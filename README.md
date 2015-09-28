@@ -2,7 +2,7 @@
 
 Makes Rubyzip dance for streaming. Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
-### OutputStreamPrefab
+## OutputStreamPrefab
 
 Is used to write a streaming ZIP file without compression when you know the CRC32 for the raw files
 and the sizes of these files upfront. This writes the local headers immediately, without having to

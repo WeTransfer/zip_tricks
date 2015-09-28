@@ -17,6 +17,7 @@ rewind the output IO.
         zip << blob
       end
       zip.put_next_entry("another-file.bin", another_file.size, another_file_crc32)
+      ... # more file writes etc.
     end
 
 ## BlockWrite

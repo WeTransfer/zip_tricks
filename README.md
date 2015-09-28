@@ -8,7 +8,7 @@ Is used to write a streaming ZIP file without compression when you know the CRC3
 and the sizes of these files upfront. This writes the local headers immediately, without having to
 rewind the output IO.
 
-    # io has to be an object that supports :<< and :tell.
+    # io has to be an object that supports #<<, #tell and #close
     io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
     
     ZipTricks::OutputStreamPrefab.open(io) do | zip |

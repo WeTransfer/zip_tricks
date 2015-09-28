@@ -10,15 +10,16 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 require 'rake'
-
+require_relative 'lib/zip_tricks'
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
   gem.name = "zip_tricks"
   gem.homepage = "http://github.com/julik/zip_tricks"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.version = ZipTricks::VERSION
+  gem.summary = %Q{Makes rubyzip stream, for real}
+  gem.description = %Q{Makes rubyzip stream, for real}
   gem.email = "me@julik.nl"
   gem.authors = ["Julik Tarkhanov"]
   # dependencies defined in Gemfile

@@ -14,6 +14,10 @@ describe ZipTricks::BlockWrite do
     expect(blobs).to eq(['hello', 'world', '!'])
   end
   
+  it 'can be closed' do
+    expect(described_class.new{}.close).to be_nil
+  end
+  
   it 'forces the written strings to binary encoding' do
     blobs = []
     adapter = described_class.new{|s|

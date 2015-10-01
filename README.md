@@ -53,6 +53,10 @@ Takes the size of filenames and headers etc. into account.
     # now you know how long the response will be
     content_length = expected_zip_size
 
+## BlockDeflate
+
+Permits compression in indepentend parts. Read the inline docs for now.
+
 ## Contributing to zip_tricks
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.

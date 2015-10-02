@@ -18,13 +18,11 @@ module ZipTricks::BlockDeflate
   # zip deflate storage omits the header).
   #
   # The computed adler32 checksum for all the blocks gets returned (as a Fixnum), to be combined later during concatenation.
-  def self.compress_block(input_io, output_io, compression_level = Zlib::DEFAULT_COMPRESSION)
+  def self.compress_block(input_io, output_io)
     running_adler = Zlib.adler32('') # Has to be started with an adler32 value for an empty string!
     until input_io.eof?
       block = input_io.read(BLOCKSIZE)
-      
-      # We need two parts of the equation. Zlib.deflate() only gives us the body
-      z = Zlib::Deflate.new(compression_level)
+      z = Zlib::Deflate.new(Zlib::BEST_COMPRESSION)
       header_and_body = z.deflate(block, Zlib::SYNC_FLUSH)
       footer = z.finish
       z.close
@@ -35,7 +33,8 @@ module ZipTricks::BlockDeflate
       raise MalformedDeflate, 'Adler should be 4 bytes' unless block_adler.bytesize == 4
       
       header, body = header_and_body[0..1], header_and_body[2..-1]
-      raise MalformedDeflate, 'Header should be \x120\x156' unless header == HEADER
+      # When BEST_COMPRESSION is used, the header has different contents
+      # raise MalformedDeflate, 'Header should be \x120\x156' unless header == HEADER
       
       output_io << body
       

@@ -14,6 +14,21 @@ describe ZipTricks::BlockWrite do
     expect(blobs).to eq(['hello', 'world', '!'])
   end
   
+  it 'can write in all possible encodings, even if the strings are frozen' do
+    destination = ''.encode(Encoding::BINARY)
+    
+    accum_string = ''
+    adapter = described_class.new{|s| accum_string << s }
+    
+    adapter << 'hello'
+    adapter << 'привет'
+    adapter << 'привет'.freeze
+    adapter << '!'
+    adapter << SecureRandom.random_bytes(1024)
+    
+    expect(accum_string.bytesize).to eq(1054)
+  end
+  
   it 'can be closed' do
     expect(described_class.new{}.close).to be_nil
   end

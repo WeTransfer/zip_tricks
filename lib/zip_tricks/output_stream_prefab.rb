@@ -16,22 +16,22 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
   # Adds a new entry.
   # 
   # @param [entry_name] The filename of the entry
-  # @param [size] The size of the uncompressed file
-  # @param [crc] The CRC32 of the entry that is going to be written
-  def put_next_entry(entry_name, size, crc, deflated_size=nil)
+  # @param [size_uncompressed] The size of the uncompressed file
+  # @param [crc] The CRC32 of the uncompressed entry that is going to be written
+  def put_next_entry(entry_name, size_uncompressed, crc, size_compressed=nil)
     new_entry = ::Zip::Entry.new(@file_name, entry_name)
-    compression_used = deflated_size ? Zip::Entry::DEFLATED : Zip::Entry::STORED
+    compression_used = size_compressed ? Zip::Entry::DEFLATED : Zip::Entry::STORED
     new_entry.compression_method = compression_used
     
     # Since we know the CRC and the size upfront we do not need local footers the way zipline uses them.
     # Instead we can generate the header when starting the entry, and never touch it afterwards.
     # Just set them from the method arguments.
-    new_entry.crc, new_entry.size = crc, size
+    new_entry.crc, new_entry.size = crc, size_uncompressed
     
     # Moved here from finalize_current_entry (since all the information is already available).
     # Should be the size of the entry (actually byte for byte the contents of the raw file,
     # since there will be no compression) plus the size of the local header for the entry. Easy.
-    new_entry.compressed_size = size + new_entry.calculate_local_header_size
+    new_entry.compressed_size = (size_compressed || size_uncompressed) # Local header size is not required
     
     # The super method signature is
     # put_next_entry(name_or_object, comment = nil, extra = nil, 
@@ -55,9 +55,22 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     nil
   end
   
+  # Rubyzip asks the compressor for the CRC and the compressed size.
+  # We override this so that the compressor keeps the values of the entry
+  # and then returns them back once done.
+  class KnownSizeCompressor < Struct.new(:output_stream, :crc, :size)
+    attr_reader :compressed_size
+    def <<(data)
+      @compressed_size ||= 0
+      @compressed_size += data.bytesize
+      output_stream << data
+    end
+    def finish; end # Just a stub
+  end
+  
   # Always force the passthru compressor (even if we have compressed entries they are already deflated).
   def get_compressor(entry, level)
-    ::Zip::PassThruCompressor.new(@output_stream)
+    KnownSizeCompressor.new(@output_stream, entry.crc, entry.size)
   end
   
   # Overridden - the @compressor writes using this method, so an override can be used to trace

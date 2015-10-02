@@ -44,6 +44,15 @@ describe ZipTricks::OutputStreamPrefab do
     
     expect(per_filename['compressed-file.bin'].bytesize).to eq(f.size)
     expect(Digest::SHA1.hexdigest(per_filename['compressed-file.bin'])).to eq(Digest::SHA1.hexdigest(f.read))
+    
+    wd = Dir.pwd
+    Dir.mktmpdir do | td |
+      Dir.chdir(td)
+      output = `unzip #{zip_file.path}`
+      puts output.inspect
+    end
+    Dir.chdir(wd)
+    
   end
   
   it 'archives files which can then be read using the usual means with Rubyzip' do
@@ -88,5 +97,14 @@ describe ZipTricks::OutputStreamPrefab do
     
     expect(per_filename['first-file.bin'].unpack("C*")).to eq(raw_file_1.unpack("C*"))
     expect(per_filename['second-file.bin'].unpack("C*")).to eq(raw_file_2.unpack("C*"))
+    
+    wd = Dir.pwd
+    Dir.mktmpdir do | td |
+      Dir.chdir(td)
+      output = `unzip #{zip_buf.path}`
+      puts output.inspect
+    end
+    Dir.chdir(wd)
+    
   end
 end

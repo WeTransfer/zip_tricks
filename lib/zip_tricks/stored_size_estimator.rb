@@ -1,4 +1,5 @@
-class ZipTricks::StoredSizeEstimator < Struct.new(:zip)
+# Helps to estimate archive sizes
+class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   # One meg of fake data. Has an overridden inspect()
   # so that it does not fill the inspecting terminal with garbage.
   ONE_MEGABYTE = Class.new(String) do
@@ -13,43 +14,45 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip)
   # entries upfront. Usage:
   #
   #  expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
-  #    estimator.add_entry("file.doc", size=898291)
-  #    estimator.add_entry("family.JPG", size=89281911)
+  #    estimator.add_stored_entry("file.doc", size=898291)
+  #    estimator.add_compressed_entry("family.tif", size=89281911, compressed_size=121908)
   #  end
   #
-  # @return []
+  # @return [Fixnum] the size of the resulting archive, in bytes
   # @yield [StoredSizeEstimator] the estimator
   def self.perform_fake_archiving
     output_io = ::ZipTricks::BlockWrite.new(&NO_OP_BYTES_RECEIVER)
-    ::ZipTricks::OutputStreamPrefab.open(output_io) do | zip |
-      yield(new(zip))
+    ZipTricks::Streamer.open(output_io) do | zip_streamer |
+      yield(new(zip_streamer))
     end
     output_io.tell
   end
   
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
-  # @param name[String] - the name of the file (filenames are variable-width in the ZIP)
-  # @param size[Fixnum] - size of the uncompressed or compressed entry (size of the data that will be appended to the ZIP)
+  # @param name [String] the name of the file (filenames are variable-width in the ZIP)
+  # @param size_uncompressed [Fixnum] size of the uncompressed entry
   # @return self
   def add_stored_entry(name, size_uncompressed)
-    zip.put_next_stored_entry(name, size_uncompressed, FAKE_CRC)
-    write_fake_data(zip, size_uncompressed)
+    zip_streamer.add_stored_entry(name, size_uncompressed, FAKE_CRC)
+    write_fake_data(zip_streamer, size_uncompressed)
     self
   end
   
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
-  # @param name[String] - the name of the file (filenames are variable-width in the ZIP)
-  # @param size[Fixnum] - size of the uncompressed or compressed entry (size of the data that will be appended to the ZIP)
+  # @param name [String] the name of the file (filenames are variable-width in the ZIP)
+  # @param size_uncompressed [Fixnum] size of the uncompressed entry
+  # @param size_compressed [Fixnum] size of the compressed entry
   # @return self
   def add_compressed_entry(name, size_uncompressed, size_compressed)
-    zip.put_next_compressed_entry(name, size_uncompressed, FAKE_CRC, size_compressed)
-    write_fake_data(zip, size_compressed)
+    zip_streamer.add_compressed_entry(name, size_uncompressed, FAKE_CRC, size_compressed)
+    write_fake_data(zip_streamer, size_compressed)
     self
   end
   
   private
+  
   # To send "fake data" to the zip compressor without creating too many strings, or having too much
   # memory pressure, we use a trick. We know that the entry we are going to be archiving is X bytes.
   # Split it in parts of 1 Mb or less.

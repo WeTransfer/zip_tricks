@@ -29,7 +29,7 @@ describe ZipTricks::OutputStreamPrefab do
     # Perform the zipping
     zip_file = Tempfile.new('z')
     described_class.open(zip_file) do |zip|
-      zip.put_next_entry("compressed-file.bin", f.size, crc, compressed_blockwise.size)
+      zip.put_next_compressed_entry("compressed-file.bin", f.size, crc, compressed_blockwise.size)
       zip << compressed_blockwise.read
     end
     
@@ -77,9 +77,9 @@ describe ZipTricks::OutputStreamPrefab do
     
     # Perform the zipping
     described_class.open(output_io) do |zip|
-      zip.put_next_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
+      zip.put_next_stored_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
       zip << raw_file_1
-      zip.put_next_entry("second-file.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
+      zip.put_next_stored_entry("second-file.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
       zip << raw_file_2
     end
     

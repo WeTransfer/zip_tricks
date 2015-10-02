@@ -24,7 +24,7 @@ class ZipTricks::BlockWrite
   def <<(buf)
     return if buf.nil?
     return if buf.bytesize.zero? # Zero-size output has a special meaning when using chunked encoding
-    encoded = buf.force_encoding(Encoding::BINARY) # Make sure the output is binary
+    encoded = buf.encode(Encoding::BINARY) rescue buf # Make sure the output is binary
     @pos += encoded.bytesize
     @block.call(encoded)
   end

@@ -12,26 +12,21 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     # replace the instantiated output stream with our stub
     @output_stream = io
   end
-
-  # Adds a new entry.
+  
+  # Announces a new entry that is already deflate-compressed.
   # 
-  # @param [entry_name] The filename of the entry
+  # @param [entry_name] The filename of the file
   # @param [size_uncompressed] The size of the uncompressed file
-  # @param [crc] The CRC32 of the uncompressed entry that is going to be written
-  def put_next_entry(entry_name, size_uncompressed, crc, size_compressed=nil)
+  # @param [crc] The CRC32 of the uncompressed file that is going to be written
+  # @param [size_compressed] The CRC32 of the uncompressed entry that is going to be written
+  def put_next_compressed_entry(entry_name, size_uncompressed, crc_uncompressed, size_compressed)
     new_entry = ::Zip::Entry.new(@file_name, entry_name)
-    compression_used = size_compressed ? Zip::Entry::DEFLATED : Zip::Entry::STORED
-    new_entry.compression_method = compression_used
+    new_entry.compression_method = Zip::Entry::DEFLATED
     
     # Since we know the CRC and the size upfront we do not need local footers the way zipline uses them.
     # Instead we can generate the header when starting the entry, and never touch it afterwards.
     # Just set them from the method arguments.
-    new_entry.crc, new_entry.size = crc, size_uncompressed
-    
-    # Moved here from finalize_current_entry (since all the information is already available).
-    # Should be the size of the entry (actually byte for byte the contents of the raw file,
-    # since there will be no compression) plus the size of the local header for the entry. Easy.
-    new_entry.compressed_size = (size_compressed || size_uncompressed) # Local header size is not required
+    new_entry.crc, new_entry.size, new_entry.compressed_size = crc_uncompressed, size_uncompressed, size_compressed
     
     # The super method signature is
     # put_next_entry(name_or_object, comment = nil, extra = nil, 
@@ -41,13 +36,34 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     # and dumps it's compressed data. Probably we _could_ do a deflate compression in a streaming fashion if we could
     # write a Compressor class that performs deflate compression on a per-block basis.
     # This also calls entry.write_local_entry(@output_stream) which flushes the local header.
-    super(new_entry, nil, nil, new_entry.compression_method)
-    
-    # The original comments in zipline said that uncompressed size in the local file header must be zero when bit 3
-    # of the general purpose flags is set, so it set the size after the header has been written.
-    # This is not really relevant for us though because we are not using local footers.
-    # new_entry.size = size
+    put_next_entry(new_entry, nil, nil, new_entry.compression_method)
   end
+  
+  def put_next_stored_entry(entry_name, size_uncompressed, crc_uncompressed)
+    new_entry = ::Zip::Entry.new(@file_name, entry_name)
+    new_entry.compression_method = Zip::Entry::STORED
+    
+    # Since we know the CRC and the size upfront we do not need local footers the way zipline uses them.
+    # Instead we can generate the header when starting the entry, and never touch it afterwards.
+    # Just set them from the method arguments.
+    new_entry.crc, new_entry.size = crc_uncompressed, size_uncompressed
+    
+    # Moved here from finalize_current_entry (since all the information is already available).
+    # Should be the size of the entry ONLY, on our case it is the same as uncompressed size.
+    new_entry.compressed_size = size_uncompressed # Local header size is not required
+    
+    # The super method signature is
+    # put_next_entry(name_or_object, comment = nil, extra = nil, 
+    # compression_method = Entry::DEFLATED, level = Zip.default_compression)
+    # If we want not to buffer, we have to force it to switch into the passthrough compressor.
+    # Otherwise we only receive the compressed blob in one go once the Compressor object gets a finish() call
+    # and dumps it's compressed data. Probably we _could_ do a deflate compression in a streaming fashion if we could
+    # write a Compressor class that performs deflate compression on a per-block basis.
+    # This also calls entry.write_local_entry(@output_stream) which flushes the local header.
+    put_next_entry(new_entry, nil, nil, new_entry.compression_method)
+  end  
+  
+  private :put_next_entry # Privatize it because we override it basically
   
   # We never need to update local headers, because we set all the data in the header ahead of time.
   # And this is the method that tries to rewind the IO, so fuse it out and turn it into a no-op.

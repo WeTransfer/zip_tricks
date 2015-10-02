@@ -12,11 +12,19 @@ rewind the output IO.
     io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
     
     ZipTricks::OutputStreamPrefab.open(io) do | zip |
-      zip.put_next_entry("first-file.bin", raw_file.size, raw_file_crc32)
+      
+      # raw_file is written "as is" (STORED mode)
+      zip.put_next_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
       while blob = raw_file.read(2048)
         zip << blob
       end
-      zip.put_next_entry("another-file.bin", another_file.size, another_file_crc32)
+      
+      # another_file is assumed to be block-deflated (DEFLATE mode)
+      zip.put_next_compressed_entry("another-file.bin", uncompressed_file_size, another_file_crc32, another_file.size)
+      while blob = another_file.read(2048)
+        zip << blob
+      end
+      
       ... # more file writes etc.
     end
 
@@ -30,7 +38,7 @@ This can be used to attach the output of the zip compressor to the Rack response
       def each(&blk)
         io = ZipTricks::BlockWrite.new(&blk)
         ZipTricks::OutputStreamPrefab.open(io) do | zip |
-          zip.put_next_entry("first-file.bin", raw_file.size, raw_file_crc32)
+          zip.put_next_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
           while blob = raw_file.read(2048)
             zip << blob
           end
@@ -47,8 +55,8 @@ Is used to predict the size of the ZIP after output, if the files are going to b
 Takes the size of filenames and headers etc. into account.
 
     expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
-      estimator.add_entry("file.doc", size=898291)
-      estimator.add_entry("family.JPG", size=89281911)
+      estimator.add_stored_entry("file.doc", size=898291)
+      estimator.add_compressed_entry("family.JPG", size=89281911, compressed_size=89218)
     end
     # now you know how long the response will be
     content_length = expected_zip_size

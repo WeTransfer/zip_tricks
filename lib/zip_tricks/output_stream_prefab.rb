@@ -18,9 +18,11 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
   # @param [entry_name] The filename of the entry
   # @param [size] The size of the uncompressed file
   # @param [crc] The CRC32 of the entry that is going to be written
-  def put_next_entry(entry_name, size, crc)
+  def put_next_entry(entry_name, size, crc, deflated_size=nil)
     new_entry = ::Zip::Entry.new(@file_name, entry_name)
-    new_entry.compression_method = Zip::Entry::STORED
+    compression_used = deflated_size ? Zip::Entry::DEFLATED : Zip::Entry::STORED
+    new_entry.compression_method = compression_used
+    
     # Since we know the CRC and the size upfront we do not need local footers the way zipline uses them.
     # Instead we can generate the header when starting the entry, and never touch it afterwards.
     # Just set them from the method arguments.
@@ -39,7 +41,7 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     # and dumps it's compressed data. Probably we _could_ do a deflate compression in a streaming fashion if we could
     # write a Compressor class that performs deflate compression on a per-block basis.
     # This also calls entry.write_local_entry(@output_stream) which flushes the local header.
-    super(new_entry, nil, nil, new_entry.compression_method, level=Zlib::NO_COMPRESSION)
+    super(new_entry, nil, nil, new_entry.compression_method)
     
     # The original comments in zipline said that uncompressed size in the local file header must be zero when bit 3
     # of the general purpose flags is set, so it set the size after the header has been written.
@@ -52,7 +54,12 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
   def update_local_headers
     nil
   end
-
+  
+  # Always force the passthru compressor (even if we have compressed entries they are already deflated).
+  def get_compressor(entry, level)
+    ::Zip::PassThruCompressor.new(@output_stream)
+  end
+  
   # Overridden - the @compressor writes using this method, so an override can be used to trace
   # how often the compressor calls the method and whether it buffers or not. If Zip::DEFLATE is used
   # for entry compression this method will be called once per file with a HUUUUGE Ruby string.

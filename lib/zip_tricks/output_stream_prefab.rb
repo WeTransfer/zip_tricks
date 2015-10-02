@@ -28,6 +28,9 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     # Just set them from the method arguments.
     new_entry.crc, new_entry.size, new_entry.compressed_size = crc_uncompressed, size_uncompressed, size_compressed
     
+    unknown_crc_and_filesize = 1 << 3
+    new_entry.gp_flags |= unknown_crc_and_filesize
+    
     # The super method signature is
     # put_next_entry(name_or_object, comment = nil, extra = nil, 
     # compression_method = Entry::DEFLATED, level = Zip.default_compression)
@@ -51,6 +54,9 @@ class ZipTricks::OutputStreamPrefab < ::Zip::OutputStream
     # Moved here from finalize_current_entry (since all the information is already available).
     # Should be the size of the entry ONLY, on our case it is the same as uncompressed size.
     new_entry.compressed_size = size_uncompressed # Local header size is not required
+    
+    unknown_crc_and_filesize = 1 << 3
+    new_entry.gp_flags |= unknown_crc_and_filesize
     
     # The super method signature is
     # put_next_entry(name_or_object, comment = nil, extra = nil, 

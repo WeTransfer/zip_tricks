@@ -9,7 +9,7 @@
 module ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1024*1024*5
   END_MARKER = [3, 0].pack("C*")
-  
+  VALID_COMPRESSIONS = (0..9).to_a.freeze # Zlib::NO_COMPRESSION..Zlib::BEST_COMPRESSION
   # Write the end marker (\x3\x0) to the given IO.
   #
   # `output_io` can also be a ZipTricks::Streamer to expedite ops.
@@ -25,9 +25,10 @@ module ZipTricks::BlockDeflate
   # The returned string can be spliced into another deflate stream.
   #
   # @param bytes [String] Bytes to compress
+  # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @return [String] compressed bytes
-  def self.deflate_chunk(bytes)
-    z = Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION)#, -::Zlib::MAX_WBITS)
+  def self.deflate_chunk(bytes, level: Zlib::DEFAULT_COMPRESSION)
+    z = Zlib::Deflate.new(level)
     compressed_blob = z.deflate(bytes, Zlib::SYNC_FLUSH)
     compressed_blob << z.finish
     z.close
@@ -50,10 +51,12 @@ module ZipTricks::BlockDeflate
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)
+  # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @param block_size [Fixnum] The block size to use (defaults to `DEFAULT_BLOCKSIZE`)
   # @return [Fixnum] number of bytes written to `output_io`
-  def self.deflate_in_blocks_and_terminate(input_io, output_io, block_size = DEFAULT_BLOCKSIZE)
-    deflate_in_blocks(input_io, output_io, block_size) + write_terminator(output_io)
+  def self.deflate_in_blocks_and_terminate(input_io, output_io, level: Zlib::DEFAULT_COMPRESSION, block_size: DEFAULT_BLOCKSIZE)
+    bytes_written = deflate_in_blocks(input_io, output_io, level: level, block_size: block_size)
+    bytes_written + write_terminator(output_io)
   end
   
   # Compress the contents of input_io into output_io, in blocks
@@ -65,12 +68,13 @@ module ZipTricks::BlockDeflate
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)
+  # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @param block_size [Fixnum] The block size to use (defaults to `DEFAULT_BLOCKSIZE`)
   # @return [Fixnum] number of bytes written to `output_io`
-  def self.deflate_in_blocks(input_io, output_io, block_size = DEFAULT_BLOCKSIZE)
+  def self.deflate_in_blocks(input_io, output_io, level: Zlib::DEFAULT_COMPRESSION, block_size: DEFAULT_BLOCKSIZE)
     bytes_written = 0
     while block = input_io.read(block_size)
-      deflated = deflate_chunk(block)
+      deflated = deflate_chunk(block, level: level)
       output_io << deflated
       bytes_written += deflated.bytesize
     end

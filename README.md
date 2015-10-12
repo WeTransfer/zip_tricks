@@ -20,6 +20,9 @@ you need to skip the end marker:
     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb), compressed)
     ZipTricks::BlockDeflate.write_terminator(compressed)
 
+You can also elect to just compress strings in memory (to splice them later):
+
+    compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
 
 ## Streamer
 

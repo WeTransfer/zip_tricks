@@ -2,28 +2,58 @@
 
 Makes Rubyzip dance for streaming. Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
-## OutputStreamPrefab
+## BlockDeflate
 
-Is used to write a streaming ZIP file without compression when you know the CRC32 for the raw files
+Deflate a byte stream in blocks of N bytes, optionally writing a terminator marker. This can be used to
+compress a file in parts.
+
+    source_file = File.open('12_gigs.bin', 'rb')
+    compressed = Tempfile.new
+    ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file, compressed)
+
+You can also do the same to parts that you will later concatenate together elsewhere, in that case
+you need to skip the end marker:
+
+    compressed = Tempfile.new
+    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb), compressed)
+    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part2.bin', 'rb), compressed)
+    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb), compressed)
+    ZipTricks::BlockDeflate.write_terminator(compressed)
+
+
+## Streamer
+
+Is used to write a streaming ZIP file when you know the CRC32 for the raw files
 and the sizes of these files upfront. This writes the local headers immediately, without having to
 rewind the output IO.
 
     # io has to be an object that supports #<<, #tell and #close
     io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
     
-    ZipTricks::OutputStreamPrefab.open(io) do | zip |
+    ZipTricks::Streamer.open(io) do | zip |
       
       # raw_file is written "as is" (STORED mode)
-      zip.put_next_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
+      zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
       while blob = raw_file.read(2048)
         zip << blob
       end
       
       # another_file is assumed to be block-deflated (DEFLATE mode)
-      zip.put_next_compressed_entry("another-file.bin", uncompressed_file_size, another_file_crc32, another_file.size)
-      while blob = another_file.read(2048)
+      zip.add_compressed_entry("another-file.bin", another_file_size, another_file_crc32, compressed_file.size)
+      while blob = compressed_file.read(2048)
         zip << blob
       end
+      
+      # If you are storing block-deflated parts of a single file, you have to terminate the output
+      # with an end marker manually
+      zip.add_compressed_entry("compressed-in-parts.bin", another_file_size, another_file_crc32, deflated_size)
+      while blob = part1.read(2048)
+        zip << blob
+      end
+      while blob = part2.read(2048)
+        zip << blob
+      end
+      zip << ZipTricks::BlockDeflate::END_MARKER
       
       ... # more file writes etc.
     end
@@ -37,12 +67,16 @@ This can be used to attach the output of the zip compressor to the Rack response
     class ZipBody
       def each(&blk)
         io = ZipTricks::BlockWrite.new(&blk)
-        ZipTricks::OutputStreamPrefab.open(io) do | zip |
-          zip.put_next_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
+        ZipTricks::Streamer.open(io) do | zip |
+          zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
           while blob = raw_file.read(2048)
             zip << blob
           end
           ...
+          zip.add_compressed_entry("compressed.txt", raw_file.size, raw_file_crc32, compressed_file.size)
+          while blob = compressed_file.read(2048)
+            zip << blob
+          end
         end
       end
     end

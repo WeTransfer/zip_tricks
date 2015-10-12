@@ -8,9 +8,15 @@ describe ZipTricks::BlockDeflate do
     it 'removes the end marker'
   end
   
-  describe '.deflate_in_blocks' do
+  describe 'deflate_in_blocks_and_terminate' do
     it 'honors the block size'
     it 'produces a blob that can be inflated later'
     it 'writes the end marker without the adler32'
+  end
+  
+  describe '.deflate_in_blocks' do
+    it 'honors the block size'
+    it 'produces a blob that can be inflated later'
+    it 'does not write the end marker'
   end
 end

@@ -10,6 +10,17 @@ module ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1024*1024*5
   END_MARKER = [3, 0].pack("C*")
   
+  # Write the end marker (\x3\x0) to the given IO.
+  #
+  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
+  #
+  # @param output_io [IO] the stream to write to (should respond to `:<<`)
+  # @return [Fixnum] number of bytes written to `output_io`
+  def self.write_terminator(output_io)
+    output_io << END_MARKER
+    END_MARKER.bytesize
+  end
+  
   # Compress a given binary string and flush the deflate stream at byte boundary.
   # The returned string can be spliced into another deflate stream.
   #
@@ -35,16 +46,14 @@ module ZipTricks::BlockDeflate
   # Once the write completes, no more parts for concatenation should be written to
   # the same stream.
   #
-  # `input_io` can also be a ZipTricks::Streamer to expedite ops.
+  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)
   # @param block_size [Fixnum] The block size to use (defaults to `DEFAULT_BLOCKSIZE`)
   # @return [Fixnum] number of bytes written to `output_io`
   def self.deflate_in_blocks_and_terminate(input_io, output_io, block_size = DEFAULT_BLOCKSIZE)
-    bytes_written = deflate_in_blocks(input_io, output_io, block_size)
-    output_io << END_MARKER
-    bytes_written + 2
+    deflate_in_blocks(input_io, output_io, block_size) + write_terminator(output_io)
   end
   
   # Compress the contents of input_io into output_io, in blocks
@@ -52,7 +61,7 @@ module ZipTricks::BlockDeflate
   # Will not write the deflate end marker (\x3\x0) so more parts can be written
   # later and succesfully read back in provided the end marker wll be written.
   #
-  # `input_io` can also be a ZipTricks::Streamer to expedite ops.
+  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)

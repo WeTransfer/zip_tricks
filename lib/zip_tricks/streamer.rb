@@ -1,4 +1,17 @@
+# Is used to write streamed ZIP archives into the provided IO-ish object.
+# The output IO is never going to be rewound or seeked, so the output
+# of this object can be coupled directly to, say, a Rack output.
+#
+# Allows for splicing raw files (for "stored" entries without compression)
+# and splicing of deflated files (for "deflated" storage mode).
+#
+# For stored entries, you need to know the CRC32 (as a uint) and the filesize upfront,
+# before the writing of the entry body starts.
+#
+# For compressed entries, you need to know the bytesize of the precompressed entry
+# as well.
 class ZipTricks::Streamer
+  InvalidFlow = Class.new(StandardError)
   STATES = [:before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed]
   TRANSITIONS = [
     [:before_entry, :in_entry_header],
@@ -8,12 +21,20 @@ class ZipTricks::Streamer
     [:in_central_directory, :closed]
   ]
   
+  # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
+  # returns, the Streamer will have it's `close` method called, which will write out the central
+  # directory of the archive to the output.
+  #
+  # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def self.open(stream)
     archive = new(stream)
     yield(archive)
     archive.close
   end
   
+  # Creates a new Streamer on top of the given IO-ish object.
+  #
+  # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def initialize(stream)
     unless stream.respond_to?(:<<) && stream.respond_to?(:tell)
       raise "The stream should respond to #<< and #tell"
@@ -23,11 +44,27 @@ class ZipTricks::Streamer
     @state = :before_entry
   end
 
-  def << (binary_data)
+  # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
+  #
+  # @param binary_data [String] a String in binary encoding
+  # @return self
+  def <<(binary_data)
     transition_or_maintain! :in_entry_body
     @output_stream << binary_data
+    self
   end
-
+  
+  # Writes out the local header for an entry (file in the ZIP) that is using the deflated storage model (is compressed).
+  # Once this method is called, the `<<` method has to be called to write the actual contents of the body.
+  #
+  # Note that the deflated body that is going to be written into the output has to be _precompressed_ (pre-deflated)
+  # before writing it into the Streamer, because otherwise it is impossible to know it's size upfront.
+  #
+  # @param entry_name [String] the name of the file in the entry
+  # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
+  # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
+  # @param compressed_size [Fixnum] the size of the compressed entry that is going to be written into the archive
+  # @return self
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
     transition! :in_entry_header
     
@@ -40,8 +77,16 @@ class ZipTricks::Streamer
     
     entry.write_local_entry(@output_stream)
     @entry_set << entry
+    self
   end
-
+  
+  # Writes out the local header for an entry (file in the ZIP) that is using the stored storage model (is stored as-is).
+  # Once this method is called, the `<<` method has to be called one or more times to write the actual contents of the body.
+  #
+  # @param entry_name [String] the name of the file in the entry
+  # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
+  # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
+  # @return self
   def add_stored_entry(entry_name, uncompressed_size, crc32)
     transition! :in_entry_header
 
@@ -54,12 +99,19 @@ class ZipTricks::Streamer
     @entry_set << entry
     entry.write_local_entry(@output_stream)
   end
-
+  
+  # Writes out the global footer and the directory entry header and the global directory of the ZIP
+  # archive using the information about the entries added using `add_stored_entry` and `add_compressed_entry`.
+  #
+  # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
+  #
+  # @return self
   def close
     transition! :in_central_directory
-    cdir = Zip::CentralDirectory.new(@entry_set, @comment)
+    cdir = Zip::CentralDirectory.new(@entry_set, comment = nil)
     cdir.write_to_stream(@output_stream)
     transition! :closed
+    self
   end
   
   private
@@ -71,16 +123,15 @@ class ZipTricks::Streamer
   end
   
   def expect!(state)
-    raise "Must be in #{state} state" unless @state == state
+    raise InvalidFlow, "Must be in #{state} state, but was in #{@state}" unless @state == state
   end
 
   def transition!(new_state)
-    @recorded_transitions ||= []
     raise "Unknown state #{new_state}" unless STATES.include?(new_state)
     if TRANSITIONS.include?([@state, new_state])
       @state = new_state
     else
-      raise "Cannot change states from #{@state} to #{new_state} (flow: #{@recorded_transitions.inspect})"
+      raise InvalidFlow, "Cannot change states from #{@state} to #{new_state} (flow: #{@recorded_transitions.inspect})"
     end
   end
 end

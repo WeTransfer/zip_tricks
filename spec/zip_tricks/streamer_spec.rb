@@ -23,7 +23,7 @@ describe ZipTricks::Streamer do
     # Note this is commented out - because the header should be OMITTED!
     # compressed_blockwise << ZipTricks::BlockDeflate::HEADER
     rewind_after(compressed_blockwise, f) do
-      ZipTricks::BlockDeflate.deflate_in_blocks(f, compressed_blockwise, chunk_size = 1024)
+      ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(f, compressed_blockwise, chunk_size = 1024)
     end
     
     # Perform the zipping
@@ -79,7 +79,7 @@ describe ZipTricks::Streamer do
       
       # Compress in blocks of 4 Kb
       rewind_after(source_f, compressed_buffer) do
-        ZipTricks::BlockDeflate.deflate_in_blocks(source_f, compressed_buffer, block_size = 1024 * 4)
+        ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_f, compressed_buffer, block_size = 1024 * 4)
       end
       
       # Add this file compressed...

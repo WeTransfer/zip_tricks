@@ -19,7 +19,7 @@ module ZipTricks::BlockDeflate
   VALID_COMPRESSIONS = (Zlib::DEFAULT_COMPRESSION..Zlib::BEST_COMPRESSION).to_a.freeze # Zlib::NO_COMPRESSION..
   # Write the end marker (\x3\x0) to the given IO.
   #
-  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
+  # `output_io` can also be a {ZipTricks::Streamer} to expedite ops.
   #
   # @param output_io [IO] the stream to write to (should respond to `:<<`)
   # @return [Fixnum] number of bytes written to `output_io`
@@ -53,7 +53,7 @@ module ZipTricks::BlockDeflate
   # Once the write completes, no more parts for concatenation should be written to
   # the same stream.
   #
-  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
+  # `output_io` can also be a {ZipTricks::Streamer} to expedite ops.
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)
@@ -70,7 +70,7 @@ module ZipTricks::BlockDeflate
   # Will not write the deflate end marker (\x3\x0) so more parts can be written
   # later and succesfully read back in provided the end marker wll be written.
   #
-  # `output_io` can also be a ZipTricks::Streamer to expedite ops.
+  # `output_io` can also be a {ZipTricks::Streamer} to expedite ops.
   #
   # @param input_io [IO] the stream to read from (should respond to `:read`)
   # @param output_io [IO] the stream to write to (should respond to `:<<`)

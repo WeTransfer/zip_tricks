@@ -26,6 +26,7 @@ class ZipTricks::Streamer
   # directory of the archive to the output.
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
+  # @yield archive [Streamer] the streamer that can be written to
   def self.open(stream)
     archive = new(stream)
     yield(archive)

@@ -1,11 +1,18 @@
 # Permits Deflate compression in independent blocks. The workflow is as follows:
 #
-# * Run every block to compress through compress_block(), memorize the adler32 value and the size of the compressed block
-# * Write out the deflate header (\120\156)
-# * Write out the compressed block bodies (the ones compress_block has written to your output, in sequence)
-# * Combine the adler32 values of all the blocks
+# * Run every block to compress through deflate_chunk, remove the header, footer and adler32 from the result
+# * Write out the compressed block bodies (the ones deflate_chunk returns)to your output, in sequence
 # * Write out the footer (\03\00)
-# * Write out the combined adler32 value packed in big-endian 32-bit.
+#
+# The resulting stream is guaranteed to be handled properly by all zip unarchiving tools, including the
+# BOMArchiveHelper/ArchiveUtility on OSX.
+#
+# You could also build a compressor for Rubyzip using this module quite easily,
+# even though this is outside the scope of the library.
+#
+# When you deflate the chunks separately, you need to write the end marker yourself (using `write_terminator`).
+# If you just want to deflate a large IO's contents, use `deflate_in_blocks_and_terminate` to have the end marker
+# written out for you.
 module ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1024*1024*5
   END_MARKER = [3, 0].pack("C*")
@@ -34,13 +41,11 @@ module ZipTricks::BlockDeflate
     z.close
     
     # Remove the header (2 bytes), the [3,0] end marker and the adler (4 bytes)
-    body_without_header_and_footer = compressed_blob[2..-7]
-    block_adler = compressed_blob[-5..-1]
-    body_without_header_and_footer
+    compressed_blob[2...-6]
   end
   
   # Compress the contents of input_io into output_io, in blocks
-  # of block_size. Align the parts so that they can be concatenated later.
+  # of block_size. Aligns the parts so that they can be concatenated later.
   # Writes deflate end marker (\x3\x0) into `output_io` as the final step, so
   # the contents of `output_io` can be spliced verbatim into a ZIP archive.
   #

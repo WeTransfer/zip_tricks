@@ -16,7 +16,7 @@
 module ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1024*1024*5
   END_MARKER = [3, 0].pack("C*")
-  VALID_COMPRESSIONS = (0..9).to_a.freeze # Zlib::NO_COMPRESSION..Zlib::BEST_COMPRESSION
+  VALID_COMPRESSIONS = (Zlib::DEFAULT_COMPRESSION..Zlib::BEST_COMPRESSION).to_a.freeze # Zlib::NO_COMPRESSION..
   # Write the end marker (\x3\x0) to the given IO.
   #
   # `output_io` can also be a ZipTricks::Streamer to expedite ops.
@@ -35,6 +35,7 @@ module ZipTricks::BlockDeflate
   # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @return [String] compressed bytes
   def self.deflate_chunk(bytes, level: Zlib::DEFAULT_COMPRESSION)
+    raise "Invalid Zlib compression level #{level}" unless VALID_COMPRESSIONS.include?(level)
     z = Zlib::Deflate.new(level)
     compressed_blob = z.deflate(bytes, Zlib::SYNC_FLUSH)
     compressed_blob << z.finish

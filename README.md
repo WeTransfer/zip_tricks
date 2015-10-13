@@ -1,6 +1,9 @@
 # zip_tricks
 
-Makes Rubyzip dance for streaming. Spiritual successor to [zipline](https://github.com/fringd/zipline)
+Makes Rubyzip sing, dance and play saxophone for streaming applications.
+Spiritual successor to [zipline](https://github.com/fringd/zipline)
+
+The library is composed of a loose set of modules which are described below.
 
 ## BlockDeflate
 
@@ -9,6 +12,8 @@ compress a file in parts.
 
     source_file = File.open('12_gigs.bin', 'rb')
     compressed = Tempfile.new
+    # Will not compress everything in memory, but do it per chunk to spare memory. `compressed`
+    # will be written to at the end of each chunk.
     ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file, compressed)
 
 You can also do the same to parts that you will later concatenate together elsewhere, in that case
@@ -28,7 +33,8 @@ You can also elect to just compress strings in memory (to splice them later):
 
 Is used to write a streaming ZIP file when you know the CRC32 for the raw files
 and the sizes of these files upfront. This writes the local headers immediately, without having to
-rewind the output IO.
+rewind the output IO. It also avoids using the local footers instead of headers, therefore permitting
+Zip64-sized entries to be stored easily.
 
     # io has to be an object that supports #<<, #tell and #close
     io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
@@ -72,14 +78,7 @@ This can be used to attach the output of the zip compressor to the Rack response
         io = ZipTricks::BlockWrite.new(&blk)
         ZipTricks::Streamer.open(io) do | zip |
           zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
-          while blob = raw_file.read(2048)
-            zip << blob
-          end
-          ...
-          zip.add_compressed_entry("compressed.txt", raw_file.size, raw_file_crc32, compressed_file.size)
-          while blob = compressed_file.read(2048)
-            zip << blob
-          end
+          ....
         end
       end
     end
@@ -88,19 +87,15 @@ This can be used to attach the output of the zip compressor to the Rack response
 
 ## StoredSizeEstimator
 
-Is used to predict the size of the ZIP after output, if the files are going to be stored without compression.
-Takes the size of filenames and headers etc. into account.
+Is used to predict the size of the ZIP archive after output. This can be used to generate, say, a `Content-Length` header,
+or to predict the size of the resulting archive on the storage device. The size is estimated using a very fast "fake archiving"
+procedure, so it computes the sizes of all the headers and the central directory very accurately.
 
-    expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
+    expected_zip_archive_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
       estimator.add_stored_entry("file.doc", size=898291)
       estimator.add_compressed_entry("family.JPG", size=89281911, compressed_size=89218)
     end
-    # now you know how long the response will be
-    content_length = expected_zip_size
 
-## BlockDeflate
-
-Permits compression in indepentend parts. Read the inline docs for now.
 
 ## Contributing to zip_tricks
  

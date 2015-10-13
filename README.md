@@ -62,7 +62,7 @@ Zip64-sized entries to be stored easily.
       while blob = part2.read(2048)
         zip << blob
       end
-      zip << ZipTricks::BlockDeflate::END_MARKER
+      ZipTricks::BlockDeflate.write_terminator(zip)
       
       ... # more file writes etc.
     end

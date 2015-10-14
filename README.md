@@ -67,23 +67,38 @@ Zip64-sized entries to be stored easily.
       ... # more file writes etc.
     end
 
+## RackBody
+
+Can be used to output a streamed ZIP archive directly through a Rack response body.
+The block given to the constructor will be called when the response body will be read by the webserver,
+and will receive a {ZipTricks::Streamer} as it's block argument. You can then add entries to the Streamer as usual.
+The archive will be automatically closed at the end of the block.
+
+    # Precompute the Content-Length ahead of time
+    content_length = ZipTricks::StoredSizeEstimator.perform_fake_archiving do | estimator |
+      estimator.add_stored_entry('large.tif', size=1289894)
+    end
+    
+    # Prepare the response body. The block will only be called when the response starts to be written.
+    body = ZipTricks::RackBody.new do | streamer |
+      streamer.add_stored_entry('large.tif', size=1289894, crc32=198210)
+      streamer << large_file.read(1024*1024) until large_file.eof?
+      ...
+    end
+    
+    return [200, {'Content-Type' => 'binary/octet-stream', 'Content-Length' => content_length.to_s}, body]
+  
 ## BlockWrite
 
 Can be used as the destination IO, but will call the given block instead on every call to `:<<`.
-This can be used to attach the output of the zip compressor to the Rack response body.
+This can be used to attach the output of the zip compressor to the Rack response body, or another
+destination. For Rack/Rails just use RackBody since it sets this up for you.
 
-    # ...in your web app
-    class ZipBody
-      def each(&blk)
-        io = ZipTricks::BlockWrite.new(&blk)
-        ZipTricks::Streamer.open(io) do | zip |
-          zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
-          ....
-        end
-      end
+    io = ZipTricks::BlockWrite.new{|data| socket << data }
+    ZipTricks::Streamer.open(io) do | zip |
+      zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
+      ....
     end
-    
-    [200, {'Content-Type' => 'binary/octet-stream'}, ZipBody.new(...)]
 
 ## StoredSizeEstimator
 

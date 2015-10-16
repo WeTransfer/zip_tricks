@@ -13,10 +13,10 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   # Performs the estimate using fake archiving. It needs to know the sizes of the
   # entries upfront. Usage:
   #
-  #  expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
-  #    estimator.add_stored_entry("file.doc", size=898291)
-  #    estimator.add_compressed_entry("family.tif", size=89281911, compressed_size=121908)
-  #  end
+  #     expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
+  #       estimator.add_stored_entry("file.doc", size=898291)
+  #       estimator.add_compressed_entry("family.tif", size=89281911, compressed_size=121908)
+  #     end
   #
   # @return [Fixnum] the size of the resulting archive, in bytes
   # @yield [StoredSizeEstimator] the estimator

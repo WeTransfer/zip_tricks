@@ -6,6 +6,31 @@ describe ZipTricks::Streamer do
     yield.tap { ios.map(&:rewind) }
   end
   
+  it 'returns the position in the IO at every call' do
+    io = StringIO.new
+    zip = described_class.new(io)
+    pos = zip.add_compressed_entry('file.jpg', 182919, 8921, 8912)
+    expect(pos).to eq(io.tell)
+    expect(pos).to eq(38)
+    
+    retval = zip << SecureRandom.random_bytes(8912)
+    expect(retval).to eq(zip)
+    expect(io.tell).to eq(8950)
+    
+    pos = zip.add_stored_entry('file.jpg', 182919, 8921)
+    expect(pos).to eq(io.tell)
+    expect(pos).to eq(8988)
+    zip << SecureRandom.random_bytes(8912)
+    expect(io.tell).to eq(17900)
+    
+    pos = zip.write_central_directory!
+    expect(pos).to eq(io.tell)
+    expect(pos).to eq(17976)
+    
+    pos_after_close = zip.close
+    expect(pos_after_close).to eq(pos)
+  end
+  
   it 'can write and then read the block-deflated files' do
     f = Tempfile.new('raw')
     f.binmode

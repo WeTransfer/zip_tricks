@@ -12,7 +12,13 @@
 # as well.
 class ZipTricks::Streamer
   InvalidFlow = Class.new(StandardError)
+  
+  # Possible states of the streamer
   STATES = [:before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed]
+  
+  # Describes the possible state transitions. Is used primarily to prevent you (the devleoper)
+  # from using the Streamer in an improper way - since the output IO can never be rewound,
+  # a very strict sequence of method calls is needed to produce a valid ZIP archive
   TRANSITIONS = [
     [:before_entry, :in_entry_header],
     [:in_entry_header, :in_entry_body],
@@ -26,7 +32,7 @@ class ZipTricks::Streamer
   # directory of the archive to the output.
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
-  # @yield archive [Streamer] the streamer that can be written to
+  # @yield [Streamer] the streamer that can be written to
   def self.open(stream)
     archive = new(stream)
     yield(archive)
@@ -48,7 +54,7 @@ class ZipTricks::Streamer
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
   #
   # @param binary_data [String] a String in binary encoding
-  # @return self
+  # @return [Streamer] self
   def <<(binary_data)
     transition_or_maintain! :in_entry_body
     @output_stream << binary_data
@@ -65,7 +71,7 @@ class ZipTricks::Streamer
   # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @param compressed_size [Fixnum] the size of the compressed entry that is going to be written into the archive
-  # @return self
+  # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
     transition! :in_entry_header
     
@@ -76,9 +82,9 @@ class ZipTricks::Streamer
     entry.compressed_size = compressed_size
     entry.gp_flags = "0000000".to_i(2)
     
-    entry.write_local_entry(@output_stream)
     @entry_set << entry
-    self
+    entry.write_local_entry(@output_stream)
+    @output_stream.tell
   end
   
   # Writes out the local header for an entry (file in the ZIP) that is using the stored storage model (is stored as-is).
@@ -87,7 +93,7 @@ class ZipTricks::Streamer
   # @param entry_name [String] the name of the file in the entry
   # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
-  # @return self
+  # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(entry_name, uncompressed_size, crc32)
     transition! :in_entry_header
 
@@ -99,23 +105,40 @@ class ZipTricks::Streamer
     entry.gp_flags = "0000000".to_i(2)
     @entry_set << entry
     entry.write_local_entry(@output_stream)
+    @output_stream.tell
   end
+  
   
   # Writes out the global footer and the directory entry header and the global directory of the ZIP
   # archive using the information about the entries added using `add_stored_entry` and `add_compressed_entry`.
   #
   # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
   #
-  # @return self
-  def close
+  # @return [Fixnum] the offset the output IO is at after writing the central directory
+  def write_central_directory!
     transition! :in_central_directory
     cdir = Zip::CentralDirectory.new(@entry_set, comment = nil)
     cdir.write_to_stream(@output_stream)
+    @output_stream.tell
+  end
+  
+  # Closes the archive. Writes the central directory if it has not yet been written.
+  # Switches the Streamer into a state where it can no longer be written to.
+  #
+  # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
+  #
+  # @return [Fixnum] the offset the output IO is at after closing the archive
+  def close
+    write_central_directory! unless in_state?(:in_central_directory)
     transition! :closed
-    self
+    @output_stream.tell
   end
   
   private
+  
+  def in_state?(state)
+    @state == state
+  end
   
   def transition_or_maintain!(new_state)
     @recorded_transitions ||= []
@@ -132,7 +155,7 @@ class ZipTricks::Streamer
     if TRANSITIONS.include?([@state, new_state])
       @state = new_state
     else
-      raise InvalidFlow, "Cannot change states from #{@state} to #{new_state} (flow: #{@recorded_transitions.inspect})"
+      raise InvalidFlow, "Cannot change states from #{@state} to #{new_state} (flow so far: #{@recorded_transitions.join('>')})"
     end
   end
 end

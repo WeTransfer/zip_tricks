@@ -180,4 +180,37 @@ describe ZipTricks::Streamer do
     Dir.chdir(wd)
     
   end
+  
+  it 'sets the general-purpose flag for entries with UTF8 names' do
+    zip_buf = Tempfile.new('zipp')
+    zip_buf.binmode
+    
+    # Generate a couple of random files
+    raw_file_1 = SecureRandom.random_bytes(1024 * 20)
+    raw_file_2 = SecureRandom.random_bytes(1024 * 128)
+    
+    # Perform the zipping
+    zip = described_class.new(zip_buf)
+    zip.add_stored_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
+    zip << raw_file_1
+    zip.add_stored_entry("второй-файл.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
+    zip << raw_file_2
+    zip.close
+    
+    zip_buf.flush
+    
+    entries = []
+    Zip::File.open(zip_buf.path) do |zip_file|
+      # Handle entries one by one
+      zip_file.each {|entry| entries << entry }
+      first_entry, second_entry = entries
+      
+      expect(first_entry.gp_flags).to eq(0)
+      expect(first_entry.name).to eq('first-file.bin')
+      
+      # Rubyzip does not properly set the encoding of the entries it reads
+      expect(second_entry.gp_flags).to eq(2048)
+      expect(second_entry.name).to eq("второй-файл.bin".force_encoding(Encoding::BINARY))
+    end
+  end
 end

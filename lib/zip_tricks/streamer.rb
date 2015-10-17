@@ -30,8 +30,8 @@ class ZipTricks::Streamer
   # Language encoding flag (EFS) bit (general purpose bit 11)
   EFS = 0b100000000000
   
-  # Default general purpose flags for each entry. Consists of 8 zeroed bits, with the EFS bit set.
-  DEFAULT_GP_FLAGS = 0b00000000 | EFS
+  # Default general purpose flags for each entry.
+  DEFAULT_GP_FLAGS = 0b00000000000
   
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central
@@ -86,7 +86,7 @@ class ZipTricks::Streamer
     entry.crc = crc32
     entry.size = uncompressed_size
     entry.compressed_size = compressed_size
-    entry.gp_flags = DEFAULT_GP_FLAGS
+    set_gp_flags_for_filename(entry, entry_name)
     
     @entry_set << entry
     entry.write_local_entry(@output_stream)
@@ -108,7 +108,7 @@ class ZipTricks::Streamer
     entry.crc = crc32
     entry.size = uncompressed_size
     entry.compressed_size = uncompressed_size
-    entry.gp_flags = DEFAULT_GP_FLAGS
+    set_gp_flags_for_filename(entry, entry_name)
     @entry_set << entry
     entry.write_local_entry(@output_stream)
     @output_stream.tell
@@ -142,6 +142,17 @@ class ZipTricks::Streamer
   
   private
   
+  # Set the general purpose flags for the entry. The only flag we care about is the EFS
+  # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
+  # bit so that the unarchiving application knows that the filename in the archive is UTF-8
+  # encoded, and not some DOS default. For ASCII entries it does not matter.
+  def set_gp_flags_for_filename(entry, filename)
+    filename.encode(Encoding::ASCII)
+    entry.gp_flags = DEFAULT_GP_FLAGS
+  rescue Encoding::UndefinedConversionError #=> UTF8 filename
+    entry.gp_flags = DEFAULT_GP_FLAGS | EFS
+  end
+    
   def in_state?(state)
     @state == state
   end

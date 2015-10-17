@@ -27,6 +27,12 @@ class ZipTricks::Streamer
     [:in_central_directory, :closed]
   ]
   
+  # Language encoding flag (EFS) bit (general purpose bit 11)
+  EFS = 0b100000000000
+  
+  # Default general purpose flags for each entry. Consists of 8 zeroed bits, with the EFS bit set.
+  DEFAULT_GP_FLAGS = 0b00000000 | EFS
+  
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central
   # directory of the archive to the output.
@@ -80,7 +86,7 @@ class ZipTricks::Streamer
     entry.crc = crc32
     entry.size = uncompressed_size
     entry.compressed_size = compressed_size
-    entry.gp_flags = "0000000".to_i(2)
+    entry.gp_flags = DEFAULT_GP_FLAGS
     
     @entry_set << entry
     entry.write_local_entry(@output_stream)
@@ -102,7 +108,7 @@ class ZipTricks::Streamer
     entry.crc = crc32
     entry.size = uncompressed_size
     entry.compressed_size = uncompressed_size
-    entry.gp_flags = "0000000".to_i(2)
+    entry.gp_flags = DEFAULT_GP_FLAGS
     @entry_set << entry
     entry.write_local_entry(@output_stream)
     @output_stream.tell

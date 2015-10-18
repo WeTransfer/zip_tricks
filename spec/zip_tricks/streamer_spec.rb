@@ -32,15 +32,15 @@ describe ZipTricks::Streamer do
     expect(retval).to eq(zip)
     expect(io.tell).to eq(8950)
     
-    pos = zip.add_stored_entry('file.jpg', 182919, 8921)
+    pos = zip.add_stored_entry('file.jpg', 8921, 182919)
     expect(pos).to eq(io.tell)
     expect(pos).to eq(8988)
-    zip << SecureRandom.random_bytes(8912)
-    expect(io.tell).to eq(17900)
+    zip << SecureRandom.random_bytes(8921)
+    expect(io.tell).to eq(17909)
     
     pos = zip.write_central_directory!
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(17976)
+    expect(pos).to eq(17985)
     
     pos_after_close = zip.close
     expect(pos_after_close).to eq(pos)
@@ -220,5 +220,29 @@ describe ZipTricks::Streamer do
       expect(second_entry.gp_flags).to eq(2048)
       expect(second_entry.name).to eq("второй-файл.bin".force_encoding(Encoding::BINARY))
     end
+  end
+  
+  it 'raises when the actual bytes written for a stored entry does not match the entry header' do
+    expect {
+      ZipTricks::Streamer.open(StringIO.new) do | zip |
+        zip.add_stored_entry('file', 123, 0)
+        zip << 'xx'
+      end
+    }.to raise_error {|e|
+      expect(e).to be_kind_of(ZipTricks::Streamer::EntryBodySizeMismatch)
+      expect(e.message).to eq('Wrong number of bytes written for entry (expected 123, got 2)')
+    }
+  end
+
+  it 'raises when the actual bytes written for a compressed entry does not match the entry header' do
+    expect {
+      ZipTricks::Streamer.open(StringIO.new) do | zip |
+        zip.add_compressed_entry('file', 1898121, 0, 123)
+        zip << 'xx'
+      end
+    }.to raise_error {|e|
+      expect(e).to be_kind_of(ZipTricks::Streamer::EntryBodySizeMismatch)
+      expect(e.message).to eq('Wrong number of bytes written for entry (expected 123, got 2)')
+    }
   end
 end

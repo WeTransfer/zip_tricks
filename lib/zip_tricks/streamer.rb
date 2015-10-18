@@ -12,6 +12,7 @@
 # as well.
 class ZipTricks::Streamer
   InvalidFlow = Class.new(StandardError)
+  EntryBodySizeMismatch = Class.new(StandardError)
   
   # Possible states of the streamer
   STATES = [:before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed]
@@ -64,6 +65,7 @@ class ZipTricks::Streamer
   def <<(binary_data)
     transition_or_maintain! :in_entry_body
     @output_stream << binary_data
+    @bytes_written_for_entry += binary_data.bytesize
     self
   end
   
@@ -90,6 +92,8 @@ class ZipTricks::Streamer
     
     @entry_set << entry
     entry.write_local_entry(@output_stream)
+    @expected_bytes_for_entry = compressed_size
+    @bytes_written_for_entry = 0
     @output_stream.tell
   end
   
@@ -111,6 +115,8 @@ class ZipTricks::Streamer
     set_gp_flags_for_filename(entry, entry_name)
     @entry_set << entry
     entry.write_local_entry(@output_stream)
+    @bytes_written_for_entry = 0
+    @expected_bytes_for_entry = uncompressed_size
     @output_stream.tell
   end
   
@@ -139,7 +145,7 @@ class ZipTricks::Streamer
     transition! :closed
     @output_stream.tell
   end
-  
+    
   private
   
   # Set the general purpose flags for the entry. The only flag we care about is the EFS
@@ -152,7 +158,15 @@ class ZipTricks::Streamer
   rescue Encoding::UndefinedConversionError #=> UTF8 filename
     entry.gp_flags = DEFAULT_GP_FLAGS | EFS
   end
-    
+  
+  # Checks whether the number of bytes written conforms to the declared entry size
+  def leaving_in_entry_body_state
+    if @bytes_written_for_entry != @expected_bytes_for_entry
+      msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry, @bytes_written_for_entry]
+      raise EntryBodySizeMismatch, msg
+    end
+  end
+  
   def in_state?(state)
     @state == state
   end
@@ -170,6 +184,7 @@ class ZipTricks::Streamer
   def transition!(new_state)
     raise "Unknown state #{new_state}" unless STATES.include?(new_state)
     if TRANSITIONS.include?([@state, new_state])
+      send("leaving_#{@state}_state") if respond_to?("leaving_#{@state}_state", also_protected_and_private=true)
       @state = new_state
     else
       raise InvalidFlow, "Cannot change states from #{@state} to #{new_state} (flow so far: #{@recorded_transitions.join('>')})"

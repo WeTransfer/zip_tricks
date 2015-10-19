@@ -11,22 +11,7 @@
 # For compressed entries, you need to know the bytesize of the precompressed entry
 # as well.
 class ZipTricks::Streamer
-  InvalidFlow = Class.new(StandardError)
   EntryBodySizeMismatch = Class.new(StandardError)
-  
-  # Possible states of the streamer
-  STATES = [:before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed]
-  
-  # Describes the possible state transitions. Is used primarily to prevent you (the devleoper)
-  # from using the Streamer in an improper way - since the output IO can never be rewound,
-  # a very strict sequence of method calls is needed to produce a valid ZIP archive
-  TRANSITIONS = [
-    [:before_entry, :in_entry_header],
-    [:in_entry_header, :in_entry_body],
-    [:in_entry_body, :in_entry_header],
-    [:in_entry_body, :in_central_directory],
-    [:in_central_directory, :closed]
-  ]
   
   # Language encoding flag (EFS) bit (general purpose bit 11)
   EFS = 0b100000000000
@@ -50,12 +35,20 @@ class ZipTricks::Streamer
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def initialize(stream)
+    @state_monitor = ZipTricks::TinyStateMachine.new(:before_entry, callbacks_to=self)
+    @state_monitor.permit_state :before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed
+    @state_monitor.permit_transition :before_entry => :in_entry_header
+    @state_monitor.permit_transition :in_entry_header => :in_entry_body
+    @state_monitor.permit_transition :in_entry_body => :in_entry_header
+    @state_monitor.permit_transition :in_entry_body => :in_central_directory
+    @state_monitor.permit_transition :in_central_directory => :closed
+    
     unless stream.respond_to?(:<<) && stream.respond_to?(:tell)
       raise "The stream should respond to #<< and #tell"
     end
+    
     @output_stream = stream
     @entry_set = ::Zip::EntrySet.new
-    @state = :before_entry
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
@@ -63,7 +56,7 @@ class ZipTricks::Streamer
   # @param binary_data [String] a String in binary encoding
   # @return [Streamer] self
   def <<(binary_data)
-    transition_or_maintain! :in_entry_body
+    @state_monitor.transition_or_maintain! :in_entry_body
     @output_stream << binary_data
     @bytes_written_for_entry += binary_data.bytesize
     self
@@ -81,7 +74,7 @@ class ZipTricks::Streamer
   # @param compressed_size [Fixnum] the size of the compressed entry that is going to be written into the archive
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
-    transition! :in_entry_header
+    @state_monitor.transition! :in_entry_header
     
     entry = ::Zip::Entry.new(@file_name, entry_name)
     entry.compression_method = Zip::Entry::DEFLATED
@@ -105,8 +98,8 @@ class ZipTricks::Streamer
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(entry_name, uncompressed_size, crc32)
-    transition! :in_entry_header
-
+    @state_monitor.transition! :in_entry_header
+    
     entry = ::Zip::Entry.new(@file_name, entry_name)
     entry.compression_method = Zip::Entry::STORED
     entry.crc = crc32
@@ -128,7 +121,7 @@ class ZipTricks::Streamer
   #
   # @return [Fixnum] the offset the output IO is at after writing the central directory
   def write_central_directory!
-    transition! :in_central_directory
+    @state_monitor.transition! :in_central_directory
     cdir = Zip::CentralDirectory.new(@entry_set, comment = nil)
     cdir.write_to_stream(@output_stream)
     @output_stream.tell
@@ -141,8 +134,8 @@ class ZipTricks::Streamer
   #
   # @return [Fixnum] the offset the output IO is at after closing the archive
   def close
-    write_central_directory! unless in_state?(:in_central_directory)
-    transition! :closed
+    write_central_directory! unless @state_monitor.in_state?(:in_central_directory)
+    @state_monitor.transition! :closed
     @output_stream.tell
   end
     
@@ -164,30 +157,6 @@ class ZipTricks::Streamer
     if @bytes_written_for_entry != @expected_bytes_for_entry
       msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry, @bytes_written_for_entry]
       raise EntryBodySizeMismatch, msg
-    end
-  end
-  
-  def in_state?(state)
-    @state == state
-  end
-  
-  def transition_or_maintain!(new_state)
-    @recorded_transitions ||= []
-    return if @state == new_state
-    transition!(new_state)
-  end
-  
-  def expect!(state)
-    raise InvalidFlow, "Must be in #{state} state, but was in #{@state}" unless @state == state
-  end
-
-  def transition!(new_state)
-    raise "Unknown state #{new_state}" unless STATES.include?(new_state)
-    if TRANSITIONS.include?([@state, new_state])
-      send("leaving_#{@state}_state") if respond_to?("leaving_#{@state}_state", also_protected_and_private=true)
-      @state = new_state
-    else
-      raise InvalidFlow, "Cannot change states from #{@state} to #{new_state} (flow so far: #{@recorded_transitions.join('>')})"
     end
   end
 end

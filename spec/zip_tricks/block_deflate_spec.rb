@@ -99,5 +99,13 @@ describe ZipTricks::BlockDeflate do
       expect(output_string).not_to be_empty
       expect(output_string).not_to end_with([3,0].pack("C*"))
     end
+    
+    it 'returns the number of bytes written' do
+      input_string = 'compressible' * 1024 * 1024 * 10
+      output_string = ''
+      
+      num_bytes = described_class.deflate_in_blocks(StringIO.new(input_string), StringIO.new(output_string))
+      expect(num_bytes).to eq(245016)
+    end
   end
 end

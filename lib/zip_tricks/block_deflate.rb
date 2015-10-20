@@ -84,6 +84,6 @@ module ZipTricks::BlockDeflate
       output_io << deflated
       bytes_written += deflated.bytesize
     end
-    bytes_written + 2
+    bytes_written
   end
 end

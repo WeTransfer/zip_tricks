@@ -36,7 +36,7 @@ class ZipTricks::Streamer
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def initialize(stream)
     @state_monitor = ZipTricks::TinyStateMachine.new(:before_entry, callbacks_to=self)
-    @state_monitor.permit_state :before_entry, :in_entry_header, :in_entry_body, :in_central_directory, :closed
+    @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
     @state_monitor.permit_transition :in_entry_header => :in_entry_body
     @state_monitor.permit_transition :in_entry_body => :in_entry_header

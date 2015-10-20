@@ -12,6 +12,7 @@
 # as well.
 class ZipTricks::Streamer
   EntryBodySizeMismatch = Class.new(StandardError)
+  InvalidOutput = Class.new(ArgumentError)
   
   # Language encoding flag (EFS) bit (general purpose bit 11)
   EFS = 0b100000000000
@@ -35,6 +36,10 @@ class ZipTricks::Streamer
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def initialize(stream)
+    unless stream.respond_to?(:<<) && stream.respond_to?(:tell)
+      raise InvalidOutput, "The stream should respond to #<< and #tell"
+    end
+    
     @state_monitor = ZipTricks::TinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
@@ -42,10 +47,6 @@ class ZipTricks::Streamer
     @state_monitor.permit_transition :in_entry_body => :in_entry_header
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
     @state_monitor.permit_transition :in_central_directory => :closed
-    
-    unless stream.respond_to?(:<<) && stream.respond_to?(:tell)
-      raise "The stream should respond to #<< and #tell"
-    end
     
     @output_stream = stream
     @entry_set = ::Zip::EntrySet.new

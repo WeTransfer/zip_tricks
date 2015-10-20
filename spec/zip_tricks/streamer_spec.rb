@@ -21,6 +21,12 @@ describe ZipTricks::Streamer do
     yield.tap { ios.map(&:rewind) }
   end
   
+  it 'raises an InvalidOutput if the given object does not support the methods' do
+    expect {
+      described_class.new(nil)
+    }.to raise_error(ZipTricks::Streamer::InvalidOutput)
+  end
+  
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)

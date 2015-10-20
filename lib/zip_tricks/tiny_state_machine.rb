@@ -1,3 +1,5 @@
+require 'thread'
+
 # A mini state machine object that can be used to track a state flow.
 #
 # The entire state machine lives in a separate variable, and does not pollute the
@@ -36,6 +38,7 @@ class ZipTricks::TinyStateMachine
   
   # Initialize a new TinyStateMachine, with the initial state and the object that will receive callbacks.
   def initialize(initial_state, object_handling_callbacks = nil)
+    @mutex = Mutex.new
     @recorded_transitions = []
     @state = initial_state
     @permitted_states = Set.new([initial_state])
@@ -127,8 +130,11 @@ class ZipTricks::TinyStateMachine
     if may_transition_to?(new_state)
       @recorded_transitions << [@state, new_state.to_sym]
       dispatch_callbacks_before_transition(new_state)
-      previous_state = @state
-      @state = new_state.to_sym
+      previous_state = @mutex.synchronize do
+        previous = @state
+        @state = new_state.to_sym
+        previous
+      end
       dispatch_callbacks_after_transition(previous_state)
     else
       raise InvalidFlow, 

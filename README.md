@@ -36,7 +36,7 @@ and the sizes of these files upfront. This writes the local headers immediately,
 rewind the output IO. It also avoids using the local footers instead of headers, therefore permitting
 Zip64-sized entries to be stored easily.
 
-    # io has to be an object that supports #<<, #tell and #close
+    # io has to be an object that supports #<< and #tell
     io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
     
     ZipTricks::Streamer.open(io) do | zip |

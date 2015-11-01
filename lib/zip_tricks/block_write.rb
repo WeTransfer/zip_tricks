@@ -5,14 +5,8 @@ class ZipTricks::BlockWrite
   # to receive the string chunks written by the zip compressor.
   def initialize(&block)
     @block = block
-    @pos = 0
   end
 
-  # The zip library needs to get the position in the IO, and it does so using tell().
-  def tell
-    @pos
-  end
-  
   # Make sure those methods raise outright
   [:seek, :pos=, :to_s].each do |m|
     define_method(m) do |*args|
@@ -35,7 +29,6 @@ class ZipTricks::BlockWrite
     #  buf.dup.force_encoding(Encoding::BINARY)
     return if encoded.bytesize.zero? # Zero-size output has a special meaning when using chunked encoding
     
-    @pos += encoded.bytesize
     @block.call(encoded)
   end
   

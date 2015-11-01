@@ -67,19 +67,6 @@ describe ZipTricks::BlockWrite do
     expect(blobs).to eq(['hello', '!'])
   end
   
-  it 'maintains the count of bytes written' do
-    blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
-    expect(adapter.tell).to be_zero
-    
-    adapter << 'hello'
-    adapter << ''
-    adapter << '!'
-    expect(adapter.tell).to eq(6)
-  end
-  
   it 'raises a TypeError on specific unsupported methods' do
     adapter = described_class.new {|s| }
     expect {

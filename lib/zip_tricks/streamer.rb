@@ -36,9 +36,9 @@ class ZipTricks::Streamer
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   def initialize(stream)
-    unless stream.respond_to?(:<<) && stream.respond_to?(:tell)
-      raise InvalidOutput, "The stream should respond to #<< and #tell"
-    end
+    raise InvalidOutput, "The stream should respond to #<<" unless stream.respond_to?(:<<)
+    stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
+    @output_stream = stream
     
     @state_monitor = ZipTricks::TinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
@@ -48,19 +48,31 @@ class ZipTricks::Streamer
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
     @state_monitor.permit_transition :in_central_directory => :closed
     
-    @output_stream = stream
     @entry_set = ::Zip::EntrySet.new
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
   #
   # @param binary_data [String] a String in binary encoding
-  # @return [Streamer] self
+  # @return self
   def <<(binary_data)
     @state_monitor.transition_or_maintain! :in_entry_body
     @output_stream << binary_data
     @bytes_written_for_entry += binary_data.bytesize
     self
+  end
+  
+  # Advances the internal IO pointer to keep the offsets of the ZIP file in check. Use this if you are going
+  # to use accelerated writes to the socket (like the `sendfile()` call) after writing the headers, or if you
+  # just need to figure out the size of the archive.
+  #
+  # @param num_bytes [Numeric] how many bytes are going to be written bypassing the Streamer
+  # @return [Numeric] position in the output stream / ZIP archive
+  def simulate_write(num_bytes)
+    @state_monitor.transition_or_maintain! :in_entry_body
+    @output_stream.advance_position_by(num_bytes)
+    @bytes_written_for_entry += num_bytes
+    @output_stream.tell
   end
   
   # Writes out the local header for an entry (file in the ZIP) that is using the deflated storage model (is compressed).

@@ -11,6 +11,21 @@ describe ZipTricks::WriteAndTell do
     expect(adapter.tell).to eq(6)
   end
   
+  it 'is able to write frozen String objects in different encodings, converting them to binary' do
+    strs = [
+      [12, 123, 0, 3].pack("C*"),
+      "текста кусок",
+      "текста замороженный кусок".freeze,
+      [12, 123, 0, 3].pack("C*"),
+    ]
+    
+    buf = 'превед'.force_encoding(Encoding::BINARY)
+    writer = described_class.new(buf)
+    strs.each {|s| writer << s }
+    expect(writer.tell).to eq(79)
+    expect(buf.bytesize).to eq(91) # It already contained some bytes
+  end
+  
   it 'advances the internal pointer using advance_position_by' do
     str = ''
     

@@ -8,8 +8,9 @@ class ZipTricks::WriteAndTell
   
   def <<(bytes)
     return self if bytes.nil?
-    @io << bytes
-    @pos += bytes.bytesize
+    binary_bytes = binary(bytes)
+    @io << binary_bytes
+    @pos += binary_bytes.bytesize
     self
   end
   
@@ -19,5 +20,14 @@ class ZipTricks::WriteAndTell
   
   def tell
     @pos
+  end
+  
+  private
+  
+  def binary(str)
+    return str if str.encoding == Encoding::BINARY
+    str.force_encoding(Encoding::BINARY)
+  rescue RuntimeError # the string is frozen
+    str.dup.force_encoding(Encoding::BINARY)
   end
 end

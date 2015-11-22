@@ -114,7 +114,7 @@ procedure, so it computes the sizes of all the headers and the central directory
 
 ## StreamCRC32
 
-Computes thw CRC32 value in a streaming fashion. Is slightly more convenient for the purpose than using the raw Zlib
+Computes the CRC32 value in a streaming fashion. Is slightly more convenient for the purpose than using the raw Zlib
 library functions.
 
     crc = ZipTricks::StreamCRC32.new

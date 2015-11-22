@@ -112,6 +112,20 @@ procedure, so it computes the sizes of all the headers and the central directory
     end
 
 
+## StreamCRC32
+
+Computes thw CRC32 value in a streaming fashion. Is slightly more convenient for the purpose than using the raw Zlib
+library functions.
+
+    crc = ZipTricks::StreamCRC32.new
+    crc << large_file.read(1024 * 12) until large_file.eof?
+    ...
+    
+    crc.to_i # Returns the actual CRC32 value computed so far
+    ...
+    # Append a known CRC32 value that has been computed previosuly
+    crc.append(precomputed_crc32, size_of_the_blob_computed_from)
+
 ## Contributing to zip_tricks
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.

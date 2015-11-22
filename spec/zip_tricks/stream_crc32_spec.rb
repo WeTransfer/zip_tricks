@@ -16,4 +16,13 @@ describe ZipTricks::StreamCRC32 do
     stream_crc << raw.read(1024 * 64) until raw.eof?
     expect(stream_crc.to_i).to eq(crc)
   end
+  
+  it 'allows in-place update with a known value' do
+    crc = Zlib.crc32
+    
+    stream_crc = described_class.new
+    stream_crc << "This is some data"
+    stream_crc.append(45678, 12910)
+    expect(stream_crc.to_i).to eq(1555667875)
+  end
 end

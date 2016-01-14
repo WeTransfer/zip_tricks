@@ -40,7 +40,7 @@ class ZipTricks::Streamer
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
     @output_stream = stream
     
-    @state_monitor = ZipTricks::TinyStateMachine.new(:before_entry, callbacks_to=self)
+    @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
     @state_monitor.permit_transition :in_entry_header => :in_entry_body

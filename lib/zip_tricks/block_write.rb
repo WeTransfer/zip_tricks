@@ -30,6 +30,7 @@ class ZipTricks::BlockWrite
     return if encoded.bytesize.zero? # Zero-size output has a special meaning when using chunked encoding
     
     @block.call(encoded)
+    self
   end
   
   # Does nothing

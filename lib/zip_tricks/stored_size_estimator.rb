@@ -6,7 +6,7 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   NO_OP_BYTES_RECEIVER = ->(bytes) {}
   
   NullWriter = Class.new do
-    def <<(data); end
+    def <<(data); self; end
   end.new
   
   # Performs the estimate using fake archiving. It needs to know the sizes of the

@@ -14,6 +14,17 @@ describe ZipTricks::BlockWrite do
     expect(blobs).to eq(['hello', 'world', '!'])
   end
   
+  it 'supports chained shovel' do
+    blobs = []
+    adapter = described_class.new{|s|
+      blobs << s
+    }
+    
+    adapter << 'hello' << 'world' << '!'
+    
+    expect(blobs).to eq(['hello', 'world', '!'])
+  end
+  
   it 'can write in all possible encodings, even if the strings are frozen' do
     destination = ''.encode(Encoding::BINARY)
     

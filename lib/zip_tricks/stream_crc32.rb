@@ -18,9 +18,10 @@ class ZipTricks::StreamCRC32
   # Append data to the CRC32. Updates the contained CRC32 value in place.
   #
   # @param blob[String] the string to compute the CRC32 from
-  # @return crc[Fixnum] the updated CRC32 value for all the blobs so far
+  # @return [self]
   def <<(blob)
     @crc = Zlib.crc32_combine(@crc, Zlib.crc32(blob), blob.bytesize)
+    self
   end
   
   # Returns the CRC32 value computed so far

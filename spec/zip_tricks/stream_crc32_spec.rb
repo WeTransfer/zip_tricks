@@ -17,6 +17,16 @@ describe ZipTricks::StreamCRC32 do
     expect(stream_crc.to_i).to eq(crc)
   end
   
+  it 'supports chained shovel' do
+    str = 'abcdef'
+    crc = Zlib.crc32(str)
+    
+    stream_crc = described_class.new
+    stream_crc << 'a' << 'b' << 'c' << 'd' << 'e' << 'f'
+    
+    expect(stream_crc.to_i).to eq(crc)
+  end
+  
   it 'allows in-place update with a known value' do
     crc = Zlib.crc32
     

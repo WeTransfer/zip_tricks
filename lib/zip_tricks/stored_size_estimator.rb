@@ -1,13 +1,5 @@
 # Helps to estimate archive sizes
-class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
-  # One meg of fake data. Has an overridden inspect()
-  # so that it does not fill the inspecting terminal with garbage.
-  FAKE_CRC = Zlib.crc32('Mary had a little lamb')
-  NO_OP_BYTES_RECEIVER = ->(bytes) {}
-  
-  NullWriter = Class.new do
-    def <<(data); self; end
-  end.new
+class ZipTricks::StoredSizeEstimator < Struct.new(:manifest)
   
   # Performs the estimate using fake archiving. It needs to know the sizes of the
   # entries upfront. Usage:
@@ -20,11 +12,13 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   # @return [Fixnum] the size of the resulting archive, in bytes
   # @yield [StoredSizeEstimator] the estimator
   def self.perform_fake_archiving
-    output_io = ZipTricks::WriteAndTell.new(NullWriter)
-    ZipTricks::Streamer.open(output_io) do | zip_streamer |
-      yield(new(zip_streamer))
+    _, bytes = ZipTricks::Manifest.build do |manifest|
+      # The API for this class uses positional arguments. The Manifest API
+      # uses keyword arguments.
+      call_adapter = new(manifest)
+      yield(call_adapter)
     end
-    output_io.tell
+    bytes
   end
   
   # Add a fake entry to the archive, to see how big it is going to be in the end.
@@ -33,8 +27,7 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   # @param size_uncompressed [Fixnum] size of the uncompressed entry
   # @return self
   def add_stored_entry(name, size_uncompressed)
-    zip_streamer.add_stored_entry(name, size_uncompressed, FAKE_CRC)
-    zip_streamer.simulate_write(size_uncompressed)
+    manifest.add_stored_entry(name: name, size_uncompressed: size_uncompressed)
     self
   end
   
@@ -45,8 +38,7 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:zip_streamer)
   # @param size_compressed [Fixnum] size of the compressed entry
   # @return self
   def add_compressed_entry(name, size_uncompressed, size_compressed)
-    zip_streamer.add_compressed_entry(name, size_uncompressed, FAKE_CRC, size_compressed)
-    zip_streamer.simulate_write(size_compressed)
+    manifest.add_compressed_entry(name: name, size_uncompressed: size_uncompressed, size_compressed: size_compressed)
     self
   end
 end

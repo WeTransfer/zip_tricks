@@ -5,5 +5,5 @@ module ZipTricks
   VERSION = '2.4.3'
   
   # Require all the sub-components except myself
-  Dir.glob(__dir__ + '/**/*.rb').each {|p| require p unless p == __FILE__ }
+  Dir.glob(__dir__ + '/**/*.rb').sort.each {|p| require p unless p == __FILE__ }
 end

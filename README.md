@@ -138,6 +138,5 @@ library functions.
 
 ## Copyright
 
-Copyright (c) 2015 Julik Tarkhanov. See LICENSE.txt for
+Copyright (c) 2015 WeTransfer. See LICENSE.txt for
 further details.
-

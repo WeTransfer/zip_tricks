@@ -1,6 +1,6 @@
 rvm:
 - 2.1
 - 2.2
-- jruby-9.0
+#- jruby-9.0
 sudo: false
 cache: bundler

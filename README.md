@@ -1,5 +1,7 @@
 # zip_tricks
 
+[![Build Status](https://travis-ci.org/WeTransfer/zip_tricks.svg?branch=master)](https://travis-ci.org/WeTransfer/zip_tricks)
+
 Makes Rubyzip sing, dance and play saxophone for streaming applications.
 Spiritual successor to [zipline](https://github.com/fringd/zipline)
 

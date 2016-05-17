@@ -1,6 +1,6 @@
 source "http://rubygems.org"
 
-gem 'rubyzip', '~> 1.1.7'
+gem 'rubyzip', '~> 1.1', '>= 1.1.7'
 gem 'very_tiny_state_machine', '~> 2'
 
 group :development do

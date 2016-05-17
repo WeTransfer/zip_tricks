@@ -15,7 +15,7 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
   gem.name = "zip_tricks"
-  gem.homepage = "http://github.com/julik/zip_tricks"
+  gem.homepage = "http://github.com/wetransfer/zip_tricks"
   gem.license = "MIT"
   gem.version = ZipTricks::VERSION
   gem.summary = %Q{Makes rubyzip stream, for real}

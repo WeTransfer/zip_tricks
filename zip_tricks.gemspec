@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]
   s.authors = ["Julik Tarkhanov"]
-  s.date = "2016-03-06"
+  s.date = "2016-05-17"
   s.description = "Makes rubyzip stream, for real"
   s.email = "me@julik.nl"
   s.extra_rdoc_files = [
@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
     ".document",
     ".gitlab-ci.yml",
     ".rspec",
+    ".travis.yml",
     ".yardopts",
     "Gemfile",
     "LICENSE.txt",
@@ -49,7 +50,7 @@ Gem::Specification.new do |s|
     "spec/zip_tricks/write_and_tell_spec.rb",
     "zip_tricks.gemspec"
   ]
-  s.homepage = "http://github.com/julik/zip_tricks"
+  s.homepage = "http://github.com/wetransfer/zip_tricks"
   s.licenses = ["MIT"]
   s.rubygems_version = "2.2.2"
   s.summary = "Makes rubyzip stream, for real"

@@ -40,12 +40,9 @@ end
 
 task :default => :spec
 
-require 'rdoc/task'
-Rake::RDocTask.new do |rdoc|
-  version = File.exist?('VERSION') ? File.read('VERSION') : ""
-
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "zip_tricks #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
+desc "Generate YARD documentation"
+YARD::Rake::YardocTask.new do |t|
+  t.files   = ['lib/**/*.rb', 'ext/**/*.c' ]
+  t.options = ['--markup markdown']
+  t.stats_options = ['--list-undoc']
 end

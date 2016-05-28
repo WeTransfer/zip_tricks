@@ -40,6 +40,7 @@ end
 
 task :default => :spec
 
+require 'yard'
 desc "Generate YARD documentation"
 YARD::Rake::YardocTask.new do |t|
   t.files   = ['lib/**/*.rb', 'ext/**/*.c' ]

@@ -15,7 +15,7 @@ class ZipTricks::Manifest < Struct.new(:zip_streamer, :io, :part_list)
   #     zip_spans[0] #=> Manifest::ZipSpan(part_type: :entry_header, byte_range_in_zip: 0..44, ...)
   #     zip_spans[-1] #=> Manifest::ZipSpan(part_type: :central_directory, byte_range_in_zip: 776721..898921, ...)
   #
-  # @return [Array<Array<ZipSpan>, Fixnum>] an array of byte spans within the final ZIP, and the total size of the archive
+  # @return [Array<ZipSpan>, Fixnum] an array of byte spans within the final ZIP, and the total size of the archive
   # @yield [Manifest] the manifest object you can add entries to
   def self.build
     output_io = ZipTricks::WriteAndTell.new(ZipTricks::NullWriter)

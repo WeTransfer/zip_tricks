@@ -6,7 +6,12 @@ Makes Rubyzip sing, dance and play saxophone for streaming applications.
 Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
 Requires Ruby 2.1+, rubyzip and a couple of other gems (all available to jRuby as well).
-The library is composed of a loose set of modules which are described below.
+The library is composed of a loose set of modules.
+
+## Usage by example
+
+Check out the `examples/` directory at the root of the project. This will give you a good idea
+of various use cases the library supports.
 
 ## BlockDeflate
 

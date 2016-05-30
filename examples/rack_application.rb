@@ -31,8 +31,8 @@ class ZipDownload
       ar.add_stored_entry(filename, f.size)
     end
     
-    # Compute the size of the download, so that a
-    # real Content-Length header can be sent.
+    # Create a suitable Rack response body, that will support each(),
+    # close() and all the other methods. We can then return it up the stack.
     zip_response_body = ZipTricks::RackBody.new do |zip|
       begin
         # We are adding only one file to the ZIP here, but you could do that
@@ -40,7 +40,7 @@ class ZipDownload
         zip.add_stored_entry(filename, f.size, crc32)
         # Write the contents of the file. It is stored, so the writes go directly
         # to the Rack output, bypassing any RubyZip deflaters/compressors. In fact you
-        # are splicing the file _directly_ into the Rack output.
+        # are yielding the "blob" string here directly to the Rack server handler.
         while blob = f.read(1024 * 128)
           zip << blob
         end
@@ -49,11 +49,11 @@ class ZipDownload
       end
     end
     
-    # Add the Content-Length header for decent download progress indication,
-    # and a Content-Disposition so that the download has a .zip extension.
+    # Add a Content-Disposition so that the download has a .zip extension
+    # (this will not work well with UTF-8 filenames on Windows, but hey!)
     content_disposition = 'attachment; filename=%s.zip' % filename
     
-    # and return the response
+    # and return the response, adding the Content-Length we have computed earlier
     [200, {'Content-Length' => size.to_s, 'Content-Disposition' => content_disposition}, zip_response_body]
   end
 end

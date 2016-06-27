@@ -2,6 +2,7 @@ source "http://rubygems.org"
 
 gem 'rubyzip', '~> 1.1', '>= 1.1.7'
 gem 'very_tiny_state_machine', '~> 2'
+gem 'range_utils', '~> 1', '>= 1.3.1'
 
 group :development do
   gem 'rake', '~> 10.4'
@@ -9,5 +10,4 @@ group :development do
   gem "yard", "~> 0.8"
   gem "bundler", "~> 1.0"
   gem "jeweler", "~> 2.0.1"
-  gem 'range_utils'
 end

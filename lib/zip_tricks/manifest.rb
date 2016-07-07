@@ -1,10 +1,10 @@
 # Helps to estimate archive sizes
 class ZipTricks::Manifest < Struct.new(:zip_streamer, :io, :part_list)
-  
+
   # Describes a span within the ZIP bytestream
   class ZipSpan < Struct.new(:part_type, :byte_range_in_zip, :filename, :additional_metadata)
   end
-  
+
   # Builds an array of spans within the ZIP file and computes the size of the resulting archive in bytes.
   #
   #     zip_spans, bytesize = Manifest.build do | b |
@@ -26,14 +26,14 @@ class ZipTricks::Manifest < Struct.new(:zip_streamer, :io, :part_list)
       yield(manifest)
       last_range_end = part_list[-1].byte_range_in_zip.end
     end
-    
+
     # Record the position of the central directory
     directory_location = (last_range_end + 1)..(output_io.tell - 1)
     part_list << ZipSpan.new(:central_directory, directory_location, :central_directory, nil)
-    
+
     [part_list, output_io.tell]
   end
-  
+
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
   # @param name [String] the name of the file (filenames are variable-width in the ZIP)
@@ -45,14 +45,14 @@ class ZipTricks::Manifest < Struct.new(:zip_streamer, :io, :part_list)
     register_part(:entry_header, name, segment_info) do
       zip_streamer.add_stored_entry(name, size_uncompressed, C_fake_crc)
     end
-    
+
     register_part(:entry_body, name, segment_info) do
       zip_streamer.simulate_write(size_uncompressed)
     end
-    
+
     self
   end
-  
+
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
   # @param name [String] the name of the file (filenames are variable-width in the ZIP)
@@ -65,19 +65,19 @@ class ZipTricks::Manifest < Struct.new(:zip_streamer, :io, :part_list)
     register_part(:entry_header, name, segment_info) do
       zip_streamer.add_compressed_entry(name, size_uncompressed, C_fake_crc, size_compressed)
     end
-    
+
     register_part(:entry_body, name, segment_info) do
       zip_streamer.simulate_write(size_compressed)
     end
-    
+
     self
   end
-  
+
   private
-  
+
   C_fake_crc = Zlib.crc32('Mary had a little lamb')
   private_constant :C_fake_crc
-  
+
   def register_part(span_type, filename, metadata)
     before, _, after = io.tell, yield, (io.tell - 1)
     part_list << ZipSpan.new(span_type, (before..after), filename, metadata)

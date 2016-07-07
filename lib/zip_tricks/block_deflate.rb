@@ -27,7 +27,7 @@ module ZipTricks::BlockDeflate
     output_io << END_MARKER
     END_MARKER.bytesize
   end
-  
+
   # Compress a given binary string and flush the deflate stream at byte boundary.
   # The returned string can be spliced into another deflate stream.
   #
@@ -40,11 +40,11 @@ module ZipTricks::BlockDeflate
     compressed_blob = z.deflate(bytes, Zlib::SYNC_FLUSH)
     compressed_blob << z.finish
     z.close
-    
+
     # Remove the header (2 bytes), the [3,0] end marker and the adler (4 bytes)
     compressed_blob[2...-6]
   end
-  
+
   # Compress the contents of input_io into output_io, in blocks
   # of block_size. Aligns the parts so that they can be concatenated later.
   # Writes deflate end marker (\x3\x0) into `output_io` as the final step, so
@@ -64,7 +64,7 @@ module ZipTricks::BlockDeflate
     bytes_written = deflate_in_blocks(input_io, output_io, level: level, block_size: block_size)
     bytes_written + write_terminator(output_io)
   end
-  
+
   # Compress the contents of input_io into output_io, in blocks
   # of block_size. Align the parts so that they can be concatenated later.
   # Will not write the deflate end marker (\x3\x0) so more parts can be written

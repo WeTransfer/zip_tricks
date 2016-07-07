@@ -13,13 +13,13 @@
 class ZipTricks::Streamer
   EntryBodySizeMismatch = Class.new(StandardError)
   InvalidOutput = Class.new(ArgumentError)
-  
+
   # Language encoding flag (EFS) bit (general purpose bit 11)
   EFS = 0b100000000000
-  
+
   # Default general purpose flags for each entry.
   DEFAULT_GP_FLAGS = 0b00000000000
-  
+
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central
   # directory of the archive to the output.
@@ -31,7 +31,7 @@ class ZipTricks::Streamer
     yield(archive)
     archive.close
   end
-  
+
   # Creates a new Streamer on top of the given IO-ish object.
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
@@ -39,7 +39,7 @@ class ZipTricks::Streamer
     raise InvalidOutput, "The stream should respond to #<<" unless stream.respond_to?(:<<)
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
     @output_stream = stream
-    
+
     @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
@@ -47,7 +47,7 @@ class ZipTricks::Streamer
     @state_monitor.permit_transition :in_entry_body => :in_entry_header
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
     @state_monitor.permit_transition :in_central_directory => :closed
-    
+
     @entry_set = ::Zip::EntrySet.new
   end
 
@@ -61,7 +61,7 @@ class ZipTricks::Streamer
     @bytes_written_for_entry += binary_data.bytesize
     self
   end
-  
+
   # Advances the internal IO pointer to keep the offsets of the ZIP file in check. Use this if you are going
   # to use accelerated writes to the socket (like the `sendfile()` call) after writing the headers, or if you
   # just need to figure out the size of the archive.
@@ -74,7 +74,7 @@ class ZipTricks::Streamer
     @bytes_written_for_entry += num_bytes
     @output_stream.tell
   end
-  
+
   # Writes out the local header for an entry (file in the ZIP) that is using the deflated storage model (is compressed).
   # Once this method is called, the `<<` method has to be called to write the actual contents of the body.
   #
@@ -88,21 +88,21 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
     @state_monitor.transition! :in_entry_header
-    
+
     entry = ::Zip::Entry.new(@file_name, entry_name)
     entry.compression_method = Zip::Entry::DEFLATED
     entry.crc = crc32
     entry.size = uncompressed_size
     entry.compressed_size = compressed_size
     set_gp_flags_for_filename(entry, entry_name)
-    
+
     @entry_set << entry
     entry.write_local_entry(@output_stream)
     @expected_bytes_for_entry = compressed_size
     @bytes_written_for_entry = 0
     @output_stream.tell
   end
-  
+
   # Writes out the local header for an entry (file in the ZIP) that is using the stored storage model (is stored as-is).
   # Once this method is called, the `<<` method has to be called one or more times to write the actual contents of the body.
   #
@@ -112,7 +112,7 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(entry_name, uncompressed_size, crc32)
     @state_monitor.transition! :in_entry_header
-    
+
     entry = ::Zip::Entry.new(@file_name, entry_name)
     entry.compression_method = Zip::Entry::STORED
     entry.crc = crc32
@@ -125,8 +125,8 @@ class ZipTricks::Streamer
     @expected_bytes_for_entry = uncompressed_size
     @output_stream.tell
   end
-  
-  
+
+
   # Writes out the global footer and the directory entry header and the global directory of the ZIP
   # archive using the information about the entries added using `add_stored_entry` and `add_compressed_entry`.
   #
@@ -139,7 +139,7 @@ class ZipTricks::Streamer
     cdir.write_to_stream(@output_stream)
     @output_stream.tell
   end
-  
+
   # Closes the archive. Writes the central directory if it has not yet been written.
   # Switches the Streamer into a state where it can no longer be written to.
   #
@@ -151,9 +151,9 @@ class ZipTricks::Streamer
     @state_monitor.transition! :closed
     @output_stream.tell
   end
-    
+
   private
-  
+
   # Set the general purpose flags for the entry. The only flag we care about is the EFS
   # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
   # bit so that the unarchiving application knows that the filename in the archive is UTF-8
@@ -164,7 +164,7 @@ class ZipTricks::Streamer
   rescue Encoding::UndefinedConversionError #=> UTF8 filename
     entry.gp_flags = DEFAULT_GP_FLAGS | EFS
   end
-  
+
   # Checks whether the number of bytes written conforms to the declared entry size
   def leaving_in_entry_body_state
     if @bytes_written_for_entry != @expected_bytes_for_entry

@@ -1,6 +1,6 @@
 # Helps to estimate archive sizes
 class ZipTricks::StoredSizeEstimator < Struct.new(:manifest)
-  
+
   # Performs the estimate using fake archiving. It needs to know the sizes of the
   # entries upfront. Usage:
   #
@@ -20,7 +20,7 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:manifest)
     end
     bytes
   end
-  
+
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
   # @param name [String] the name of the file (filenames are variable-width in the ZIP)
@@ -30,7 +30,7 @@ class ZipTricks::StoredSizeEstimator < Struct.new(:manifest)
     manifest.add_stored_entry(name: name, size_uncompressed: size_uncompressed)
     self
   end
-  
+
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
   # @param name [String] the name of the file (filenames are variable-width in the ZIP)

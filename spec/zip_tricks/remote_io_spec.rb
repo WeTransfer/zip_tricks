@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe ZipTricks::RemoteIO do
-  
+
   context 'working with the fetcher object' do
     it 'asks the fetcher object to obtain the object size and the actual data when reading' do
       mock_fetcher = double(request_object_size: 120, request_range: 'abc')
@@ -9,17 +9,17 @@ describe ZipTricks::RemoteIO do
       expect(subject.read(3)).to eq('abc')
     end
   end
-  
+
   context 'when it internally addresses a remote resource' do
     it 'requests the size of the resource once via #request_object_size and does neet to read if resource is empty' do
       subject = described_class.new
       expect(subject).to receive(:request_object_size).and_return(0)
       expect(subject.read).to be_nil
     end
-    
+
     it 'performs remote reads when repeatedly requesting the same chunk, via #request_range' do
       subject = described_class.new
-      
+
       expect(subject).to receive(:request_object_size).and_return(120)
       allow(subject).to receive(:request_range) {|range|
         expect(range).to eq(5..14)
@@ -31,7 +31,7 @@ describe ZipTricks::RemoteIO do
       end
     end
   end
-  
+
   describe '#seek' do
     context 'with an unsupported mode' do
       it 'raises an error' do
@@ -55,7 +55,7 @@ describe ZipTricks::RemoteIO do
       it 'seens to 10 bytes to the end of the IO' do
         uncap = described_class.new
         expect(uncap).to receive(:request_object_size).and_return(100)
-        
+
         mode = IO::SEEK_END
         offset = -10
         expect(uncap.seek(-10, IO::SEEK_END)).to eq(0)
@@ -70,19 +70,19 @@ describe ZipTricks::RemoteIO do
       @buf.binmode
       5.times { @buf << Random.new.bytes(1024 * 1024 * 3) }
       @buf.rewind
-      
+
       @subject = described_class.new
-      
+
       allow(@subject).to receive(:request_object_size).and_return(@buf.size)
       allow(@subject).to receive(:request_range) {|range|
         @buf.read[range].tap { @buf.rewind }
       }
     end
-    
+
     after :each do
       @buf.close; @buf.unlink
     end
-    
+
     context 'without arguments' do
       it 'reads the entire buffer and alters the position pointer' do
         expect(@subject.pos).to eq(0)
@@ -102,10 +102,10 @@ describe ZipTricks::RemoteIO do
 
       it 'returns exact amount of bytes from the middle of the buffer' do
         @subject.seek(456, IO::SEEK_SET)
-        
+
         bytes_read = @subject.read(10)
         expect(@subject.pos).to eq(456+10)
-        
+
         @buf.seek(456)
         expect(bytes_read).to eq(@buf.read(10))
       end
@@ -113,11 +113,11 @@ describe ZipTricks::RemoteIO do
       it 'returns the last N bytes it can read' do
         at_end = @buf.size - 4
         @subject.seek(at_end, IO::SEEK_SET)
-        
+
         expect(@subject.pos).to eq(15728636)
         bytes_read = @subject.read(10)
         expect(@subject.pos).to eq(@buf.size) # Should have moved the pos pointer to the end
-        
+
         expect(bytes_read.bytesize).to eq(4)
 
         expect(@subject.pos).to eq(@buf.size)

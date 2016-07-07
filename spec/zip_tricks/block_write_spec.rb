@@ -6,44 +6,44 @@ describe ZipTricks::BlockWrite do
     adapter = described_class.new{|s|
       blobs << s
     }
-    
+
     adapter << 'hello'
     adapter << 'world'
     adapter << '!'
-    
+
     expect(blobs).to eq(['hello', 'world', '!'])
   end
-  
+
   it 'supports chained shovel' do
     blobs = []
     adapter = described_class.new{|s|
       blobs << s
     }
-    
+
     adapter << 'hello' << 'world' << '!'
-    
+
     expect(blobs).to eq(['hello', 'world', '!'])
   end
-  
+
   it 'can write in all possible encodings, even if the strings are frozen' do
     destination = ''.encode(Encoding::BINARY)
-    
+
     accum_string = ''
     adapter = described_class.new{|s| accum_string << s }
-    
+
     adapter << 'hello'
     adapter << 'привет'
     adapter << 'привет'.freeze
     adapter << '!'
     adapter << SecureRandom.random_bytes(1024)
-    
+
     expect(accum_string.bytesize).to eq(1054)
   end
-  
+
   it 'can be closed' do
     expect(described_class.new{}.close).to be_nil
   end
-  
+
   it 'forces the written strings to binary encoding' do
     blobs = []
     adapter = described_class.new{|s|
@@ -55,7 +55,7 @@ describe ZipTricks::BlockWrite do
     expect(blobs).not_to be_empty
     blobs.each {|s| expect(s.encoding).to eq(Encoding::BINARY) }
   end
-  
+
   it 'omits strings of zero length' do
     blobs = []
     adapter = described_class.new{|s|
@@ -66,7 +66,7 @@ describe ZipTricks::BlockWrite do
     adapter << '!'
     expect(blobs).to eq(['hello', '!'])
   end
-  
+
   it 'omits nils' do
     blobs = []
     adapter = described_class.new{|s|
@@ -77,17 +77,17 @@ describe ZipTricks::BlockWrite do
     adapter << '!'
     expect(blobs).to eq(['hello', '!'])
   end
-  
+
   it 'raises a TypeError on specific unsupported methods' do
     adapter = described_class.new {|s| }
     expect {
       adapter.seek(123)
     }.to raise_error(/non\-rewindable/)
-    
+
     expect {
       adapter.to_s
     }.to raise_error(/non\-rewindable/)
-    
+
     expect {
       adapter.pos = 123
     }.to raise_error(/non\-rewindable/)

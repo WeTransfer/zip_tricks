@@ -5,7 +5,7 @@ class ZipTricks::WriteAndTell
     @io = io
     @pos = 0
   end
-  
+
   def <<(bytes)
     return self if bytes.nil?
     binary_bytes = binary(bytes)
@@ -13,17 +13,17 @@ class ZipTricks::WriteAndTell
     @pos += binary_bytes.bytesize
     self
   end
-  
+
   def advance_position_by(num_bytes)
     @pos += num_bytes
   end
-  
+
   def tell
     @pos
   end
-  
+
   private
-  
+
   def binary(str)
     return str if str.encoding == Encoding::BINARY
     str.force_encoding(Encoding::BINARY)

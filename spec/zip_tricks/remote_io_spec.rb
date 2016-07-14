@@ -93,6 +93,14 @@ describe ZipTricks::RemoteIO do
     end
 
     context 'with length' do
+      it 'supports an unlimited number of reads of size 0 and does not perform remote fetches for them' do
+        expect(@subject).not_to receive(:request_range)
+        20.times do
+          data = @subject.read(0)
+          expect(data).to eq('')
+        end
+      end
+      
       it 'returns exact amount of bytes at the start of the buffer' do
         bytes_read = @subject.read(10)
         expect(@subject.pos).to eq(10)

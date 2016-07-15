@@ -62,6 +62,17 @@ class ZipTricks::Streamer
     self
   end
 
+  # Writes a part of a zip entry body (actual binary data of the entry) into the output stream,
+  # and returns the number of bytes written. Is implemented to make Streamer usable with
+  # `IO.copy_stream(from, to)`.
+  #
+  # @param binary_data [String] a String in binary encoding
+  # @return [Fixnum] the number of bytes written
+  def write(binary_data)
+    self << binary_data
+    binary_data.bytesize
+  end
+
   # Advances the internal IO pointer to keep the offsets of the ZIP file in check. Use this if you are going
   # to use accelerated writes to the socket (like the `sendfile()` call) after writing the headers, or if you
   # just need to figure out the size of the archive.

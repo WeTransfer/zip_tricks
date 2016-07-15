@@ -207,7 +207,7 @@ describe ZipTricks::Streamer do
     zip.add_stored_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
     zip << raw_file_1
     zip.add_stored_entry("второй-файл.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
-    zip << raw_file_2
+    IO.copy_stream(StringIO.new(raw_file_2), zip)
     zip.close
 
     zip_buf.flush

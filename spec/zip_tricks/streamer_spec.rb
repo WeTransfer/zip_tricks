@@ -45,7 +45,7 @@ describe ZipTricks::Streamer do
 
     pos = zip.write_central_directory!
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(17985)
+    expect(pos).to eq(18039)
 
     pos_after_close = zip.close
     expect(pos_after_close).to eq(pos)

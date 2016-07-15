@@ -7,10 +7,17 @@
 # you have the file's CRC32 checksum upfront.
 #
 # Just like Rubyzip it will switch to Zip64 automatically if required, but there is no global
-# setting for that.
+# setting to enable that behavior - it is always on.
 class ZipTricks::Microzip
   STORED   = 0
   DEFLATED = 8
+
+  TooMuch = Class.new(StandardError)
+  DuplicateFilenames = Class.new(StandardError)
+  UnknownMode = Class.new(StandardError)
+  
+  private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
+    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :Entry
 
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF
@@ -18,10 +25,6 @@ class ZipTricks::Microzip
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45
-
-  TooMuch = Class.new(StandardError)
-  DuplicateFilenames = Class.new(StandardError)
-  UnknownMode = Class.new(StandardError)
 
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
     def initialize(*)
@@ -201,12 +204,24 @@ class ZipTricks::Microzip
     end
   end
 
+  # Creates a new streaming writer. The writer is stateful and knows it's list of ZIP file entries
+  # as they are being added.
   # @param out_io[#<<, #tell] a writable object that responds to << and tell
   def initialize(out_io)
     @io = out_io
     @files = []
   end
 
+  # Adds a file to the entry list and immediately writes out it's local file header into the
+  # output stream.
+  #
+  # @param filename[String] The name of the file
+  # @param crc32[Fixnum]    The CRC32 checksum of the file
+  # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
+  # @param uncompressed_size[Fixnum]  The size of the file once extracted
+  # @param storage_mode[Fixnum]  Either 0 for "stored" or 8 for "deflated"
+  # @param mtime[Time] What modification time to record for the file
+  # @return [void]
   def add_local_file_header(filename:, crc32:, compressed_size:, uncompressed_size:, storage_mode:, mtime: Time.now.utc)
     if @files.any?{|e| e.filename == filename }
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
@@ -228,6 +243,9 @@ class ZipTricks::Microzip
   end
 =end
 
+  # Writes the central directory (including the Zip6 salient bits if necessary)
+  #
+  # @return [void]
   def write_central_directory
     start_of_central_directory = @io.tell
 

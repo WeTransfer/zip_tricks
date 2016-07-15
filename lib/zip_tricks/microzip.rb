@@ -16,9 +16,6 @@ class ZipTricks::Microzip
   DuplicateFilenames = Class.new(StandardError)
   UnknownMode = Class.new(StandardError)
   
-  private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
-    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :Entry
-
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF
 
@@ -319,4 +316,7 @@ class ZipTricks::Microzip
     @io << [0].pack('v')                                    # .ZIP file comment length        2 bytes
                                                             # .ZIP file comment       (variable size)
   end
+  
+  private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
+    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :Entry
 end

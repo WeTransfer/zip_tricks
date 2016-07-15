@@ -38,14 +38,14 @@ describe ZipTricks::Streamer do
     expect(retval).to eq(zip)
     expect(io.tell).to eq(8950)
 
-    pos = zip.add_stored_entry('file.jpg', 8921, 182919)
+    pos = zip.add_stored_entry('filf.jpg', 8921, 182919)
     expect(pos).to eq(8988)
     zip << SecureRandom.random_bytes(8921)
     expect(io.tell).to eq(17909)
 
     pos = zip.write_central_directory!
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(17985)
+    expect(pos).to eq(18039)
 
     pos_after_close = zip.close
     expect(pos_after_close).to eq(pos)

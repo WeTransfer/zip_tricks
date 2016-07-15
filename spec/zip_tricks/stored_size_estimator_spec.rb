@@ -13,10 +13,10 @@ describe ZipTricks::StoredSizeEstimator do
 
       estimator.add_stored_entry("second-file.bin", raw_file_2.size)
 
-      r = estimator.add_compressed_entry("second-file.bin", raw_file_2.size, raw_file_3.size)
+      r = estimator.add_compressed_entry("second-flie.bin", raw_file_2.size, raw_file_3.size)
       expect(r).to eq(estimator), "add_compressed_entry should return self"
     end
 
-    expect(predicted_size).to eq(1410524)
+    expect(predicted_size).to eq(1410585)
   end
 end

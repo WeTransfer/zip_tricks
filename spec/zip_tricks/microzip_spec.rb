@@ -43,6 +43,8 @@ describe ZipTricks::Microzip do
     end
     
     inspect_zip_with_external_tool(tf.path)
+    open_zip_with_archive_utility(tf.path)
+    open_zip_with_unarchiver(tf.path)
   end
 
   it 'raises an exception if the filename is non-unique in the already existing set' do
@@ -109,6 +111,7 @@ describe ZipTricks::Microzip do
     end
     
     inspect_zip_with_external_tool(out_zip.path)
+    open_zip_with_unarchiver_if_available(out_zip.path)
   end
 
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do

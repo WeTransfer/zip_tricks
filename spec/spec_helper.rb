@@ -79,19 +79,24 @@ module ZipInspection
     $zip_inspection_buf.puts `#{escaped_cmd}`
   end
   
-  def open_zip_with_osx_archive_utility(path_to_zip)
+  def open_with_external_app(app_path, path_to_zip, skip_if_missing)
+    bin_exists = File.exist?(app_path)
+    skip "This system does not have #{File.basename(app_path)}" if skip_if_missing && !bin_exists 
+    return unless bin_exists
+    `#{Shellwords.join([app_path, path_to_zip])}`
+  end
+  
+  def open_zip_with_archive_utility(path_to_zip, skip_if_missing: true)
     # ArchiveUtility sometimes puts the stuff it unarchives in ~/Downloads etc. so do
     # not perform any checks on the files since we do not really know where they are on disk.
     # Visual inspection should show whether the unarchiving is handled correctly.
     au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
-    `#{Shellwords.join([au_path, path_to_zip])}`
+    open_with_external_app(au_path, path_to_zip, skip_if_missing)
   end
   
-  def skip_if_system_does_not_have_archive_utility!
-    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
-    unless File.exist?(au_path)
-      skip "This system does not have ArchiveUtility"
-    end
+  def open_zip_with_unarchiver(path_to_zip, skip_if_missing: true)
+    ua_path = '/Applications/The Unarchiver.app/Contents/MacOS/The Unarchiver'
+    open_with_external_app(ua_path, path_to_zip, skip_if_missing)
   end
 end
 

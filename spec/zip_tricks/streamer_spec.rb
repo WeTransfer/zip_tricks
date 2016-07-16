@@ -94,8 +94,6 @@ describe ZipTricks::Streamer do
   end
 
   it 'creates an archive that OSX ArchiveUtility can handle' do
-    skip_if_system_does_not_have_archive_utility!
-    
     outbuf = Tempfile.new('zip')
     outbuf.binmode
 

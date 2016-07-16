@@ -22,7 +22,7 @@ describe ZipTricks::Microzip do
     t = Time.now.utc
 
     3.times do |i|
-      fn = "test-#{i}.bin"
+      fn = "test-#{i}"
       z.add_local_file_header(filename: fn, crc32: crc, compressed_size: test_str.bytesize,
         uncompressed_size: test_str.bytesize, storage_mode: 0, mtime: t)
       tf << test_str
@@ -34,15 +34,27 @@ describe ZipTricks::Microzip do
       entries = []
       zip_file.each do |entry|
         entries << entry
+        
+        # Check the file contents
         readback = entry.get_input_stream.read
         readback.force_encoding(Encoding::BINARY)
         expect(readback).to eq(test_str)
+        
+        # The CRC
+        expect(entry.crc).to eq(crc)
+        
+        # Check the name
         expect(entry.name).to match(/test/)
+        
+        # Check the right external attributes (non-executable on UNIX)
+        expect(entry.external_file_attributes).to eq(2175008768)
       end
       expect(entries.length).to eq(3)
     end
-    
+
     inspect_zip_with_external_tool(tf.path)
+    open_zip_with_archive_utility(tf.path)
+    open_zip_with_unarchiver(tf.path)
   end
 
   it 'raises an exception if the filename is non-unique in the already existing set' do
@@ -82,6 +94,8 @@ describe ZipTricks::Microzip do
       expect(the_entry.gp_flags).to eq(2048)
       expect(the_entry.name.force_encoding(Encoding::UTF_8)).to match(/тест/)
     end
+    open_zip_with_archive_utility(out_zip.path)
+    open_zip_with_unarchiver(out_zip.path)
   end
 
   it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do
@@ -107,8 +121,9 @@ describe ZipTricks::Microzip do
       expect(the_entry.size).to eq(5 * 1024 * 1024 * 1024)
       expect(the_entry.instance_variable_get("@extra_length")).to be > 0 # Not accessible publicly
     end
-    
+
     inspect_zip_with_external_tool(out_zip.path)
+    open_zip_with_unarchiver_if_available(out_zip.path)
   end
 
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do
@@ -135,10 +150,10 @@ describe ZipTricks::Microzip do
       end
       expect(entries.length).to eq(2)
       first_entry, second_entry = entries[0], entries[1]
-      
+
       expect(first_entry.extra_length).to be_zero # The file _itself_ is below 4GB
       expect(first_entry.size).to eq(two_gigs_plus.size)
-      
+
       expect(second_entry.extra_length).to be_zero # The file _itself_ is below 4GB
       expect(second_entry.size).to eq(two_gigs_plus.size)
     end

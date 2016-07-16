@@ -22,7 +22,16 @@ class ZipTricks::Microzip
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45
-
+  DEFAULT_EXTERNAL_ATTRS = begin
+    # These need to be set so that the unarchived files do not become executable on UNIX, for
+    # security purposes. Strictly speaking we would want to make this user-customizable,
+    # but for now just putting in sane defaults will do. For example, Trac with zipinfo does this:
+    # zipinfo.external_attr = 0644 << 16L # permissions -r-wr--r--.
+    # We snatch the incantations from Rubyzip for this.
+    unix_perms = 0644
+    file_type_file = 010
+    external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
+  end
   C_V = 'V'.freeze
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
@@ -162,10 +171,11 @@ class ZipTricks::Microzip
       io << [0].pack(C_v)                                 # file comment length             2 bytes
       io << [0].pack(C_v)                                 # disk number start               2 bytes
       io << [0].pack(C_v)                                 # internal file attributes        2 bytes
-      io << [0].pack(C_V)                                 # external file attributes        4 bytes
+      
+      io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
 
       if @requires_zip64
-        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # relative offset of local header 4 bytes
+        io << [FOUR_BYTE_MAX_UINT].pack(C_V)             # relative offset of local header 4 bytes
       else
         io << [local_file_header_location].pack(C_V)     # relative offset of local header 4 bytes
       end
@@ -307,5 +317,5 @@ class ZipTricks::Microzip
   end
   
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
-    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :Entry, :C_V, :C_v, :C_Qe
+    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :DEFAULT_EXTERNAL_ATTRS, :Entry, :C_V, :C_v, :C_Qe
 end

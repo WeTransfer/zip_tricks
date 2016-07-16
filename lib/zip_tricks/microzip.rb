@@ -249,7 +249,8 @@ class ZipTricks::Microzip
     start_of_central_directory = @io.tell
 
     # Central directory file headers, per file in order
-    @files.zip(@local_header_offsets).each do |(file, offset)|
+    @files.each_with_index do |file, i|
+      offset = @local_header_offsets.fetch(i)
       file.write_central_directory_file_header(@io, offset)
     end
     central_dir_size = @io.tell - start_of_central_directory

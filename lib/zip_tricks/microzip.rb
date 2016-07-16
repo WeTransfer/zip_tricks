@@ -116,34 +116,6 @@ class ZipTricks::Microzip
       io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
     end
 
-    # I am keeping this for future use (if we want to generate ZIPs with postfix CRCs for instance)
-    def write_data_descriptor(io)
-      # 4.3.9.3 Although not originally assigned a signature, the value
-      #       0x08074b50 has commonly been adopted as a signature value
-      #       for the data descriptor record.
-      # 4.3.9.4 When writing ZIP files, implementors SHOULD include the
-      #    signature value marking the data descriptor record.  When
-      #    the signature is used, the fields currently defined for
-      #    the data descriptor record will immediately follow the
-      #    signature.
-      io << [0x08074b50].pack(C_V)
-      # 4.3.9.2 When compressing files, compressed and uncompressed sizes
-      # should be stored in ZIP64 format (as 8 byte values) when a
-      # file's size exceeds 0xFFFFFFFF.   However ZIP64 format may be
-      # used regardless of the size of a file.  When extracting, if
-      # the zip64 extended information extra field is present for
-      # the file the compressed and uncompressed sizes will be 8
-      # byte values.
-      io << [crc32].pack(C_V)                             # crc-32                          4 bytes
-      if @requires_zip64
-        io << [compressed_size].pack(C_Qe)                # compressed size                 8 bytes for ZIP64
-        io << [uncompressed_size].pack(C_Qe)              # uncompressed size               8 bytes for ZIP64
-      else
-        io << [compressed_size].pack(C_V)                 # compressed size                 4 bytes
-        io << [uncompressed_size].pack(C_V)               # uncompressed size               4 bytes
-      end
-    end
-
     def write_central_directory_file_header(io, local_file_header_location)
       # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
       # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
@@ -240,17 +212,6 @@ class ZipTricks::Microzip
     @local_header_offsets << @io.tell
     e.write_local_file_header(@io)
   end
-
-=begin
-  # Keeping for future use (if we want to write postfix CRCs for instance).
-  # The BOMArchiveHelper thing however is _really_ unhappy about those descriptors,
-  # and is likely to error out if you feed it one.
-  def write_data_descriptor
-    last_file = @files[-1]
-    raise "No files registered" unless last_file
-    last_file.write_data_descriptor(@io)
-  end
-=end
 
   # Writes the central directory (including the Zip6 salient bits if necessary)
   #

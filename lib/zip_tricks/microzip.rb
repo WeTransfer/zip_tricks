@@ -303,6 +303,7 @@ class ZipTricks::Microzip
                                                               # central directory               4 bytes
       @io << [zip64_eocdr_offset].pack(C_Qe)                  # relative offset of the zip64
                                                               # end of central directory record 8 bytes
+                                                              # (note: "relative" is actually "from the start of the file")
       @io << [1].pack(C_V)                                    # total number of disks           4 bytes
     end
 

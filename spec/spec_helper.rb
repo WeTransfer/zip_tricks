@@ -78,6 +78,21 @@ module ZipInspection
     escaped_cmd = Shellwords.join(['zipinfo', '-tlhvz', path_to_zip])
     $zip_inspection_buf.puts `#{escaped_cmd}`
   end
+  
+  def open_zip_with_osx_archive_utility(path_to_zip)
+    # ArchiveUtility sometimes puts the stuff it unarchives in ~/Downloads etc. so do
+    # not perform any checks on the files since we do not really know where they are on disk.
+    # Visual inspection should show whether the unarchiving is handled correctly.
+    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
+    `#{Shellwords.join([au_path, path_to_zip])}`
+  end
+  
+  def skip_if_system_does_not_have_archive_utility!
+    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
+    unless File.exist?(au_path)
+      skip "This system does not have ArchiveUtility"
+    end
+  end
 end
 
 RSpec.configure do |config|

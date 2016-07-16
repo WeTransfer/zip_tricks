@@ -94,11 +94,8 @@ describe ZipTricks::Streamer do
   end
 
   it 'creates an archive that OSX ArchiveUtility can handle' do
-    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
-    unless File.exist?(au_path)
-      skip "This system does not have ArchiveUtility"
-    end
-
+    skip_if_system_does_not_have_archive_utility!
+    
     outbuf = Tempfile.new('zip')
     outbuf.binmode
 
@@ -129,11 +126,8 @@ describe ZipTricks::Streamer do
       outbuf.flush
       File.unlink('test.zip') rescue nil
       File.rename(outbuf.path, 'osx-archive-test.zip')
-
-      # ArchiveUtility sometimes puts the stuff it unarchives in ~/Downloads etc. so do
-      # not perform any checks on the files since we do not really know where they are on disk.
-      # Visual inspection should show whether the unarchiving is handled correctly.
-      `#{Shellwords.join([au_path, 'osx-archive-test.zip'])}`
+      
+      open_zip_with_osx_archive_utility('osx-archive-test.zip')
     end
 
     FileUtils.rm_rf('osx-archive-test')

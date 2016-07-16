@@ -3,11 +3,24 @@ require 'fileutils'
 require 'shellwords'
 
 describe ZipTricks::Microzip do
-
   class RandomFile < Tempfile
+    attr_reader :crc32
     def initialize(size)
       super('random-bin')
-
+      crc = ZipTricks::StreamCRC32.new
+      
+      random = Random.new
+      bytes = size % (1024 * 1024)
+      megs = size / (1024 * 1024)
+      megs.times do
+        random_blob = random.bytes(1024 * 1024)
+        self << random_blob
+        crc << random_blob
+      end
+      random_blob = random.bytes(bytes)
+      self << random_blob
+      crc << random_blob
+      @crc32 = crc.to_i
     end
   end
 
@@ -76,6 +89,7 @@ describe ZipTricks::Microzip do
 
     n_files.times do |i|
       fn = "test-#{i}.bin"
+      still_alive!
       z.add_local_file_header(filename: fn, crc32: crc, compressed_size: test_str.bytesize,
         uncompressed_size: test_str.bytesize, storage_mode: 0, mtime: t)
       tf << test_str

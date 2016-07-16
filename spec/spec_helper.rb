@@ -15,12 +15,13 @@ module Keepalive
   # those tests this method has to be called every now and then to revive the output and let the
   # build proceed.
   def still_alive!
-    @last_out_ping_at ||= Time.now
-    if (Time.now - @last_out_ping_at) > 3
-      @last_out_ping_at = Time.now
+    $keepalive_last_out_ping_at ||= Time.now
+    if (Time.now - $keepalive_last_out_ping_at) > 3
+      $keepalive_last_out_ping_at = Time.now
       $stdout << '_'
     end
   end
+  extend self
 end
 
 RSpec.configure do |config|

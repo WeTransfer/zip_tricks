@@ -7,12 +7,14 @@ describe ZipTricks::Microzip do
     attr_reader :crc32
     def initialize(size)
       super('random-bin')
+      binmode
       crc = ZipTricks::StreamCRC32.new
       
       random = Random.new
       bytes = size % (1024 * 1024)
       megs = size / (1024 * 1024)
       megs.times do
+        Keepalive.still_alive!
         random_blob = random.bytes(1024 * 1024)
         self << random_blob
         crc << random_blob
@@ -21,6 +23,7 @@ describe ZipTricks::Microzip do
       self << random_blob
       crc << random_blob
       @crc32 = crc.to_i
+      rewind
     end
   end
 
@@ -68,13 +71,70 @@ describe ZipTricks::Microzip do
     end
   end
 
-  xit 'raises an exception if the filename is non-unique in the already existing set'
-  it 'raises an exception if the filename does not fit in 0xFFFF bytes'
-  it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in'
-  it 'switches an entry to Zip64 if a file is added which, uncompreeed, is larger than the 4-byte max size'
-  it 'switches an entry to Zip64 if a file is added which, compressed, is larger than the 4-byte max size'
-  it 'switches an entry to Zip64 if a file is added which, compressed, is larger than the 4-byte max size'
-  it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true
+  it 'raises an exception if the filename is non-unique in the already existing set' do
+    z = described_class.new(StringIO.new)
+    z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+    expect {
+      z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+    }.to raise_error(/already/)
+  end
+  
+  it 'raises an exception if the filename does not fit in 0xFFFF bytes' do
+    longest_filename_in_the_universe = "x" * (0xFFFF + 1)
+    z = described_class.new(StringIO.new)
+    expect {
+      z.add_local_file_header(filename: longest_filename_in_the_universe, crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+    }.to raise_error(/filename/)
+  end
+  
+  it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in' do
+    the_f = RandomFile.new(19)
+    
+    out_zip = Tempfile.new('zip')
+    z = described_class.new(out_zip)
+    z.add_local_file_header(filename: 'тест', crc32: the_f.crc32, compressed_size: the_f.size,
+      uncompressed_size: the_f.size, storage_mode: 0, mtime: Time.now)
+    IO.copy_stream(the_f, out_zip)
+    z.write_central_directory
+    out_zip.flush
+    
+    Zip::File.open(out_zip.path) do |zip_file|
+      entries = []
+      zip_file.each do |entry|
+        entries << entry
+      end
+      the_entry = entries[0]
+      
+      expect(the_entry.gp_flags).to eq(2048)
+      expect(the_entry.name.force_encoding(Encoding::UTF_8)).to match(/тест/)
+    end
+  end
+  
+  it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do
+    five_gigs = RandomFile.new(5 * 1024 * 1024 * 1024)
+    
+    out_zip = Tempfile.new('huge-zip')
+    z = described_class.new(out_zip)
+    z.add_local_file_header(filename: 'the-five-gigs', crc32: five_gigs.crc32, compressed_size: five_gigs.size,
+      uncompressed_size: five_gigs.size, storage_mode: 0, mtime: Time.now)
+    IO.copy_stream(five_gigs, out_zip)
+    z.write_central_directory
+    out_zip.flush
+    
+    Zip::File.open(out_zip.path) do |zip_file|
+      entries = []
+      zip_file.each do |entry|
+        entries << entry
+        expect(entry.name).to match(/five/)
+      end
+      the_entry = entries[0]
+      expect(the_entry.version_needed_to_extract).to eq(45)
+      expect(the_entry.compressed_size).to eq(5 * 1024 * 1024 * 1024)
+      expect(the_entry.size).to eq(5 * 1024 * 1024 * 1024)
+      expect(the_entry.extra_length).to be > 0
+    end
+  end
+  
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do

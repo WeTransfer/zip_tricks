@@ -125,7 +125,7 @@ describe ZipTricks::Streamer do
       File.unlink('test.zip') rescue nil
       File.rename(outbuf.path, 'osx-archive-test.zip')
       
-      open_zip_with_osx_archive_utility('osx-archive-test.zip')
+      open_zip_with_archive_utility('osx-archive-test.zip')
     end
 
     FileUtils.rm_rf('osx-archive-test')

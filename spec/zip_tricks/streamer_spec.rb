@@ -90,10 +90,8 @@ describe ZipTricks::Streamer do
     expect(per_filename['compressed-file.bin'].bytesize).to eq(f.size)
     expect(Digest::SHA1.hexdigest(per_filename['compressed-file.bin'])).to eq(Digest::SHA1.hexdigest(f.read))
 
-    output = `unzip -v #{zip_file.path}`
-    puts output.inspect
+    inspect_zip_with_external_tool(zip_file.path)
   end
-
 
   it 'creates an archive that OSX ArchiveUtility can handle' do
     au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
@@ -188,8 +186,7 @@ describe ZipTricks::Streamer do
     wd = Dir.pwd
     Dir.mktmpdir do | td |
       Dir.chdir(td)
-      output = `unzip -v #{zip_buf.path}`
-      puts output.inspect
+      inspect_zip_with_external_tool(zip_buf.path)
     end
     Dir.chdir(wd)
   end

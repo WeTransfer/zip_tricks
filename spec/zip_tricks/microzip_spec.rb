@@ -22,7 +22,7 @@ describe ZipTricks::Microzip do
     t = Time.now.utc
 
     3.times do |i|
-      fn = "test-#{i}.bin"
+      fn = "test-#{i}"
       z.add_local_file_header(filename: fn, crc32: crc, compressed_size: test_str.bytesize,
         uncompressed_size: test_str.bytesize, storage_mode: 0, mtime: t)
       tf << test_str

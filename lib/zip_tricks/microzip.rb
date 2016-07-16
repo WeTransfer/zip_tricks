@@ -31,7 +31,6 @@ class ZipTricks::Microzip
     def initialize(*)
       super
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
-      @local_file_header_location = :LOCAL_FILE_HEADER_NOT_WRITTEN_YET
     end
 
     def requires_zip64?
@@ -96,12 +95,12 @@ class ZipTricks::Microzip
       io << [compressed_size].pack(C_Qe)              # 8 bytes    Size of compressed data
     end
 
-    def write_zip_64_extra_for_central_directory_file_header(io)
+    def write_zip_64_extra_for_central_directory_file_header(io, local_file_header_location)
       io << [0x0001].pack(C_v)                        # 2 bytes    Tag for this "extra" block type
       io << [28].pack(C_v)                            # 2 bytes    Size of this "extra" block. For us it will always be 28
       io << [uncompressed_size].pack(C_Qe)            # 8 bytes    Original uncompressed file size
       io << [compressed_size].pack(C_Qe)              # 8 bytes    Size of compressed data
-      io << [@local_file_header_location].pack(C_Qe)  # 8 bytes    Offset of local header record
+      io << [local_file_header_location].pack(C_Qe)   # 8 bytes    Offset of local header record
       io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
     end
 
@@ -274,14 +273,14 @@ class ZipTricks::Microzip
       @io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v)      # version needed to extract       2 bytes
       @io << [0].pack(C_V)                                    # number of this disk             4 bytes
       @io << [0].pack(C_V)                                    # number of the disk with the
-      @io                                                     # start of the central directory  4 bytes
+                                                              # start of the central directory  4 bytes
       @io << [@files.length].pack(C_Qe)                       # total number of entries in the
-      @io                                                     # central directory on this disk  8 bytes
+                                                              # central directory on this disk  8 bytes
       @io << [@files.length].pack(C_Qe)                       # total number of entries in the
-      @io                                                     # central directory               8 bytes
+                                                              # central directory               8 bytes
       @io << [central_dir_size].pack(C_Qe)                    # size of the central directory   8 bytes
-      @io                                                     # offset of start of central
-      @io                                                     # directory with respect to
+                                                              # offset of start of central
+                                                              # directory with respect to
       @io << [start_of_central_directory].pack(C_Qe)          # the starting disk number        8 bytes
                                                               # zip64 extensible data sector    (variable size)
 
@@ -300,11 +299,20 @@ class ZipTricks::Microzip
     @io << [0x06054b50].pack(C_V)                           # end of central dir signature     4 bytes  (0x06054b50)
     @io << [0].pack(C_v)                                    # number of this disk              2 bytes
     @io << [0].pack(C_v)                                    # number of the disk with the
-                                                            #   start of the central directory 2 bytes
-    @io << [@files.length].pack(C_v)                        # total number of entries in the
-                                                            # central directory on this disk   2 bytes
-    @io << [@files.length].pack(C_v)                        # total number of entries in
-                                                            # the central directory            2 bytes
+                                                            # start of the central directory 2 bytes
+    
+    if zip64_required # the number of entries will be read from the zip64 part of the central directory
+      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                    # total number of entries in the
+                                                              # central directory on this disk   2 bytes
+      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                    # total number of entries in
+                                                              # the central directory            2 bytes
+    else
+      @io << [@files.length].pack(C_v)                        # total number of entries in the
+                                                              # central directory on this disk   2 bytes
+      @io << [@files.length].pack(C_v)                        # total number of entries in
+                                                              # the central directory            2 bytes
+    end
+    
     if zip64_required
       @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                   # size of the central directory    4 bytes
       @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                   # offset of start of central

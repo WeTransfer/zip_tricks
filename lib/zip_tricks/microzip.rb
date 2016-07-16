@@ -274,14 +274,14 @@ class ZipTricks::Microzip
       @io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v)      # version needed to extract       2 bytes
       @io << [0].pack(C_V)                                    # number of this disk             4 bytes
       @io << [0].pack(C_V)                                    # number of the disk with the
-      @io                                                     # start of the central directory  4 bytes
+                                                              # start of the central directory  4 bytes
       @io << [@files.length].pack(C_Qe)                       # total number of entries in the
-      @io                                                     # central directory on this disk  8 bytes
+                                                              # central directory on this disk  8 bytes
       @io << [@files.length].pack(C_Qe)                       # total number of entries in the
-      @io                                                     # central directory               8 bytes
+                                                              # central directory               8 bytes
       @io << [central_dir_size].pack(C_Qe)                    # size of the central directory   8 bytes
-      @io                                                     # offset of start of central
-      @io                                                     # directory with respect to
+                                                              # offset of start of central
+                                                              # directory with respect to
       @io << [start_of_central_directory].pack(C_Qe)          # the starting disk number        8 bytes
                                                               # zip64 extensible data sector    (variable size)
 

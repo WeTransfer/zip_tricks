@@ -51,7 +51,7 @@ describe ZipTricks::Microzip do
     end
   end
 
-  it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)' do
+  it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do
     tf = Tempfile.new('zip')
     z = described_class.new(tf)
 

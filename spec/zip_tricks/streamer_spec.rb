@@ -127,7 +127,6 @@ describe ZipTricks::Streamer do
       
       open_zip_with_archive_utility('osx-archive-test.zip')
     end
-
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')
   end

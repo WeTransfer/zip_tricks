@@ -146,7 +146,7 @@ describe ZipTricks::Microzip do
     inspect_zip_with_external_tool(out_zip.path)
   end
 
-  it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do
+  it 'creates an archive with more than 65535 file entries (Zip64 due to number of files)', long: true do
     tf = ManagedTempfile.new('zip')
     z = described_class.new(tf)
 

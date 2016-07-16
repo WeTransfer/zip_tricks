@@ -3,9 +3,13 @@ require 'fileutils'
 require 'shellwords'
 
 describe ZipTricks::Microzip do
-  let(:test_text_file_path) {
-    File.join(__dir__, 'war-and-peace.txt')
-  }
+
+  class RandomFile < Tempfile
+    def initialize(size)
+      super('random-bin')
+
+    end
+  end
 
   # Run each test in a temporady directory, and nuke it afterwards
   around(:each) do |example|
@@ -21,7 +25,7 @@ describe ZipTricks::Microzip do
     yield.tap { ios.map(&:rewind) }
   end
 
-  it 'creates an archive with a number of very tiny text files' do
+  it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = Tempfile.new('zip')
     z = described_class.new(tf)
 
@@ -50,6 +54,15 @@ describe ZipTricks::Microzip do
       expect(entries.length).to eq(13)
     end
   end
+
+  xit 'raises an exception if the filename is non-unique in the already existing set'
+  it 'raises an exception if the filename does not fit in 0xFFFF bytes'
+  it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in'
+  it 'switches an entry to Zip64 if a file is added which, uncompreeed, is larger than the 4-byte max size'
+  it 'switches an entry to Zip64 if a file is added which, compressed, is larger than the 4-byte max size'
+  it 'switches an entry to Zip64 if a file is added which, compressed, is larger than the 4-byte max size'
+  it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true
+  it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do
     tf = Tempfile.new('zip')

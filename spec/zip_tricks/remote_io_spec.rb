@@ -80,7 +80,9 @@ describe ZipTricks::RemoteIO do
     end
 
     after :each do
-      @buf.close; @buf.unlink
+      if @buf
+        @buf.close; @buf.unlink
+      end
     end
 
     context 'without arguments' do

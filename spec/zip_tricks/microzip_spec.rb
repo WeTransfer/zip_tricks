@@ -41,7 +41,7 @@ describe ZipTricks::Microzip do
       end
       expect(entries.length).to eq(3)
     end
-    
+
     inspect_zip_with_external_tool(tf.path)
     open_zip_with_archive_utility(tf.path)
     open_zip_with_unarchiver(tf.path)
@@ -84,6 +84,8 @@ describe ZipTricks::Microzip do
       expect(the_entry.gp_flags).to eq(2048)
       expect(the_entry.name.force_encoding(Encoding::UTF_8)).to match(/тест/)
     end
+    open_zip_with_archive_utility(out_zip.path)
+    open_zip_with_unarchiver(out_zip.path)
   end
 
   it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do
@@ -109,7 +111,7 @@ describe ZipTricks::Microzip do
       expect(the_entry.size).to eq(5 * 1024 * 1024 * 1024)
       expect(the_entry.instance_variable_get("@extra_length")).to be > 0 # Not accessible publicly
     end
-    
+
     inspect_zip_with_external_tool(out_zip.path)
     open_zip_with_unarchiver_if_available(out_zip.path)
   end
@@ -138,10 +140,10 @@ describe ZipTricks::Microzip do
       end
       expect(entries.length).to eq(2)
       first_entry, second_entry = entries[0], entries[1]
-      
+
       expect(first_entry.extra_length).to be_zero # The file _itself_ is below 4GB
       expect(first_entry.size).to eq(two_gigs_plus.size)
-      
+
       expect(second_entry.extra_length).to be_zero # The file _itself_ is below 4GB
       expect(second_entry.size).to eq(two_gigs_plus.size)
     end

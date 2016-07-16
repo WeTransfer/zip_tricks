@@ -18,14 +18,14 @@ describe ZipTricks::Microzip do
   end
 
   it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
-    tf = Tempfile.new('zip')
+    tf = ManagedTempfile.new('zip')
     z = described_class.new(tf)
 
     test_str = Random.new.bytes(64)
     crc = Zlib.crc32(test_str)
     t = Time.now.utc
 
-    13.times do |i|
+    3.times do |i|
       fn = "test-#{i}.bin"
       z.add_local_file_header(filename: fn, crc32: crc, compressed_size: test_str.bytesize,
         uncompressed_size: test_str.bytesize, storage_mode: 0, mtime: t)
@@ -43,7 +43,7 @@ describe ZipTricks::Microzip do
         expect(readback).to eq(test_str)
         expect(entry.name).to match(/test/)
       end
-      expect(entries.length).to eq(13)
+      expect(entries.length).to eq(3)
     end
     
     inspect_zip_with_external_tool(tf.path)
@@ -68,7 +68,7 @@ describe ZipTricks::Microzip do
   it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in' do
     the_f = RandomFile.new(19)
 
-    out_zip = Tempfile.new('zip')
+    out_zip = ManagedTempfile.new('zip')
     z = described_class.new(out_zip)
     z.add_local_file_header(filename: 'тест', crc32: the_f.crc32, compressed_size: the_f.size,
       uncompressed_size: the_f.size, storage_mode: 0, mtime: Time.now)
@@ -91,7 +91,7 @@ describe ZipTricks::Microzip do
   it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do
     five_gigs = RandomFile.new(5 * 1024 * 1024 * 1024)
 
-    out_zip = Tempfile.new('huge-zip')
+    out_zip = ManagedTempfile.new('huge-zip')
     z = described_class.new(out_zip)
     z.add_local_file_header(filename: 'the-five-gigs', crc32: five_gigs.crc32, compressed_size: five_gigs.size,
       uncompressed_size: five_gigs.size, storage_mode: 0, mtime: Time.now)
@@ -106,10 +106,10 @@ describe ZipTricks::Microzip do
         expect(entry.name).to match(/five/)
       end
       the_entry = entries[0]
-      expect(the_entry.version_needed_to_extract).to eq(45)
+      expect(the_entry.instance_variable_get("@version_needed_to_extract")).to eq(45) # Not accessible publicly
       expect(the_entry.compressed_size).to eq(5 * 1024 * 1024 * 1024)
       expect(the_entry.size).to eq(5 * 1024 * 1024 * 1024)
-      expect(the_entry.extra_length).to be > 0
+      expect(the_entry.instance_variable_get("@extra_length")).to be > 0 # Not accessible publicly
     end
     
     inspect_zip_with_external_tool(out_zip.path)
@@ -118,7 +118,7 @@ describe ZipTricks::Microzip do
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do
     two_gigs_plus = RandomFile.new((2 * 1024 * 1024 * 1024) + 3)
 
-    out_zip = Tempfile.new('huge-zip')
+    out_zip = ManagedTempfile.new('huge-zip')
     z = described_class.new(out_zip)
 
     z.add_local_file_header(filename: 'first', crc32: two_gigs_plus.crc32, compressed_size: two_gigs_plus.size,
@@ -151,7 +151,7 @@ describe ZipTricks::Microzip do
   end
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do
-    tf = Tempfile.new('zip')
+    tf = ManagedTempfile.new('zip')
     z = described_class.new(tf)
 
     test_str = Random.new.bytes(64)

@@ -20,8 +20,25 @@ module Keepalive
   extend self
 end
 
+
+class ManagedTempfile < Tempfile
+  @@managed_tempfiles = []
+  
+  def initialize(*)
+    super
+    @@managed_tempfiles << self
+  end
+  
+  def self.prune!
+    @@managed_tempfiles.each do |tf|
+      (tf.close; tf.unlink) rescue nil
+    end
+    @@managed_tempfiles.clear
+  end
+end
+
 # A Tempfile filled with N bytes of random data, that also knows the CRC32 of that data
-class RandomFile < Tempfile
+class RandomFile < ManagedTempfile
   attr_reader :crc32
   RANDOM_MEG = Random.new.bytes(1024 * 1024) # Allocate it once to prevent heap churn
   def initialize(size)
@@ -66,6 +83,11 @@ end
 RSpec.configure do |config|
   config.include Keepalive
   config.include ZipInspection
+  
+  config.after :each do
+    ManagedTempfile.prune!
+  end
+  
   config.after :suite do
     $stderr << $zip_inspection_buf.string if $zip_inspection_buf
   end

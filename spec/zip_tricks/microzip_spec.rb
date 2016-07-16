@@ -123,7 +123,7 @@ describe ZipTricks::Microzip do
     end
 
     inspect_zip_with_external_tool(out_zip.path)
-    open_zip_with_unarchiver_if_available(out_zip.path)
+    open_zip_with_unarchiver(out_zip.path)
   end
 
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do
@@ -151,14 +151,16 @@ describe ZipTricks::Microzip do
       expect(entries.length).to eq(2)
       first_entry, second_entry = entries[0], entries[1]
 
-      expect(first_entry.extra_length).to be_zero # The file _itself_ is below 4GB
+      expect(first_entry.instance_variable_get("@extra_length")).to be_zero # The file _itself_ is below 4GB
       expect(first_entry.size).to eq(two_gigs_plus.size)
 
-      expect(second_entry.extra_length).to be_zero # The file _itself_ is below 4GB
+      expect(first_entry.instance_variable_get("@extra_length")).to be_zero # The file _itself_ is below 4GB
       expect(second_entry.size).to eq(two_gigs_plus.size)
     end
 
     inspect_zip_with_external_tool(out_zip.path)
+    open_zip_with_archive_utility(out_zip.path)
+    open_zip_with_unarchiver(out_zip.path)
   end
 
   it 'creates an archive with more than 65535 file entries (Zip64 due to number of files)', long: true do

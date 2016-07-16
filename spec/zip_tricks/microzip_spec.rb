@@ -176,7 +176,8 @@ describe ZipTricks::Microzip do
 
     # TODO: unzip in OSX is too old to cope
     output = `unzip -v #{out_zip.path}`
-    $stderr.puts output.inspect
+    $stderr.puts "Result of running unzip on the result of example ...:"
+    $stderr.puts output
   end
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do

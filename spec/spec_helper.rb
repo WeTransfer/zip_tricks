@@ -52,6 +52,16 @@ class RandomFile < Tempfile
   end
 end
 
+module ZipInspection
+  def inspect_zip_with_external_tool(path_to_zip)
+    example_info = self.inspect # The only way to get at the RSpec example without using the block argument
+    $stderr.puts "Inspecting ZIP output of #{example_info}."
+    escaped_cmd = Shellwords.join(['zipinfo', '-tlhvz', path_to_zip])
+    $stderr.puts `#{escaped_cmd}`
+  end
+end
+
 RSpec.configure do |config|
   config.include Keepalive
+  config.include ZipInspection
 end

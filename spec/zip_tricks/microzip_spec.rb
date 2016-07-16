@@ -45,6 +45,8 @@ describe ZipTricks::Microzip do
       end
       expect(entries.length).to eq(13)
     end
+    
+    inspect_zip_with_external_tool(tf.path)
   end
 
   it 'raises an exception if the filename is non-unique in the already existing set' do
@@ -143,10 +145,7 @@ describe ZipTricks::Microzip do
       expect(second_entry.size).to eq(two_gigs_plus.size)
     end
 
-    # TODO: unzip in OSX is too old to cope
-    output = `unzip -v #{out_zip.path}`
-    $stderr.puts "Result of running unzip on the result of example ...:"
-    $stderr.puts output
+    inspect_zip_with_external_tool(out_zip.path)
   end
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do

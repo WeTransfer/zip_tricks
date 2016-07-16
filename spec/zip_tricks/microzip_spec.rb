@@ -3,37 +3,6 @@ require 'fileutils'
 require 'shellwords'
 
 describe ZipTricks::Microzip do
-  class RandomFile < Tempfile
-    attr_reader :crc32
-    RANDOM_MEG = Random.new.bytes(1024 * 1024)
-    def initialize(size)
-      super('random-bin')
-      binmode
-      crc = ZipTricks::StreamCRC32.new
-      bytes = size % (1024 * 1024)
-      megs = size / (1024 * 1024)
-      megs.times do
-        Keepalive.still_alive!
-        self << RANDOM_MEG
-        crc << RANDOM_MEG
-      end
-      random_blob = Random.new.bytes(bytes)
-      self << random_blob
-      crc << random_blob
-      @crc32 = crc.to_i
-      rewind
-    end
-
-    def copy_to(io)
-      rewind
-      while data = read(10*1024*1024)
-        io << data
-        Keepalive.still_alive!
-      end
-      rewind
-    end
-  end
-
   # Run each test in a temporady directory, and nuke it afterwards
   around(:each) do |example|
     wd = Dir.pwd

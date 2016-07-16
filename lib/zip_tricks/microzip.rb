@@ -47,12 +47,6 @@ class ZipTricks::Microzip
     end
 
     def write_local_file_header(io)
-      @local_file_header_location = io.tell # Save for the time when we need to write the central directory
-
-      # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
-      # in the future as a zip64 extra field, so we give up, give in, you loose, love will always win...
-      @requires_zip64 = true if @local_file_header_location > FOUR_BYTE_MAX_UINT
-
       io << [0x04034b50].pack('V')                        # local file header signature     4 bytes  (0x04034b50)
 
       if @requires_zip64                                  # version needed to extract       2 bytes
@@ -137,9 +131,12 @@ class ZipTricks::Microzip
     end
 =end
 
-    def write_central_directory_file_header(io)
+    def write_central_directory_file_header(io, local_file_header_location)
+      # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
+      # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
+      @requires_zip64 = true if local_file_header_location > FOUR_BYTE_MAX_UINT
+      
       io << [0x02014b50].pack('V')                        # central file header signature   4 bytes  (0x02014b50)
-
       io << [VERSION_MADE_BY].pack('v')                   # version made by                 2 bytes
       if @requires_zip64
         io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack('v') # version needed to extract       2 bytes
@@ -180,7 +177,7 @@ class ZipTricks::Microzip
       if @requires_zip64
         io << [FOUR_BYTE_MAX_UINT].pack('V')              # relative offset of local header 4 bytes
       else
-        io << [@local_file_header_location].pack('V')     # relative offset of local header 4 bytes
+        io << [local_file_header_location].pack('V')     # relative offset of local header 4 bytes
       end
       io << filename                                      # file name (variable size)
 
@@ -207,6 +204,7 @@ class ZipTricks::Microzip
   def initialize(out_io)
     @io = out_io
     @files = []
+    @local_header_offsets = []
   end
 
   # Adds a file to the entry list and immediately writes out it's local file header into the
@@ -226,6 +224,7 @@ class ZipTricks::Microzip
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime)
     @files << e
+    @local_header_offsets << @io.tell
     e.write_local_file_header(@io)
   end
 
@@ -247,8 +246,8 @@ class ZipTricks::Microzip
     start_of_central_directory = @io.tell
 
     # Central directory file headers, per file in order
-    @files.each do |file|
-      file.write_central_directory_file_header(@io)
+    @files.zip(@local_header_offsets).each do |(file, offset)|
+      file.write_central_directory_file_header(@io, offset)
     end
     central_dir_size = @io.tell - start_of_central_directory
 

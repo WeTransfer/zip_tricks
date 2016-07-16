@@ -50,6 +50,18 @@ class ZipTricks::Microzip
     end
 
     def write_local_file_header(io)
+      # TBD: caveat. If this entry _does_ fit into a standard zip segment (both compressed and
+      # uncompressed size at or below 0xFFFF etc), but it is _located_ at an offset that requires
+      # Zip64 to be used (beyound 4GB), we are going to be omitting the Zip64 extras in the local
+      # file header, but we will be enabling them when writing the central directory. Then the
+      # CD record for the file _will_ have Zip64 extra, but the local file header won't. In theory,
+      # this should not pose a problem, but then again... life in this world can be harsh.
+      #
+      # If it turns out that it _does_ pose a problem, we can always do:
+      #
+      #   @requires_zip64 = true if io.tell > FOUR_BYTE_MAX_UINT
+      #
+      # right here, and have the data written regardless even if the file fits.
       io << [0x04034b50].pack(C_V)                        # local file header signature     4 bytes  (0x04034b50)
 
       if @requires_zip64                                  # version needed to extract       2 bytes
@@ -104,7 +116,6 @@ class ZipTricks::Microzip
       io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
     end
 
-=begin
     # I am keeping this for future use (if we want to generate ZIPs with postfix CRCs for instance)
     def write_data_descriptor(io)
       # 4.3.9.3 Although not originally assigned a signature, the value
@@ -132,7 +143,6 @@ class ZipTricks::Microzip
         io << [uncompressed_size].pack(C_V)               # uncompressed size               4 bytes
       end
     end
-=end
 
     def write_central_directory_file_header(io, local_file_header_location)
       # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
@@ -250,8 +260,8 @@ class ZipTricks::Microzip
 
     # Central directory file headers, per file in order
     @files.each_with_index do |file, i|
-      offset = @local_header_offsets.fetch(i)
-      file.write_central_directory_file_header(@io, offset)
+      local_file_header_offset_from_start_of_file = @local_header_offsets.fetch(i)
+      file.write_central_directory_file_header(@io, local_file_header_offset_from_start_of_file)
     end
     central_dir_size = @io.tell - start_of_central_directory
 
@@ -293,6 +303,7 @@ class ZipTricks::Microzip
                                                               # central directory               4 bytes
       @io << [zip64_eocdr_offset].pack(C_Qe)                  # relative offset of the zip64
                                                               # end of central directory record 8 bytes
+                                                              # (note: "relative" is actually "from the start of the file")
       @io << [1].pack(C_V)                                    # total number of disks           4 bytes
     end
 

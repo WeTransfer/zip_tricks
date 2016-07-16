@@ -30,6 +30,11 @@ class ZipTricks::Microzip
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
     def initialize(*)
       super
+      
+      if filename.bytesize > TWO_BYTE_MAX_UINT
+        raise TooMuch, "The given filename is too long to fit (%d bytes)" % filename.bytesize
+      end
+      
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
     end
 

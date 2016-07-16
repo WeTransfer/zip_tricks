@@ -13,10 +13,6 @@ describe ZipTricks::Microzip do
     Dir.chdir(wd)
   end
 
-  def rewind_after(*ios)
-    yield.tap { ios.map(&:rewind) }
-  end
-
   it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     z = described_class.new(tf)

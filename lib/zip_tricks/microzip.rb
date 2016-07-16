@@ -31,7 +31,6 @@ class ZipTricks::Microzip
     def initialize(*)
       super
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
-      @local_file_header_location = :LOCAL_FILE_HEADER_NOT_WRITTEN_YET
     end
 
     def requires_zip64?

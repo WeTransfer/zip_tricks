@@ -111,6 +111,8 @@ describe ZipTricks::Microzip do
       expect(the_entry.size).to eq(5 * 1024 * 1024 * 1024)
       expect(the_entry.extra_length).to be > 0
     end
+    
+    inspect_zip_with_external_tool(out_zip.path)
   end
 
   it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do

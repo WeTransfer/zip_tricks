@@ -25,6 +25,15 @@ describe ZipTricks::Microzip do
       @crc32 = crc.to_i
       rewind
     end
+    
+    def copy_to(io)
+      rewind
+      while data = read(10*1024*1024)
+        io << data
+        Keepalive.still_alive!
+      end
+      rewind
+    end
   end
 
   # Run each test in a temporady directory, and nuke it afterwards
@@ -94,7 +103,7 @@ describe ZipTricks::Microzip do
     z = described_class.new(out_zip)
     z.add_local_file_header(filename: 'тест', crc32: the_f.crc32, compressed_size: the_f.size,
       uncompressed_size: the_f.size, storage_mode: 0, mtime: Time.now)
-    IO.copy_stream(the_f, out_zip)
+    the_f.copy_to(out_zip)
     z.write_central_directory
     out_zip.flush
     
@@ -117,7 +126,7 @@ describe ZipTricks::Microzip do
     z = described_class.new(out_zip)
     z.add_local_file_header(filename: 'the-five-gigs', crc32: five_gigs.crc32, compressed_size: five_gigs.size,
       uncompressed_size: five_gigs.size, storage_mode: 0, mtime: Time.now)
-    IO.copy_stream(five_gigs, out_zip)
+    five_gigs.copy_to(out_zip)
     z.write_central_directory
     out_zip.flush
     
@@ -135,7 +144,34 @@ describe ZipTricks::Microzip do
     end
   end
   
-  it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true
+  it 'creates an archive with 2 files each of which is just over 2GB (Zip64 due to offsets)', long: true do
+    two_gigs_plus = RandomFile.new((2 * 1024 * 1024 * 1024) + 3)
+    
+    out_zip = Tempfile.new('huge-zip')
+    z = described_class.new(out_zip)
+    
+    z.add_local_file_header(filename: 'first', crc32: two_gigs_plus.crc32, compressed_size: two_gigs_plus.size,
+      uncompressed_size: two_gigs_plus.size, storage_mode: 0, mtime: Time.now)
+    two_gigs_plus.copy_to(out_zip)
+    
+    z.add_local_file_header(filename: 'second', crc32: two_gigs_plus.crc32, compressed_size: two_gigs_plus.size,
+      uncompressed_size: two_gigs_plus.size, storage_mode: 0, mtime: Time.now)
+    two_gigs_plus.copy_to(out_zip)
+    
+    z.write_central_directory
+    out_zip.flush
+    
+#    Zip::File.open(out_zip.path) do |zip_file|
+#      entries = []
+#      zip_file.each do |entry|
+#        entries << entry
+#      end
+#      expect(entries.length).to eq(2)
+#    end
+
+    output = `unzip -v #{out_zip.path}`
+    $stderr.puts output.inspect
+  end
 
   it 'creates an archive with more than 0xFFFF file entries (Zip64 due to number of files)', long: true do
     tf = Tempfile.new('zip')

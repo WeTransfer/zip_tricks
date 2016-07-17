@@ -97,12 +97,16 @@ class ZipTricks::Microzip
       filename_encoded.force_encoding(Encoding::BINARY)
     end
     
+    def utf8_filename?
+      filename_encoded.encoding == Encoding::UTF_8
+    end
+    
     # Set the general purpose flags for the entry. The only flag we care about is the EFS
     # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
     def gp_flags_based_on_filename
-      if filename_encoded.encoding == Encoding::UTF_8
+      if utf8_filename?
         0b00000000000 | 0b100000000000
       else
         0b00000000000
@@ -147,17 +151,18 @@ class ZipTricks::Microzip
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
       io << [filename_binary.bytesize].pack(C_v)        # file name length             2 bytes
 
+      extra_fields_size = 0
       if @requires_zip64
         tmp = ''.force_encoding(Encoding::BINARY)
         write_zip_64_extra_for_local_file_header(tmp)
-        io << [tmp.bytesize].pack(C_v)                    # extra field length              2 bytes
-      else
-        io << [0].pack(C_v)                               # extra field length              2 bytes
+        extra_fields_size += tmp.bytesize
       end
+      io << [extra_fields_size].pack(C_v)               # extra field length              2 bytes
 
-      io << filename_binary                               # file name (variable size)
+      io << filename_binary                             # file name (variable size)
 
       write_zip_64_extra_for_local_file_header(io) if @requires_zip64
+      write_infozip_extra_for_utf8_filename(io) if utf8_filename?
     end
 
     def write_zip_64_extra_for_local_file_header(io)
@@ -174,6 +179,25 @@ class ZipTricks::Microzip
       io << [compressed_size].pack(C_Qe)              # 8 bytes    Size of compressed data
       io << [local_file_header_location].pack(C_Qe)   # 8 bytes    Offset of local header record
       io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
+    end
+
+    def write_infozip_extra_for_utf8_filename(io)
+      # The specification says:
+      # If both the File Name and Comment fields are UTF-8, the new General Purpose
+      # Bit Flag, bit 11 (Language encoding flag (EFS)), can be used to
+      # indicate that both the header File Name and Comment fields are UTF-8
+      # and, in this case, the Unicode Path and Unicode Comment extra fields
+      # are not needed and should not be created.
+      #
+      # But (!) we will experiment with it regardless.
+      blocksize = 1 + 4 + filename_binary.bytesize # (version + crc of the filename + utf8 name byte length)
+      filename_crc = Zlib.crc32(filename_binary)
+      
+      io << [0x7075].pack('v')                  # (UPath) 0x7075        Short       tag for this extra block type ("up")
+      io << [blocksize].pack('v')               #         TSize         Short       total data size for this block
+      io << [1].pack('C')                       #         Version       1 byte      version of this extra field, currently 1
+      io << [filename_crc].pack(C_V)            #         NameCRC32     4 bytes     File Name Field CRC32 Checksum
+      io << filename_binary                     #         UnicodeName   Variable    UTF-8 version of the entry File Name
     end
 
     def write_central_directory_file_header(io, local_file_header_location)
@@ -206,13 +230,21 @@ class ZipTricks::Microzip
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
       io << [filename_binary.bytesize].pack(C_v)          # file name length                2 bytes
 
+      extra_field_length = 0
+      
       if @requires_zip64
-        local_fh_extra = ''.force_encoding(Encoding::BINARY)
-        write_zip_64_extra_for_central_directory_file_header(local_fh_extra, local_file_header_location)
-        io << [local_fh_extra.bytesize].pack(C_v)         # extra field length              2 bytes
-      else
-        io << [0].pack(C_v)                                 # extra field length              2 bytes
+        tmp = ''.force_encoding(Encoding::BINARY)
+        write_zip_64_extra_for_central_directory_file_header(tmp, local_file_header_location)
+        extra_field_length += tmp.bytesize
       end
+      
+      if utf8_filename?
+        tmp = ''.force_encoding(Encoding::BINARY)
+        write_infozip_extra_for_utf8_filename(tmp)
+        extra_field_length += tmp.bytesize
+      end
+      
+      io << [extra_field_length].pack(C_v)                # extra field length              2 bytes
 
       io << [0].pack(C_v)                                 # file comment length             2 bytes
       io << [0].pack(C_v)                                 # disk number start               2 bytes
@@ -229,6 +261,9 @@ class ZipTricks::Microzip
 
       if @requires_zip64                                  # extra field (variable size)
         write_zip_64_extra_for_central_directory_file_header(io, local_file_header_location)
+      end
+      if utf8_filename?
+        write_infozip_extra_for_utf8_filename(io)
       end
                                                           # file comment (variable size)
     end

@@ -22,7 +22,7 @@ Jeweler::Tasks.new do |gem|
   gem.description = %Q{Makes rubyzip stream, for real}
   gem.email = "me@julik.nl"
   gem.authors = ["Julik Tarkhanov"]
-  gem.files.exclude "testing"
+  gem.files.exclude "testing/**/*"
   # dependencies defined in Gemfile
 end
 Jeweler::RubygemsDotOrgTasks.new

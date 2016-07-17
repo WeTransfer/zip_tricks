@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib"]
   s.authors = ["Julik Tarkhanov"]
-  s.date = "2016-07-15"
+  s.date = "2016-07-17"
   s.description = "Makes rubyzip stream, for real"
   s.email = "me@julik.nl"
   s.extra_rdoc_files = [
@@ -35,6 +35,7 @@ Gem::Specification.new do |s|
     "lib/zip_tricks/block_deflate.rb",
     "lib/zip_tricks/block_write.rb",
     "lib/zip_tricks/manifest.rb",
+    "lib/zip_tricks/microzip.rb",
     "lib/zip_tricks/null_writer.rb",
     "lib/zip_tricks/rack_body.rb",
     "lib/zip_tricks/remote_io.rb",
@@ -47,6 +48,8 @@ Gem::Specification.new do |s|
     "spec/zip_tricks/block_deflate_spec.rb",
     "spec/zip_tricks/block_write_spec.rb",
     "spec/zip_tricks/manifest_spec.rb",
+    "spec/zip_tricks/microzip_interop_spec.rb",
+    "spec/zip_tricks/microzip_spec.rb",
     "spec/zip_tricks/rack_body_spec.rb",
     "spec/zip_tricks/remote_io_spec.rb",
     "spec/zip_tricks/remote_uncap_spec.rb",

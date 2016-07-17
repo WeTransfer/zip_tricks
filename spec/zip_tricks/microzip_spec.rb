@@ -206,5 +206,8 @@ describe ZipTricks::Microzip do
       
       skip "Not finished"
     end
+    
+    it 'writes the central directory 1 file that is larger than 4GB'
+    it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold'
   end
 end

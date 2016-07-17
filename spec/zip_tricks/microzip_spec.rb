@@ -31,10 +31,9 @@ describe ZipTricks::Microzip do
     tf.flush
 
     Zip::File.open(tf.path) do |zip_file|
-      entries = []
-      zip_file.each do |entry|
-        entries << entry
-
+      entries = zip_file.to_a
+      expect(entries.length).to eq(3)
+      entries.each do |entry|
         # Make sure it is tagged as UNIX
         expect(entry.fstype).to eq(3)
 
@@ -52,7 +51,6 @@ describe ZipTricks::Microzip do
         # Check the right external attributes (non-executable on UNIX)
         expect(entry.external_file_attributes).to eq(2175008768)
       end
-      expect(entries.length).to eq(3)
     end
 
     inspect_zip_with_external_tool(tf.path)

@@ -105,5 +105,33 @@ describe ZipTricks::Microzip do
       expect(br.read_8b).to eq(0xFFFFFFFF + 1) # True uncompressed size
       expect(buf).to be_eof
     end
+    
+    it 'writes out the local file header for an entry that requires Zip64 based on its uncompressed size _only_' do
+      buf = StringIO.new
+      zip = described_class.new(buf)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 90981,
+        uncompressed_size: (0xFFFFFFFF + 1), storage_mode: 8, mtime: mtime)
+      
+      buf.rewind
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x04034b50) # Signature
+      expect(br.read_2b).to eq(45)         # Version needed to extract (require Zip64 support)
+      expect(br.read_2b).to eq(0)          # gp flags
+      expect(br.read_2b).to eq(8)          # storage mode
+      expect(br.read_2b).to eq(28160)      # DOS time
+      expect(br.read_2b).to eq(18673)      # DOS date
+      expect(br.read_4b).to eq(123)        # CRC32
+      expect(br.read_4b).to eq(0xFFFFFFFF) # compressed size (blanked out)
+      expect(br.read_4b).to eq(0xFFFFFFFF) # uncompressed size (blanked out)
+      expect(br.read_2b).to eq('first-file.bin'.bytesize)      # byte length of the filename
+      expect(br.read_2b).to eq(20)         # size of extra fields
+      expect(br.read_n('first-file.bin'.bytesize)).to eq('first-file.bin') # the filename
+      expect(br.read_2b).to eq(1)              # Zip64 extra field signature
+      expect(br.read_2b).to eq(16)             # Size of the Zip64 extra field
+      expect(br.read_8b).to eq(0xFFFFFFFF + 1) # True uncompressed size
+      expect(br.read_8b).to eq(90981)          # True compressed size
+      expect(buf).to be_eof
+    end
   end
 end

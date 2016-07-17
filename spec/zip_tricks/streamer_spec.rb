@@ -125,7 +125,8 @@ describe ZipTricks::Streamer do
       File.unlink('test.zip') rescue nil
       File.rename(outbuf.path, 'osx-archive-test.zip')
       
-      open_zip_with_archive_utility('osx-archive-test.zip')
+      # Mark this test as skipped if the system does not have the binary
+      open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
     end
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')

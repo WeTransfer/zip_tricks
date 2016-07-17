@@ -133,5 +133,28 @@ describe ZipTricks::Microzip do
       expect(br.read_8b).to eq(90981)          # True compressed size
       expect(buf).to be_eof
     end
+    
+    it 'does not write out the Zip64 extra if the position in the destination IO is beyond the Zip64 size limit' do
+      buf = StringIO.new
+      zip = described_class.new(buf)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+      expect(buf).to receive(:tell).and_return(0xFFFFFFFF + 1)
+      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 123,
+        uncompressed_size: 456, storage_mode: 8, mtime: mtime)
+      
+      buf.rewind
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x04034b50) # Signature
+      expect(br.read_2b).to eq(20)         # Version needed to extract (require Zip64 support)
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_4b
+      br.read_4b
+      br.read_4b
+      br.read_2b
+      expect(br.read_2b).to be_zero
+    end
   end
 end

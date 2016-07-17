@@ -20,7 +20,7 @@ def build_test(test_description)
   filename = '%02d-%s.zip' % [$tests_performed, test_file_base]
   
   puts 'Test %02d: %s' % [$tests_performed, test_description]
-  puts fiename
+  puts filename
   puts ""
   
   $builder_threads << Thread.new do
@@ -98,3 +98,17 @@ build_test "One tiny entry followed by second that requires Zip64" do |zip|
   repeats.times { zip << war_and_peace }
 end
 
+build_test "Two entries both requiring Zip64" do |zip|
+  desired_minimum_size = (0xFFFFFFFF) + 6
+  repeats = (desired_minimum_size.to_f / war_and_peace.bytesize).ceil
+  crc_stream = ZipTricks::StreamCRC32.new
+  repeats.times { crc_stream << war_and_peace }
+  entry_size = war_and_peace.bytesize * repeats
+  raise "Ooops" if entry_size < desired_minimum_size
+  
+  zip.add_stored_entry('huge-1.bin', entry_size, crc_stream.to_i)
+  repeats.times { zip << war_and_peace }
+
+  zip.add_stored_entry('huge-2.bin', entry_size, crc_stream.to_i)
+  repeats.times { zip << war_and_peace }
+end

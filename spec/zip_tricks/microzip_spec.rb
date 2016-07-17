@@ -34,18 +34,21 @@ describe ZipTricks::Microzip do
       entries = []
       zip_file.each do |entry|
         entries << entry
-        
+
+        # Make sure it is tagged as UNIX
+        expect(entry.fstype).to eq(3)
+
         # Check the file contents
         readback = entry.get_input_stream.read
         readback.force_encoding(Encoding::BINARY)
         expect(readback).to eq(test_str)
-        
+
         # The CRC
         expect(entry.crc).to eq(crc)
-        
+
         # Check the name
         expect(entry.name).to match(/test/)
-        
+
         # Check the right external attributes (non-executable on UNIX)
         expect(entry.external_file_attributes).to eq(2175008768)
       end

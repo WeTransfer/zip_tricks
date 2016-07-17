@@ -157,4 +157,25 @@ describe ZipTricks::Microzip do
       expect(br.read_2b).to be_zero
     end
   end
+  
+  describe '#write_central_directory' do
+    it 'can write the central directory and makes it a valid one even if there were no files' do
+      buf = StringIO.new
+      
+      zip = described_class.new(buf)
+      zip.write_central_directory
+      
+      buf.rewind
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x06054b50) # EOCD signature
+      expect(br.read_2b).to eq(0)          # disk number
+      expect(br.read_2b).to eq(0)          # disk number of the disk containing EOCD
+      expect(br.read_2b).to eq(0)          # num files in the central directory of this disk
+      expect(br.read_2b).to eq(0)          # num files in the central directories of all disks
+      expect(br.read_4b).to eq(0)          # central directorys size
+      expect(br.read_4b).to eq(0)          # offset of start of central directory from the beginning of the disk
+      expect(br.read_2b).to eq(0)          # ZIP file comment length
+      expect(buf).to be_eof
+    end
+  end
 end

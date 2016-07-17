@@ -177,5 +177,34 @@ describe ZipTricks::Microzip do
       expect(br.read_2b).to eq(0)          # ZIP file comment length
       expect(buf).to be_eof
     end
+    
+    it 'writes the central directory for 2 files' do
+      buf = StringIO.new
+      
+      zip = described_class.new(buf)
+      
+      buf = StringIO.new
+      zip = described_class.new(buf)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 5,
+        uncompressed_size: 8, storage_mode: 8, mtime: mtime)
+      buf << Random.new.bytes(5)
+      zip.add_local_file_header(filename: 'first-file.txt', crc32: 123, compressed_size: 9,
+        uncompressed_size: 9, storage_mode: 0, mtime: mtime)
+      buf << Random.new.bytes(5)
+      
+      central_dir_offset = buf.tell
+      
+      zip.write_central_directory
+      
+      # Seek to where the central directory begins
+      buf.rewind
+      buf.seek(central_dir_offset)
+      
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
+      
+      skip "Not finished"
+    end
   end
 end

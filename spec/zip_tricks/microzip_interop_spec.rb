@@ -57,22 +57,6 @@ describe 'Microzip in interop context' do
     open_zip_with_unarchiver(tf.path)
   end
 
-  it 'raises an exception if the filename is non-unique in the already existing set' do
-    z = described_class.new(StringIO.new)
-    z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
-    expect {
-      z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
-    }.to raise_error(/already/)
-  end
-
-  it 'raises an exception if the filename does not fit in 0xFFFF bytes' do
-    longest_filename_in_the_universe = "x" * (0xFFFF + 1)
-    z = described_class.new(StringIO.new)
-    expect {
-      z.add_local_file_header(filename: longest_filename_in_the_universe, crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
-    }.to raise_error(/filename/)
-  end
-
   it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in' do
     the_f = RandomFile.new(19)
 
@@ -94,8 +78,6 @@ describe 'Microzip in interop context' do
       expect(the_entry.gp_flags).to eq(2048)
       expect(the_entry.name.force_encoding(Encoding::UTF_8)).to match(/тест/)
     end
-    open_zip_with_archive_utility(out_zip.path)
-    open_zip_with_unarchiver(out_zip.path)
   end
 
   it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do

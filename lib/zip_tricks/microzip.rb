@@ -18,7 +18,7 @@ class ZipTricks::Microzip
   
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF
-
+  
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45
@@ -32,10 +32,16 @@ class ZipTricks::Microzip
     file_type_file = 010
     external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
   end
+  MADE_BY_SIGNATURE = begin
+    # A combination of the VERSION_MADE_BY low byte and the OS type high byte
+    os_type = 3 # UNIX
+    [VERSION_MADE_BY, os_type].pack('CC')
+  end
+
   C_V = 'V'.freeze
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
-
+  
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
     def initialize(*)
       super
@@ -136,7 +142,7 @@ class ZipTricks::Microzip
       @requires_zip64 = true if local_file_header_location > FOUR_BYTE_MAX_UINT
       
       io << [0x02014b50].pack(C_V)                        # central file header signature   4 bytes  (0x02014b50)
-      io << [VERSION_MADE_BY].pack(C_v)                   # version made by                 2 bytes
+      io << MADE_BY_SIGNATURE                             # version made by                 2 bytes
       if @requires_zip64
         io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v) # version needed to extract       2 bytes
       else
@@ -256,7 +262,7 @@ class ZipTricks::Microzip
                                                 # directory record                8 bytes
                                                 # (this is ex. the 12 bytes of the signature and the size value itself).
                                                 # Without the extensible data sector it is always 44.
-      @io << [VERSION_MADE_BY].pack(C_v)                      # version made by                 2 bytes
+      @io << MADE_BY_SIGNATURE                                # version made by                 2 bytes
       @io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v)      # version needed to extract       2 bytes
       @io << [0].pack(C_V)                                    # number of this disk             4 bytes
       @io << [0].pack(C_V)                                    # number of the disk with the
@@ -317,5 +323,7 @@ class ZipTricks::Microzip
   end
   
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
-    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64, :DEFAULT_EXTERNAL_ATTRS, :Entry, :C_V, :C_v, :C_Qe
+    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
+    :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE, 
+    :Entry, :C_V, :C_v, :C_Qe
 end

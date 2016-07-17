@@ -1,6 +1,4 @@
 require_relative '../spec_helper'
-require 'fileutils'
-require 'shellwords'
 
 describe 'Microzip in interop context' do
   let(:described_class) { ZipTricks::Microzip}

@@ -4,6 +4,8 @@ $LOAD_PATH.unshift(File.dirname(__FILE__))
 require 'rspec'
 require 'zip_tricks'
 require 'digest'
+require 'fileutils'
+require 'shellwords'
 
 module Keepalive
   # Travis-CI kills the build if it does not receive output on standard out or standard error

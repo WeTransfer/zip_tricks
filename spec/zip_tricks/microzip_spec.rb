@@ -78,6 +78,30 @@ describe ZipTricks::Microzip do
       expect(br.read_2b).to eq(2048)       # gp flags
     end
     
+    it 'writes out the local file header for an entry with a filename with diacritics, setting the proper GP flag bit' do
+      buf = StringIO.new
+      zip = described_class.new(buf)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+      zip.add_local_file_header(filename: 'Kungälv', crc32: 123, compressed_size: 8981,
+        uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
+      
+      buf.rewind
+      br = ByteReader.new(buf)
+      br.read_4b # Signature
+      br.read_2b # Version needed to extract
+      expect(br.read_2b).to eq(2048)       # gp flags
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_4b
+      br.read_4b
+      br.read_4b
+      br.read_2b
+      br.read_2b
+      filename_readback = br.read_n('Kungälv'.bytesize)
+      expect(filename_readback.force_encoding(Encoding::UTF_8)).to eq('Kungälv')
+    end
+    
     it 'writes out the local file header for an entry that requires Zip64 based on its compressed size _only_' do
       buf = StringIO.new
       zip = described_class.new(buf)

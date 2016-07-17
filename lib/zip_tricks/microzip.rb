@@ -41,32 +41,72 @@ class ZipTricks::Microzip
   C_V = 'V'.freeze
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
+
+  # Strictly speaking, if a diacritic-containing character (such as å) does fit into the DOS-437
+  # codepage, it should be encodable as such. This would, in theory, let older Windows tools
+  # decode the filename correctly. However, this kills the filename decoding for the OSX builtin
+  # archive utility (it assumes the filename to be UTF-8, regardless). So if we allow filenames
+  # to be encoded in DOS-437, we _potentially_ have support in Windows but we upset everyone on Mac.
+  # If we just use UTF-8 and set the right EFS bit in general purpose flags, we upset Windows users
+  # because most of the Windows unarchive tools (at least the builtin ones) do not give a flying eff
+  # about the EFS support bit being set.
+  #
+  # Additionally, if we use Unarchiver on OSX (which is our recommended unpacker for large files),
+  # it will (very rightfully) ask us how we should decode each filename that does not have the EFS bit,
+  # but does contain something non-ASCII-decodable. This is horrible UX for users.
+  #
+  # So, basically, we have 2 choices, for filenames containing diacritics (for bona-fide UTF-8 you do not
+  # even get those choices, you _have_ to use UTF-8):
+  #
+  # * Make life easier for Windows users by setting stuff to DOS, not care about the standard _and_ make
+  #   most of Mac users upset
+  # * Make life easy for Mac users and conform to the standard, and tell Windows users to get a _decent_
+  #   ZIP unarchiving tool.
+  #
+  # We are going with option 2, and this is well-thought-out. Trust me. If you want the crazytown
+  # filename encoding scheme that is described here http://stackoverflow.com/questions/13261347
+  # you can try this:
+  #
+  #  [Encoding::CP437, Encoding::ISO_8859_1, Encoding::UTF_8]
+  #
+  # We don't want no such thing, and sorry Windows users, you are going to need a decent unarchiver
+  # that honors the standard. Alas, alas.
+  FILENAME_ENCODINGS = [Encoding::ASCII, Encoding::UTF_8]
   
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
     def initialize(*)
       super
-      
-      if filename.bytesize > TWO_BYTE_MAX_UINT
-        raise TooMuch, "The given filename is too long to fit (%d bytes)" % filename.bytesize
-      end
-      
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
+      if filename_binary.bytesize > TWO_BYTE_MAX_UINT
+        raise TooMuch, "The given filename is too long to fit (%d bytes)" % filename_binary.bytesize
+      end
     end
 
     def requires_zip64?
       @requires_zip64
     end
-
+    
+    def filename_encoded
+      FILENAME_ENCODINGS.each do |enc|
+        return filename.encode(enc) rescue nil
+      end
+      raise "No usable encoding for #{@filename.inspect}"
+    end
+    
+    def filename_binary
+      filename_encoded.force_encoding(Encoding::BINARY)
+    end
+    
     # Set the general purpose flags for the entry. The only flag we care about is the EFS
     # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
     def gp_flags_based_on_filename
-      filename.encode(Encoding::ASCII)
-      0b00000000000
-    rescue Encoding::UndefinedConversionError # UTF8 filename
-      # notify the unarchiver that the filename is in UTF8
-      0b00000000000 | 0b100000000000
+      if filename_encoded.encoding == Encoding::UTF_8
+        0b00000000000 | 0b100000000000
+      else
+        0b00000000000
+      end
     end
 
     def write_local_file_header(io)
@@ -105,7 +145,7 @@ class ZipTricks::Microzip
       end
 
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
-      io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
+      io << [filename_binary.bytesize].pack(C_v)        # file name length             2 bytes
 
       if @requires_zip64
         tmp = ''.force_encoding(Encoding::BINARY)
@@ -115,7 +155,7 @@ class ZipTricks::Microzip
         io << [0].pack(C_v)                               # extra field length              2 bytes
       end
 
-      io << filename                                      # file name (variable size)
+      io << filename_binary                               # file name (variable size)
 
       write_zip_64_extra_for_local_file_header(io) if @requires_zip64
     end
@@ -164,7 +204,7 @@ class ZipTricks::Microzip
       end
 
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
-      io << [filename.bytesize].pack(C_v)                 # file name length                2 bytes
+      io << [filename_binary.bytesize].pack(C_v)          # file name length                2 bytes
 
       if @requires_zip64
         local_fh_extra = ''.force_encoding(Encoding::BINARY)
@@ -185,7 +225,7 @@ class ZipTricks::Microzip
       else
         io << [local_file_header_location].pack(C_V)     # relative offset of local header 4 bytes
       end
-      io << filename                                      # file name (variable size)
+      io << filename_binary                              # file name (variable size)
 
       if @requires_zip64                                  # extra field (variable size)
         write_zip_64_extra_for_central_directory_file_header(io, local_file_header_location)

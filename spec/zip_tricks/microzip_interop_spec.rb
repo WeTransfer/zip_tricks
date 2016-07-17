@@ -57,7 +57,7 @@ describe 'Microzip in interop context' do
     open_zip_with_unarchiver(tf.path)
   end
 
-  it 'correctly sets the general-purpose flag bit 11 when a UTF-8 filename is passed in' do
+  it 'encodes filenames with real UTF-8 characters as UTF-8 and sets the EFS bit in the general purpose flag' do
     the_f = RandomFile.new(19)
 
     out_zip = ManagedTempfile.new('zip')
@@ -69,17 +69,34 @@ describe 'Microzip in interop context' do
     out_zip.flush
 
     Zip::File.open(out_zip.path) do |zip_file|
-      entries = []
-      zip_file.each do |entry|
-        entries << entry
-      end
-      the_entry = entries[0]
-
+      the_entry = zip_file.to_a[0]
       expect(the_entry.gp_flags).to eq(2048)
       expect(the_entry.name.force_encoding(Encoding::UTF_8)).to match(/тест/)
     end
   end
 
+  it 'encodes filenames with diacritics as UTF-8 and sets the EFS bit in the general purpose flag' do
+    the_f = RandomFile.new(5)
+
+    out_zip = ManagedTempfile.new('zip')
+    z = described_class.new(out_zip)
+    z.add_local_file_header(filename: 'Kungälv', crc32: the_f.crc32, compressed_size: the_f.size,
+      uncompressed_size: the_f.size, storage_mode: 0, mtime: Time.now)
+    the_f.copy_to(out_zip)
+    z.write_central_directory
+    out_zip.flush
+
+    Zip::File.open(out_zip.path) do |zip_file|
+      the_entry = zip_file.to_a[0]
+      expect(the_entry.gp_flags).to eq(2048)
+      expect(the_entry.name.force_encoding(Encoding::UTF_8)).to eq('Kungälv')
+    end
+
+    inspect_zip_with_external_tool(out_zip.path)
+    open_zip_with_archive_utility(out_zip.path)
+    open_zip_with_unarchiver(out_zip.path)
+  end
+  
   it 'creates an archive with 1 5GB file (Zip64 due to a single file exceeding the size)', long: true do
     five_gigs = RandomFile.new(5 * 1024 * 1024 * 1024)
 

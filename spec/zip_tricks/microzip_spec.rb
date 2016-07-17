@@ -2,7 +2,8 @@ require_relative '../spec_helper'
 require 'fileutils'
 require 'shellwords'
 
-describe ZipTricks::Microzip do
+describe 'Microzip in interop context' do
+  let(:described_class) { ZipTricks::Microzip}
   # Run each test in a temporady directory, and nuke it afterwards
   around(:each) do |example|
     wd = Dir.pwd

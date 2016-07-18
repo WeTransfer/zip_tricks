@@ -35,6 +35,8 @@ parallel, and `StreamCRC32` to compute the CRC checksum, before feeding them to 
 
 This approach might be reconsidered in the future.
 
+For more info see https://github.com/thejoshwolfe/yazl#general-purpose-bit-flag
+
 ## Zip64 support
 
 Zip64 support switches on _by itself_, automatically, when _any_ of the following conditions is met:

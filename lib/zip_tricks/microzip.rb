@@ -43,7 +43,7 @@ class ZipTricks::Microzip
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
 
-  class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
+  class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor)
     def initialize(*)
       super
       filename.force_encoding(Encoding::UTF_8)
@@ -61,8 +61,12 @@ class ZipTricks::Microzip
     # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
-    def gp_flags_based_on_filename
-      @requires_efs_flag ? (0b00000000000 | 0b100000000000) : 0b00000000000
+    def gp_flags
+      flag = 0b00000000000
+      flag |= 0b100000000000 if @requires_efs_flag # bit 11
+      flag |= 0x0008 if use_data_descriptor        # bit 3
+      
+      flag
     end
 
     def write_local_file_header(io)
@@ -86,18 +90,18 @@ class ZipTricks::Microzip
         io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)
       end
 
-      io << [gp_flags_based_on_filename].pack("v")        # general purpose bit flag        2 bytes
+      io << [gp_flags].pack("v")                          # general purpose bit flag        2 bytes
       io << [storage_mode].pack("v")                      # compression method              2 bytes
       io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
       io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
       io << [crc32].pack(C_V)                             # crc-32                          4 bytes
 
-      if @requires_zip64
-        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
-        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
-      else
+      if !@requires_zip64
         io << [compressed_size].pack(C_V)                 # compressed size              4 bytes
         io << [uncompressed_size].pack(C_V)               # uncompressed size            4 bytes
+      else
+        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
+        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
       end
 
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
@@ -147,7 +151,7 @@ class ZipTricks::Microzip
         io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)       # version needed to extract       2 bytes
       end
 
-      io << [gp_flags_based_on_filename].pack(C_v)        # general purpose bit flag        2 bytes
+      io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
       io << [storage_mode].pack(C_v)                      # compression method              2 bytes
       io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
       io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
@@ -191,6 +195,35 @@ class ZipTricks::Microzip
                                                           # file comment (variable size)
     end
 
+    # I am keeping this for future use (if we want to generate ZIPs with postfix CRCs for instance)
+    def write_data_descriptor(io)
+      # 4.3.9.3 Although not originally assigned a signature, the value
+      #       0x08074b50 has commonly been adopted as a signature value
+      #       for the data descriptor record.
+      # 4.3.9.4 When writing ZIP files, implementors SHOULD include the
+      #    signature value marking the data descriptor record.  When
+      #    the signature is used, the fields currently defined for
+      #    the data descriptor record will immediately follow the
+      #    signature.
+      io << [0x08074b50].pack(C_V)
+      # 4.3.9.2 When compressing files, compressed and uncompressed sizes
+      # should be stored in ZIP64 format (as 8 byte values) when a
+      # file's size exceeds 0xFFFFFFFF.   However ZIP64 format may be
+      # used regardless of the size of a file.  When extracting, if
+      # the zip64 extended information extra field is present for
+      # the file the compressed and uncompressed sizes will be 8
+      # byte values.
+      io << [crc32].pack(C_V)                             # crc-32                          4 bytes
+      @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
+      if @requires_zip64
+        io << [compressed_size].pack(C_Qe)                # compressed size                 8 bytes for ZIP64
+        io << [uncompressed_size].pack(C_Qe)              # uncompressed size               8 bytes for ZIP64
+      else
+        io << [compressed_size].pack(C_V)                 # compressed size                 4 bytes
+        io << [uncompressed_size].pack(C_V)               # uncompressed size               4 bytes
+      end
+    end
+    
     private
 
     def bytesize_of
@@ -229,12 +262,34 @@ class ZipTricks::Microzip
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
-    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime)
+    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime,use_data_descriptor=false)
     @files << e
     @local_header_offsets << io.tell
     e.write_local_file_header(io)
   end
 
+  def add_local_file_header_of_unknown_size(io:,  filename:, storage_mode:, mtime: Time.now.utc)
+    if @files.any?{|e| e.filename == filename }
+      raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
+    end
+    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
+    e = Entry.new(filename, crc32=0, compressed_size=0, uncompressed_size=0, storage_mode, mtime, use_data_descriptor=true)
+    @files << e
+    @local_header_offsets << io.tell
+    e.write_local_file_header(io)
+  end
+  
+  def write_data_descriptor(io:, crc32:, compressed_size:, uncompressed_size:)
+    last_file = @files[-1]
+    raise "No files registered" unless last_file
+    raise "The file #{last_file} did not have the postfix descriptors enabled" unless last_file.use_data_descriptor
+    last_file.compressed_size = compressed_size
+    last_file.uncompressed_size = uncompressed_size
+    last_file.crc32 = crc32
+    last_file.write_data_descriptor(io)
+    last_file.use_data_descriptor = false # Reset it so that the central directory gets generated correctly
+  end
+  
   # Writes the central directory (including the Zip6 salient bits if necessary)
   #
   # @param io[#<<, #tell] the buffer to write the central directory to.

@@ -93,3 +93,11 @@ Additionally, the tests with the unarchivers we _do_ support have shown that inc
 extra field does not actually help any of them recognize the file name correctly. And the use of
 those fields for the UTF-8 filename, per spec, tells us we should not set the EFS bit - which ruins
 the unarchiving for all other solutions. As any other, this decision may be changed in the future.
+
+## Directory support
+
+ZIP makes it possible to store empty directories (folders). For our purposes, however, we are going
+to store only the files. If you store a file, called, say, `docs/item.doc` then the unarchiver will
+automatically create the `docs` directory if it doesn't exist already. You can also store an entry
+with a length of 0 and set it's external attributes to be an empty directory, but we do not need
+that functionality - so it is also omitted.

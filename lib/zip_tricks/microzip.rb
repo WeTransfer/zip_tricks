@@ -42,15 +42,7 @@ class ZipTricks::Microzip
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
 
-  module Bytesize
-    def bytesize_of
-      ''.force_encoding(Encoding::BINARY).tap {|b| yield(b) }.bytesize
-    end
-  end
-  include Bytesize
-  
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
-    include Bytesize
     def initialize(*)
       super
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
@@ -231,6 +223,10 @@ class ZipTricks::Microzip
     end
 
     private
+
+    def bytesize_of
+      ''.force_encoding(Encoding::BINARY).tap {|b| yield(b) }.bytesize
+    end
 
     def to_binary_dos_time(t)
       (t.sec/2) + (t.min << 5) + (t.hour << 11)

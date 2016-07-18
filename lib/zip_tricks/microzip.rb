@@ -59,36 +59,6 @@ class ZipTricks::Microzip
     # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
-    #
-    # Now, strictly speaking, if a diacritic-containing character (such as å) does fit into the DOS-437
-    # codepage, it should be encodable as such. This would, in theory, let older Windows tools
-    # decode the filename correctly. However, this kills the filename decoding for the OSX builtin
-    # archive utility (it assumes the filename to be UTF-8, regardless). So if we allow filenames
-    # to be encoded in DOS-437, we _potentially_ have support in Windows but we upset everyone on Mac.
-    # If we just use UTF-8 and set the right EFS bit in general purpose flags, we upset Windows users
-    # because most of the Windows unarchive tools (at least the builtin ones) do not give a flying eff
-    # about the EFS support bit being set.
-    #
-    # Additionally, if we use Unarchiver on OSX (which is our recommended unpacker for large files),
-    # it will (very rightfully) ask us how we should decode each filename that does not have the EFS bit,
-    # but does contain something non-ASCII-decodable. This is horrible UX for users.
-    #
-    # So, basically, we have 2 choices, for filenames containing diacritics (for bona-fide UTF-8 you do not
-    # even get those choices, you _have_ to use UTF-8):
-    #
-    # * Make life easier for Windows users by setting stuff to DOS, not care about the standard _and_ make
-    #   most of Mac users upset
-    # * Make life easy for Mac users and conform to the standard, and tell Windows users to get a _decent_
-    #   ZIP unarchiving tool.
-    #
-    # We are going with option 2, and this is well-thought-out. Trust me. If you want the crazytown
-    # filename encoding scheme that is described here http://stackoverflow.com/questions/13261347
-    # you can try this:
-    #
-    #  [Encoding::CP437, Encoding::ISO_8859_1, Encoding::UTF_8]
-    #
-    # We don't want no such thing, and sorry Windows users, you are going to need a decent unarchiver
-    # that honors the standard. Alas, alas.
     def gp_flags_based_on_filename
       filename.encode(Encoding::ASCII)
       0b00000000000

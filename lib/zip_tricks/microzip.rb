@@ -241,8 +241,8 @@ class ZipTricks::Microzip
     end
   end
 
-  # Creates a new streaming writer. The writer is stateful and knows it's list of ZIP file entries
-  # as they are being added.
+  # Creates a new streaming writer.
+  # The writer is stateful and knows it's list of ZIP file entries as they are being added.
   def initialize
     @files = []
     @local_header_offsets = []
@@ -251,6 +251,7 @@ class ZipTricks::Microzip
   # Adds a file to the entry list and immediately writes out it's local file header into the
   # output stream.
   #
+  # @param io[#<<, #tell] the buffer to write the local file header to
   # @param filename[String] The name of the file
   # @param crc32[Fixnum]    The CRC32 checksum of the file
   # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
@@ -271,6 +272,8 @@ class ZipTricks::Microzip
 
   # Writes the central directory (including the Zip6 salient bits if necessary)
   #
+  # @param io[#<<, #tell] the buffer to write the central directory to.
+  #                     The method will use `tell` on the buffer since it has to know where the central directory is located
   # @return [void]
   def write_central_directory(io)
     start_of_central_directory = io.tell

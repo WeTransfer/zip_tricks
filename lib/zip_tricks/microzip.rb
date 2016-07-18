@@ -157,6 +157,10 @@ class ZipTricks::Microzip
 
       io << filename_binary                               # file name (variable size)
 
+      # Interesting tidbit:
+      # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
+      # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
+      # Zip64 extra field as _the first_ extra field. If we decide to add the Info-ZIP UTF-8 field...
       write_zip_64_extra_for_local_file_header(io) if @requires_zip64
     end
 

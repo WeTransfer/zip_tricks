@@ -1,10 +1,5 @@
 require_relative 'support'
 
-test_matrix_item "OSX", "ArchiveUtility (built-in)"
-test_matrix_item "OSX", "The Unarchiver (3.11.1)"
-test_matrix_item "Windows 7", "Explorer"
-test_matrix_item "Windows 7", "7Zip 9.20"
-
 build_test "Two small stored files" do |zip|
   zip.add_stored_entry('text.txt', $war_and_peace.bytesize, $war_and_peace_crc)
   zip << $war_and_peace
@@ -59,4 +54,42 @@ build_test "Two entries both requiring Zip64" do |zip|
 
   zip.add_stored_entry('huge-file-2.bin', big.size, big.crc32)
   big.write_to(zip)
+end
+
+DD = ZipTricks::CompressingStreamer 
+
+build_test "Two stored entries using data descriptors", streamer_class: DD do |zip|
+  zip.write_stored_file('stored.1.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 4)
+  end
+  zip.write_stored_file('stored.2.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 3)
+  end
+end
+
+build_test "One entry deflated using data descriptors", streamer_class: DD do |zip|
+  big = generate_big_entry(0xFFFFFFFF / 64)
+  zip.write_deflated_file('war-and-peace-repeated-compressed.txt') do |sink|
+    big.write_to(sink)
+  end
+end
+
+build_test "Two entries larger than the overall Zip64 offset using data descriptors", streamer_class: DD do |zip|
+  big = generate_big_entry((0xFFFFFFFF / 2) + 1024)
+  
+  zip.write_stored_file('repeated-A.txt') do |sink|
+    big.write_to(sink)
+  end
+  
+  zip.write_stored_file('repeated-B.txt') do |sink|
+    big.write_to(sink)
+  end
+end
+
+build_test "One stored entry larger than Zip64 threshold using data descriptors", streamer_class: DD do |zip|
+  big = generate_big_entry(0xFFFFFFFF + 64000)
+  
+  zip.write_stored_file('repeated-A.txt') do |sink|
+    big.write_to(sink)
+  end
 end

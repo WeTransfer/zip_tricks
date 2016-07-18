@@ -16,10 +16,10 @@ class ZipTricks::Microzip
   PathError = Class.new(StandardError)
   DuplicateFilenames = Class.new(StandardError)
   UnknownMode = Class.new(StandardError)
-  
+
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF
-  
+  ZIP_TRICKS_COMMENT = 'Written using ZipTricks %s' % ZipTricks::VERSION
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45
@@ -43,26 +43,30 @@ class ZipTricks::Microzip
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
 
-  class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
+  class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor)
     def initialize(*)
       super
       filename.force_encoding(Encoding::UTF_8)
-      @requires_efs_flag = !(filename.encode(Encoding::ASCII) rescue false)
-      @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
       raise TooMuch, "Filename is too long" if filename.bytesize > TWO_BYTE_MAX_UINT
       raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
+      @requires_efs_flag = !(filename.encode(Encoding::ASCII) rescue false)
+      @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
     end
 
     def requires_zip64?
       @requires_zip64
     end
-    
+
     # Set the general purpose flags for the entry. The only flag we care about is the EFS
     # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
-    def gp_flags_based_on_filename
-      @requires_efs_flag ? (0b00000000000 | 0b100000000000) : 0b00000000000
+    def gp_flags
+      flag = 0b00000000000
+      flag |= 0b100000000000 if @requires_efs_flag # bit 11
+      flag |= 0x0008 if use_data_descriptor        # bit 3
+
+      flag
     end
 
     def write_local_file_header(io)
@@ -86,18 +90,18 @@ class ZipTricks::Microzip
         io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)
       end
 
-      io << [gp_flags_based_on_filename].pack("v")        # general purpose bit flag        2 bytes
-      io << [storage_mode].pack("v")                      # compression method              2 bytes
+      io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
+      io << [storage_mode].pack(C_v)                      # compression method              2 bytes
       io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
       io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
       io << [crc32].pack(C_V)                             # crc-32                          4 bytes
 
-      if @requires_zip64
-        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
-        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
-      else
+      if !@requires_zip64
         io << [compressed_size].pack(C_V)                 # compressed size              4 bytes
         io << [uncompressed_size].pack(C_V)               # uncompressed size            4 bytes
+      else
+        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
+        io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
       end
 
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
@@ -138,7 +142,7 @@ class ZipTricks::Microzip
       # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
       # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
       @requires_zip64 = true if local_file_header_location > FOUR_BYTE_MAX_UINT
-      
+
       io << [0x02014b50].pack(C_V)                        # central file header signature   4 bytes  (0x02014b50)
       io << MADE_BY_SIGNATURE                             # version made by                 2 bytes
       if @requires_zip64
@@ -147,7 +151,7 @@ class ZipTricks::Microzip
         io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)       # version needed to extract       2 bytes
       end
 
-      io << [gp_flags_based_on_filename].pack(C_v)        # general purpose bit flag        2 bytes
+      io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
       io << [storage_mode].pack(C_v)                      # compression method              2 bytes
       io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
       io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
@@ -173,7 +177,7 @@ class ZipTricks::Microzip
       io << [extra_size].pack(C_v)                        # extra field length              2 bytes
 
       io << [0].pack(C_v)                                 # file comment length             2 bytes
-      
+
       # For The Unarchiver < 3.11.1 this field has to be set to the overflow value if zip64 is used
       # because otherwise it does not properly advance the pointer when reading the Zip64 extra field
       # https://bitbucket.org/WAHa_06x36/theunarchiver/pull-requests/2/bug-fix-for-zip64-extra-field-parser/diff
@@ -195,7 +199,24 @@ class ZipTricks::Microzip
       if @requires_zip64                                  # extra field (variable size)
         write_zip_64_extra_for_central_directory_file_header(io, local_file_header_location)
       end
-                                                          # file comment (variable size)
+      #(empty)                                            # file comment (variable size)
+    end
+
+    def write_data_descriptor(io)
+      io << [0x08074b50].pack(C_V)  # Although not originally assigned a signature, the value
+                                    # 0x08074b50 has commonly been adopted as a signature value
+                                    # for the data descriptor record.
+      io << [crc32].pack(C_V)                             # crc-32                          4 bytes
+
+
+      # If one of the sizes is above 0xFFFFFFF use ZIP64 lengths (8 bytes) instead. A good unarchiver
+      # will decide to unpack it as such if it finds the Zip64 extra for the file in the central directory.
+      # So also use the opportune moment to switch the entry to Zip64 if needed
+      @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
+      pack_spec = @requires_zip64 ? C_Qe : C_V
+
+      io << [compressed_size].pack(pack_spec)       # compressed size                 4 bytes, or 8 bytes for ZIP64
+      io << [uncompressed_size].pack(pack_spec)     # uncompressed size               4 bytes, or 8 bytes for ZIP64
     end
 
     private
@@ -221,7 +242,8 @@ class ZipTricks::Microzip
   end
 
   # Adds a file to the entry list and immediately writes out it's local file header into the
-  # output stream.
+  # output stream. The entry will not use data descriptors and bit 3 of the general purpose flags
+  # will not be set.
   #
   # @param io[#<<, #tell] the buffer to write the local file header to
   # @param filename[String] The name of the file
@@ -236,16 +258,57 @@ class ZipTricks::Microzip
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
-    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime)
+    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime,use_data_descriptor=false)
     @files << e
     @local_header_offsets << io.tell
     e.write_local_file_header(io)
   end
 
+  # Adds a file to the entry list and immediately writes out it's local file header, setting the
+  # compressed/uncompressed sizes in the local file header to zeroes, and setting bit 3 of the
+  # general purpose flags. Either the written local file header or the data written after it
+  # should be followed by a data descriptor for the entry (see `write_data_descriptor`)
+  #
+  # @param io[#<<, #tell] the buffer to write the local file header to
+  # @param filename[String] The name of the file
+  # @param storage_mode[Fixnum]  Either 0 for "stored" or 8 for "deflated"
+  # @param mtime[Time] What modification time to record for the file
+  # @return [void]
+  def add_local_file_header_of_unknown_size(io:,  filename:, storage_mode:, mtime: Time.now.utc)
+    if @files.any?{|e| e.filename == filename }
+      raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
+    end
+    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
+    e = Entry.new(filename, crc32=0, compressed_size=0, uncompressed_size=0, storage_mode, mtime, use_data_descriptor=true)
+    @files << e
+    @local_header_offsets << io.tell
+    e.write_local_file_header(io)
+  end
+
+  # Writes the data descriptor following the file data for a file whose local file header
+  # was written using `add_local_file_header_of_unknown_size`. If the one of the sizes
+  # exceeds the Zip64 threshold, the data descriptor will have the sizes written out as
+  # 8-byte values instead of 4-byte values.
+  #
+  # @param io[#<<, #tell] the buffer to write the local file header to
+  # @param crc32[Fixnum]    The CRC32 checksum of the file
+  # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
+  # @param uncompressed_size[Fixnum]  The size of the file once extracted
+  # @return [void]
+  def write_data_descriptor(io:, crc32:, compressed_size:, uncompressed_size:)
+    last_file = @files[-1]
+    raise "No files registered" unless last_file
+    raise "The file #{last_file} did not have the postfix descriptors enabled" unless last_file.use_data_descriptor
+    last_file.compressed_size = compressed_size
+    last_file.uncompressed_size = uncompressed_size
+    last_file.crc32 = crc32
+    last_file.write_data_descriptor(io)
+  end
+
   # Writes the central directory (including the Zip6 salient bits if necessary)
   #
   # @param io[#<<, #tell] the buffer to write the central directory to.
-  #                     The method will use `tell` on the buffer since it has to know where the central directory is located
+  #         The method will use `tell` on the buffer since it has to know where the central directory is located.
   # @return [void]
   def write_central_directory(io)
     start_of_central_directory = io.tell
@@ -267,11 +330,12 @@ class ZipTricks::Microzip
       # [zip64 end of central directory record]
       zip64_eocdr_offset = io.tell
                                                 # zip64 end of central dir
-      io << [0x06064b50].pack(C_V)             # signature                       4 bytes  (0x06064b50)
-      io << [44].pack(C_Qe)                    # size of zip64 end of central
+      io << [0x06064b50].pack(C_V)              # signature                       4 bytes  (0x06064b50)
+      io << [44].pack(C_Qe)                     # size of zip64 end of central
                                                 # directory record                8 bytes
                                                 # (this is ex. the 12 bytes of the signature and the size value itself).
-                                                # Without the extensible data sector it is always 44.
+                                                # Without the extensible data sector (which we are not using)
+                                                # it is always 44 bytes.
       io << MADE_BY_SIGNATURE                                # version made by                 2 bytes
       io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v)      # version needed to extract       2 bytes
       io << [0].pack(C_V)                                    # number of this disk             4 bytes
@@ -304,7 +368,7 @@ class ZipTricks::Microzip
     io << [0].pack(C_v)                                     # number of this disk              2 bytes
     io << [0].pack(C_v)                                     # number of the disk with the
                                                             # start of the central directory 2 bytes
-    
+
     if zip64_required # the number of entries will be read from the zip64 part of the central directory
       io << [TWO_BYTE_MAX_UINT].pack(C_v)                   # total number of entries in the
                                                             # central directory on this disk   2 bytes
@@ -316,7 +380,7 @@ class ZipTricks::Microzip
       io << [@files.length].pack(C_v)                       # total number of entries in
                                                             # the central directory            2 bytes
     end
-    
+
     if zip64_required
       io << [FOUR_BYTE_MAX_UINT].pack(C_V)                  # size of the central directory    4 bytes
       io << [FOUR_BYTE_MAX_UINT].pack(C_V)                  # offset of start of central
@@ -328,12 +392,12 @@ class ZipTricks::Microzip
                                                             # directory with respect to
                                                             # the starting disk number        4 bytes
     end
-    io << [0].pack(C_v)                                     # .ZIP file comment length        2 bytes
-                                                            # .ZIP file comment       (variable size)
+    io << [ZIP_TRICKS_COMMENT.bytesize].pack(C_v)           # .ZIP file comment length        2 bytes
+    io << ZIP_TRICKS_COMMENT                                # .ZIP file comment       (variable size)
   end
-  
+
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
     :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
-    :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE, 
-    :Entry, :C_V, :C_v, :C_Qe
+    :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
+    :Entry, :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
 end

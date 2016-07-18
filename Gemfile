@@ -4,6 +4,7 @@ gem 'rubyzip', '~> 1.1', '>= 1.1.7'
 gem 'very_tiny_state_machine', '~> 2'
 
 group :development do
+  gem 'terminal-table'
   gem 'range_utils'
   gem 'rack', '~> 1.6' # For Jeweler
   gem 'rake', '~> 10.4'

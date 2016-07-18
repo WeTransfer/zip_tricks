@@ -260,6 +260,7 @@ class ZipTricks::Microzip
   # @param mtime[Time] What modification time to record for the file
   # @return [void]
   def add_local_file_header(io:, filename:, crc32:, compressed_size:, uncompressed_size:, storage_mode:, mtime: Time.now.utc)
+    filename.force_encoding(Encoding::UTF_8)
     if @files.any?{|e| e.filename == filename }
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end

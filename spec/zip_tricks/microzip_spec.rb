@@ -233,4 +233,21 @@ describe ZipTricks::Microzip do
     it 'writes the central directory 1 file that is larger than 4GB'
     it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold'
   end
+
+  it "encodes correctly UTF8 names, even if they are in US_ASCII (which uses by default, if LANG and LC_ALL are not set)" do
+    name = 'файл.bin'
+    name.force_encoding(Encoding::US_ASCII)
+
+    buf = StringIO.new
+    zip = described_class.new
+    mtime = Time.utc(2016, 7, 17, 13, 48)
+    zip.add_local_file_header(io: buf, filename: name, crc32: 123, compressed_size: 8981,
+                              uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
+
+    buf.rewind
+    br = ByteReader.new(buf)
+    br.read_4b # Signature
+    br.read_2b # Version needed to extract
+    expect(br.read_2b).to eq(2048)       # gp flags
+  end
 end

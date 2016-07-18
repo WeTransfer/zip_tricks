@@ -94,6 +94,9 @@ extra field does not actually help any of them recognize the file name correctly
 those fields for the UTF-8 filename, per spec, tells us we should not set the EFS bit - which ruins
 the unarchiving for all other solutions. As any other, this decision may be changed in the future.
 
+There are some interesting notes about the Info-ZIP/EFS combination here
+https://commons.apache.org/proper/commons-compress/zip.html
+
 ## Directory support
 
 ZIP makes it possible to store empty directories (folders). For our purposes, however, we are going

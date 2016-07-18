@@ -24,27 +24,28 @@ describe ZipTricks::Microzip do
   end
   
   it 'raises an exception if the filename is non-unique in the already existing set' do
-    z = described_class.new(StringIO.new)
-    z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+    z = described_class.new
+    z.add_local_file_header(io: StringIO.new, filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
     expect {
-      z.add_local_file_header(filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+      z.add_local_file_header(io: StringIO.new, filename: 'foo.txt', crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
     }.to raise_error(/already/)
   end
 
   it 'raises an exception if the filename does not fit in 0xFFFF bytes' do
     longest_filename_in_the_universe = "x" * (0xFFFF + 1)
-    z = described_class.new(StringIO.new)
+    z = described_class.new
     expect {
-      z.add_local_file_header(filename: longest_filename_in_the_universe, crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
+      z.add_local_file_header(io: StringIO.new, filename: longest_filename_in_the_universe, 
+        crc32: 0, compressed_size: 0, uncompressed_size: 0, storage_mode: 0)
     }.to raise_error(/filename/)
   end
   
   describe '#add_local_file_header' do
     it 'writes out the local file header for an entry that fits into a standard ZIP' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 8981,
+      zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: 8981,
         uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -66,9 +67,9 @@ describe ZipTricks::Microzip do
     
     it 'writes out the local file header for an entry with a UTF-8 filename, setting the proper GP flag bit' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'файл.bin', crc32: 123, compressed_size: 8981,
+      zip.add_local_file_header(io: buf, filename: 'файл.bin', crc32: 123, compressed_size: 8981,
         uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -80,9 +81,9 @@ describe ZipTricks::Microzip do
     
     it 'writes out the local file header for an entry with a filename with diacritics, setting the proper GP flag bit' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'Kungälv', crc32: 123, compressed_size: 8981,
+      zip.add_local_file_header(io: buf, filename: 'Kungälv', crc32: 123, compressed_size: 8981,
         uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -104,9 +105,9 @@ describe ZipTricks::Microzip do
     
     it 'writes out the local file header for an entry that requires Zip64 based on its compressed size _only_' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: (0xFFFFFFFF + 1),
+      zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: (0xFFFFFFFF + 1),
         uncompressed_size: 90981, storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -132,9 +133,9 @@ describe ZipTricks::Microzip do
     
     it 'writes out the local file header for an entry that requires Zip64 based on its uncompressed size _only_' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 90981,
+      zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: 90981,
         uncompressed_size: (0xFFFFFFFF + 1), storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -160,10 +161,10 @@ describe ZipTricks::Microzip do
     
     it 'does not write out the Zip64 extra if the position in the destination IO is beyond the Zip64 size limit' do
       buf = StringIO.new
-      zip = described_class.new(buf)
+      zip = described_class.new
       mtime = Time.utc(2016, 7, 17, 13, 48)
       expect(buf).to receive(:tell).and_return(0xFFFFFFFF + 1)
-      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 123,
+      zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: 123,
         uncompressed_size: 456, storage_mode: 8, mtime: mtime)
       
       buf.rewind
@@ -186,8 +187,8 @@ describe ZipTricks::Microzip do
     it 'can write the central directory and makes it a valid one even if there were no files' do
       buf = StringIO.new
       
-      zip = described_class.new(buf)
-      zip.write_central_directory
+      zip = described_class.new
+      zip.write_central_directory(buf)
       
       buf.rewind
       br = ByteReader.new(buf)
@@ -203,23 +204,21 @@ describe ZipTricks::Microzip do
     end
     
     it 'writes the central directory for 2 files' do
-      buf = StringIO.new
+      zip = described_class.new
       
-      zip = described_class.new(buf)
-      
-      buf = StringIO.new
-      zip = described_class.new(buf)
       mtime = Time.utc(2016, 7, 17, 13, 48)
-      zip.add_local_file_header(filename: 'first-file.bin', crc32: 123, compressed_size: 5,
+      
+      buf = StringIO.new
+      zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: 5,
         uncompressed_size: 8, storage_mode: 8, mtime: mtime)
       buf << Random.new.bytes(5)
-      zip.add_local_file_header(filename: 'first-file.txt', crc32: 123, compressed_size: 9,
+      zip.add_local_file_header(io: buf, filename: 'first-file.txt', crc32: 123, compressed_size: 9,
         uncompressed_size: 9, storage_mode: 0, mtime: mtime)
       buf << Random.new.bytes(5)
       
       central_dir_offset = buf.tell
       
-      zip.write_central_directory
+      zip.write_central_directory(buf)
       
       # Seek to where the central directory begins
       buf.rewind

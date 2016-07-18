@@ -5,7 +5,7 @@ describe 'Microzip in interop context' do
   
   it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
-    z = described_class.new(tf)
+    z = described_class.new
 
     test_str = Random.new.bytes(64)
     crc = Zlib.crc32(test_str)
@@ -13,11 +13,11 @@ describe 'Microzip in interop context' do
 
     3.times do |i|
       fn = "test-#{i}"
-      z.add_local_file_header(filename: fn, crc32: crc, compressed_size: test_str.bytesize,
+      z.add_local_file_header(io: tf, filename: fn, crc32: crc, compressed_size: test_str.bytesize,
         uncompressed_size: test_str.bytesize, storage_mode: 0, mtime: t)
       tf << test_str
     end
-    z.write_central_directory
+    z.write_central_directory(tf)
     tf.flush
 
     Zip::File.open(tf.path) do |zip_file|

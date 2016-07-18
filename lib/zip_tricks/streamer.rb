@@ -40,7 +40,7 @@ class ZipTricks::Streamer
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
     
     @output_stream = stream
-    @zip = ZipTricks::Microzip.new(@output_stream)
+    @zip = ZipTricks::Microzip.new
     
     @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
@@ -99,7 +99,7 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
     @state_monitor.transition! :in_entry_header
-    @zip.add_local_file_header(filename: entry_name, crc32: crc32,
+    @zip.add_local_file_header(io: @output_stream, filename: entry_name, crc32: crc32,
       compressed_size: compressed_size, uncompressed_size: uncompressed_size, storage_mode: ZipTricks::Microzip::DEFLATED)
     @expected_bytes_for_entry = compressed_size
     @bytes_written_for_entry = 0
@@ -115,7 +115,7 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(entry_name, uncompressed_size, crc32)
     @state_monitor.transition! :in_entry_header
-    @zip.add_local_file_header(filename: entry_name, crc32: crc32,
+    @zip.add_local_file_header(io: @output_stream, filename: entry_name, crc32: crc32,
       compressed_size: uncompressed_size, uncompressed_size: uncompressed_size, storage_mode: ZipTricks::Microzip::STORED)
     @bytes_written_for_entry = 0
     @expected_bytes_for_entry = uncompressed_size
@@ -130,7 +130,7 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the central directory
   def write_central_directory!
     @state_monitor.transition! :in_central_directory
-    @zip.write_central_directory
+    @zip.write_central_directory(@output_stream)
     @output_stream.tell
   end
 

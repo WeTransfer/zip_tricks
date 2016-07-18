@@ -1,4 +1,5 @@
 require_relative '../spec_helper'
+require_relative '../../testing/support'
 
 describe ZipTricks::Microzip do
   class ByteReader < Struct.new(:io)
@@ -21,6 +22,29 @@ describe ZipTricks::Microzip do
     def read_n(n)
       io.read(n)
     end
+  end
+
+  def check_file_in_central_directory(br, compressed_method:, compressed_size:, uncompressed_size:, filename:, crc32:, version:, relative_offset:)
+    extra_field = version == 45 ? 32 : 0 # zip64 specific value
+
+    expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
+    expect(br.read_2b).to eq(820)        # version made by
+    expect(br.read_2b).to eq(version)         # version need to extract
+    expect(br.read_2b).to eq(0)          # general purpose bit flag
+    expect(br.read_2b).to eq(compressed_method)      # compression method
+    expect(br.read_2b).to eq(28160)      # last mod file time
+    expect(br.read_2b).to eq(18673)      # last mod file date
+    expect(br.read_4b).to eq(crc32)        # crc32
+    expect(br.read_4b).to eq(compressed_size)       # compressed size
+    expect(br.read_4b).to eq(uncompressed_size)     # uncompressed size
+    expect(br.read_2b).to eq(filename.size)         # filename length
+    expect(br.read_2b).to eq(extra_field)          # extra field
+    expect(br.read_2b).to eq(0)          # file comment
+    expect(br.read_2b).to eq(0)          # disk number
+    expect(br.read_2b).to eq(0)          # internal file attributes
+    expect(br.read_4b).to eq(2175008768) # external file attributes
+    expect(br.read_4b).to eq(relative_offset)          # relative offset of local header
+    expect(br.read_n(filename.bytesize)).to eq(filename) # the filename
   end
 
   it 'raises an exception if the filename is non-unique in the already existing set' do
@@ -237,7 +261,7 @@ describe ZipTricks::Microzip do
       zip.add_local_file_header(io: buf, filename: 'first-file.bin', crc32: 123, compressed_size: 5,
         uncompressed_size: 8, storage_mode: 8, mtime: mtime)
       buf << Random.new.bytes(5)
-      zip.add_local_file_header(io: buf, filename: 'first-file.txt', crc32: 123, compressed_size: 9,
+      zip.add_local_file_header(io: buf, filename: 'second-file.txt', crc32: 123, compressed_size: 9,
         uncompressed_size: 9, storage_mode: 0, mtime: mtime)
       buf << Random.new.bytes(5)
 
@@ -250,12 +274,115 @@ describe ZipTricks::Microzip do
       buf.seek(central_dir_offset)
 
       br = ByteReader.new(buf)
-      expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
 
-      skip "Not finished"
+      # First file
+      check_file_in_central_directory(br, compressed_method: 8, compressed_size: 5, uncompressed_size: 8,
+                                      filename: 'first-file.bin', crc32: 123, version: 20, relative_offset: 0)
+      # Second file
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: 9, uncompressed_size: 9,
+                                      filename: 'second-file.txt', crc32: 123, version: 20, relative_offset: 49)
+
+      expect(br.read_4b).to eq(0x06054b50) # end of central dir signature
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_4b
+      br.read_4b
+      br.read_2b
+
+      expect(buf).to be_eof
     end
 
-    it 'writes the central directory 1 file that is larger than 4GB'
-    it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold'
+    it 'writes the central directory 1 file that is larger than 4GB' do
+      zip   = described_class.new
+      buf   = StringIO.new
+      big   = generate_big_entry(0xFFFFFFFF + 2048)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+
+      zip.add_local_file_header(io: buf, filename: 'big-file.bin', crc32: big.crc32, compressed_size: big.size,
+                                uncompressed_size: big.size, storage_mode: 0, mtime: mtime)
+      big.write_to(buf)
+
+      central_dir_offset = buf.tell
+
+      zip.write_central_directory(buf)
+
+      # Seek to where the central directory begins
+      buf.rewind
+      buf.seek(central_dir_offset)
+
+      br = ByteReader.new(buf)
+      size = 0xFFFFFFFF # because zip64 set FOUR_BYTE_MAX_UINT for a size in common places
+
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: size, uncompressed_size: size,
+                                      filename: 'big-file.bin', crc32: big.crc32, version: 45, relative_offset: size)
+      # specific zip64 data
+      expect(br.read_2b).to eq(0x0001) # Tag for the "extra" block
+      expect(br.read_2b).to eq(28) # Size of this "extra" block. For us it will always be 28
+      expect(br.read_8b).to eq(big.size) # Original uncompressed file size
+      expect(br.read_8b).to eq(big.size) # Original compressed file size
+      expect(br.read_8b).to eq(0) # Offset of local header record
+      expect(br.read_4b).to eq(0) # Number of the disk on which this file starts
+    end
+
+    it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold' do
+      zip   = described_class.new
+      buf   = StringIO.new
+      big1  = generate_big_entry(0xFFFFFFFF/2 + 512)
+      big2  = generate_big_entry(0xFFFFFFFF/2 + 1024)
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+
+      zip.add_local_file_header(io: buf, filename: 'first-big-file.bin', crc32: big1.crc32, compressed_size: big1.size,
+                                uncompressed_size: big1.size, storage_mode: 0, mtime: mtime)
+      big1.write_to(buf)
+
+      zip.add_local_file_header(io: buf, filename: 'second-big-file.bin', crc32: big2.crc32, compressed_size: big2.size,
+                                uncompressed_size: big2.size, storage_mode: 0, mtime: mtime)
+      big2.write_to(buf)
+
+      central_dir_offset = buf.tell
+
+      zip.write_central_directory(buf)
+
+      # Seek to where the central directory begins
+      buf.rewind
+      buf.seek(central_dir_offset)
+
+      br = ByteReader.new(buf)
+
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big1.size, uncompressed_size: big1.size,
+                                      filename: 'first-big-file.bin', crc32: big1.crc32, version: 20, relative_offset: 0)
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big2.size, uncompressed_size: big2.size,
+                                      filename: 'second-big-file.bin', crc32: big2.crc32, version: 20, relative_offset: 2147706028)
+
+      # zip64 specific values for a whole central directory
+      expect(br.read_4b).to eq(0x06064b50) # zip64 end of central dir signature
+      expect(br.read_8b).to eq(44) # size of zip64 end of central directory record
+      expect(br.read_2b).to eq(820) # version made by
+      expect(br.read_2b).to eq(45) # version need to extract
+      expect(br.read_4b).to eq(0) # number of this disk
+      expect(br.read_4b).to eq(0) # another number related to disk
+      expect(br.read_8b).to eq(2) # total number of entries in the central directory on this disk
+      expect(br.read_8b).to eq(2) # total number of entries in the central directory
+      expect(br.read_8b).to eq(129) # size of central directory
+      expect(br.read_8b).to eq(4295412057) # starting disk number
+      expect(br.read_4b).to eq(0x07064b50) # zip64 end of central dir locator signature
+      expect(br.read_4b).to eq(0) # number of disk ...
+      expect(br.read_8b).to eq(4295412186) # relative offset zip64
+      expect(br.read_4b).to eq(1) # total number of disks
+
+      # common part
+      expect(br.read_4b).to eq(0x06054b50) # end of central dir signature
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_2b
+      br.read_4b
+      br.read_4b
+      br.read_2b
+
+      expect(buf).to be_eof
+    end
   end
 end

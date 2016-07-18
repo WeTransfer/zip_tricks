@@ -73,7 +73,15 @@ class ZipTricks::Microzip
   # that honors the standard. Alas, alas.
   FILENAME_ENCODINGS = [Encoding::ASCII, Encoding::UTF_8]
   
+  module Bytesize
+    def bytesize_of
+      ''.force_encoding(Encoding::BINARY).tap {|b| yield(b) }.bytesize
+    end
+  end
+  include Bytesize
+  
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
+    include Bytesize
     def initialize(*)
       super
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
@@ -147,13 +155,11 @@ class ZipTricks::Microzip
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
       io << [filename_binary.bytesize].pack(C_v)        # file name length             2 bytes
 
+      extra_size = 0
       if @requires_zip64
-        tmp = ''.force_encoding(Encoding::BINARY)
-        write_zip_64_extra_for_local_file_header(tmp)
-        io << [tmp.bytesize].pack(C_v)                    # extra field length              2 bytes
-      else
-        io << [0].pack(C_v)                               # extra field length              2 bytes
+        extra_size += bytesize_of {|buf| write_zip_64_extra_for_local_file_header(buf) }
       end
+      io << [extra_size].pack(C_v)                      # extra field length              2 bytes
 
       io << filename_binary                               # file name (variable size)
 
@@ -210,13 +216,13 @@ class ZipTricks::Microzip
       # Filename should not be longer than 0xFFFF otherwise this wont fit here
       io << [filename_binary.bytesize].pack(C_v)          # file name length                2 bytes
 
+      extra_size = 0
       if @requires_zip64
-        local_fh_extra = ''.force_encoding(Encoding::BINARY)
-        write_zip_64_extra_for_central_directory_file_header(local_fh_extra, local_file_header_location)
-        io << [local_fh_extra.bytesize].pack(C_v)         # extra field length              2 bytes
-      else
-        io << [0].pack(C_v)                                 # extra field length              2 bytes
+        extra_size += bytesize_of {|buf|
+          write_zip_64_extra_for_central_directory_file_header(buf, local_file_header_location)
+        }
       end
+      io << [extra_size].pack(C_v)                        # extra field length              2 bytes
 
       io << [0].pack(C_v)                                 # file comment length             2 bytes
       io << [0].pack(C_v)                                 # disk number start               2 bytes
@@ -340,27 +346,27 @@ class ZipTricks::Microzip
                                                             # start of the central directory 2 bytes
     
     if zip64_required # the number of entries will be read from the zip64 part of the central directory
-      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                    # total number of entries in the
-                                                              # central directory on this disk   2 bytes
-      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                    # total number of entries in
-                                                              # the central directory            2 bytes
+      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                  # total number of entries in the
+                                                            # central directory on this disk   2 bytes
+      @io << [TWO_BYTE_MAX_UINT].pack(C_v)                  # total number of entries in
+                                                            # the central directory            2 bytes
     else
-      @io << [@files.length].pack(C_v)                        # total number of entries in the
-                                                              # central directory on this disk   2 bytes
-      @io << [@files.length].pack(C_v)                        # total number of entries in
-                                                              # the central directory            2 bytes
+      @io << [@files.length].pack(C_v)                      # total number of entries in the
+                                                            # central directory on this disk   2 bytes
+      @io << [@files.length].pack(C_v)                      # total number of entries in
+                                                            # the central directory            2 bytes
     end
     
     if zip64_required
-      @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                   # size of the central directory    4 bytes
-      @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                   # offset of start of central
-                                                              # directory with respect to
-                                                              # the starting disk number        4 bytes
+      @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                 # size of the central directory    4 bytes
+      @io << [FOUR_BYTE_MAX_UINT].pack(C_V)                 # offset of start of central
+                                                            # directory with respect to
+                                                            # the starting disk number        4 bytes
     else
-      @io << [central_dir_size].pack(C_V)                     # size of the central directory    4 bytes
-      @io << [start_of_central_directory].pack(C_V)           # offset of start of central
-                                                              # directory with respect to
-                                                              # the starting disk number        4 bytes
+      @io << [central_dir_size].pack(C_V)                   # size of the central directory    4 bytes
+      @io << [start_of_central_directory].pack(C_V)         # offset of start of central
+                                                            # directory with respect to
+                                                            # the starting disk number        4 bytes
     end
     @io << [0].pack(C_v)                                    # .ZIP file comment length        2 bytes
                                                             # .ZIP file comment       (variable size)

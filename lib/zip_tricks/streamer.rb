@@ -38,8 +38,10 @@ class ZipTricks::Streamer
   def initialize(stream)
     raise InvalidOutput, "The stream should respond to #<<" unless stream.respond_to?(:<<)
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
+    
     @output_stream = stream
-
+    @zip = ZipTricks::Microzip.new
+    
     @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
     @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
@@ -47,8 +49,6 @@ class ZipTricks::Streamer
     @state_monitor.permit_transition :in_entry_body => :in_entry_header
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
     @state_monitor.permit_transition :in_central_directory => :closed
-
-    @entry_set = ::Zip::EntrySet.new
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
@@ -99,16 +99,8 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
     @state_monitor.transition! :in_entry_header
-
-    entry = ::Zip::Entry.new(@file_name, entry_name)
-    entry.compression_method = Zip::Entry::DEFLATED
-    entry.crc = crc32
-    entry.size = uncompressed_size
-    entry.compressed_size = compressed_size
-    set_gp_flags_for_filename(entry, entry_name)
-
-    @entry_set << entry
-    entry.write_local_entry(@output_stream)
+    @zip.add_local_file_header(io: @output_stream, filename: entry_name, crc32: crc32,
+      compressed_size: compressed_size, uncompressed_size: uncompressed_size, storage_mode: ZipTricks::Microzip::DEFLATED)
     @expected_bytes_for_entry = compressed_size
     @bytes_written_for_entry = 0
     @output_stream.tell
@@ -123,20 +115,12 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(entry_name, uncompressed_size, crc32)
     @state_monitor.transition! :in_entry_header
-
-    entry = ::Zip::Entry.new(@file_name, entry_name)
-    entry.compression_method = Zip::Entry::STORED
-    entry.crc = crc32
-    entry.size = uncompressed_size
-    entry.compressed_size = uncompressed_size
-    set_gp_flags_for_filename(entry, entry_name)
-    @entry_set << entry
-    entry.write_local_entry(@output_stream)
+    @zip.add_local_file_header(io: @output_stream, filename: entry_name, crc32: crc32,
+      compressed_size: uncompressed_size, uncompressed_size: uncompressed_size, storage_mode: ZipTricks::Microzip::STORED)
     @bytes_written_for_entry = 0
     @expected_bytes_for_entry = uncompressed_size
     @output_stream.tell
   end
-
 
   # Writes out the global footer and the directory entry header and the global directory of the ZIP
   # archive using the information about the entries added using `add_stored_entry` and `add_compressed_entry`.
@@ -146,8 +130,7 @@ class ZipTricks::Streamer
   # @return [Fixnum] the offset the output IO is at after writing the central directory
   def write_central_directory!
     @state_monitor.transition! :in_central_directory
-    cdir = Zip::CentralDirectory.new(@entry_set, comment = nil)
-    cdir.write_to_stream(@output_stream)
+    @zip.write_central_directory(@output_stream)
     @output_stream.tell
   end
 
@@ -164,17 +147,6 @@ class ZipTricks::Streamer
   end
 
   private
-
-  # Set the general purpose flags for the entry. The only flag we care about is the EFS
-  # bit (bit 11) which should be set if the filename is UTF8. If it is, we need to set the
-  # bit so that the unarchiving application knows that the filename in the archive is UTF-8
-  # encoded, and not some DOS default. For ASCII entries it does not matter.
-  def set_gp_flags_for_filename(entry, filename)
-    filename.encode(Encoding::ASCII)
-    entry.gp_flags = DEFAULT_GP_FLAGS
-  rescue Encoding::UndefinedConversionError #=> UTF8 filename
-    entry.gp_flags = DEFAULT_GP_FLAGS | EFS
-  end
 
   # Checks whether the number of bytes written conforms to the declared entry size
   def leaving_in_entry_body_state

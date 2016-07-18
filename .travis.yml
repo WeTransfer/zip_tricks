@@ -7,3 +7,4 @@ cache: bundler
 matrix:
   allow_failures:
     - rvm: jruby-9.0
+script: bundle exec rspec

@@ -31,6 +31,9 @@ pkg
 #
 #.DS_Store
 
+tmp
+testing/*.zip
+
 # For TextMate
 #*.tmproj
 #tmtags

@@ -38,14 +38,14 @@ describe ZipTricks::Streamer do
     expect(retval).to eq(zip)
     expect(io.tell).to eq(8950)
 
-    pos = zip.add_stored_entry('file.jpg', 8921, 182919)
+    pos = zip.add_stored_entry('filf.jpg', 8921, 182919)
     expect(pos).to eq(8988)
     zip << SecureRandom.random_bytes(8921)
     expect(io.tell).to eq(17909)
 
     pos = zip.write_central_directory!
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(17985)
+    expect(pos).to eq(18039)
 
     pos_after_close = zip.close
     expect(pos_after_close).to eq(pos)
@@ -90,17 +90,10 @@ describe ZipTricks::Streamer do
     expect(per_filename['compressed-file.bin'].bytesize).to eq(f.size)
     expect(Digest::SHA1.hexdigest(per_filename['compressed-file.bin'])).to eq(Digest::SHA1.hexdigest(f.read))
 
-    output = `unzip -v #{zip_file.path}`
-    puts output.inspect
+    inspect_zip_with_external_tool(zip_file.path)
   end
 
-
   it 'creates an archive that OSX ArchiveUtility can handle' do
-    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
-    unless File.exist?(au_path)
-      skip "This system does not have ArchiveUtility"
-    end
-
     outbuf = Tempfile.new('zip')
     outbuf.binmode
 
@@ -131,13 +124,10 @@ describe ZipTricks::Streamer do
       outbuf.flush
       File.unlink('test.zip') rescue nil
       File.rename(outbuf.path, 'osx-archive-test.zip')
-
-      # ArchiveUtility sometimes puts the stuff it unarchives in ~/Downloads etc. so do
-      # not perform any checks on the files since we do not really know where they are on disk.
-      # Visual inspection should show whether the unarchiving is handled correctly.
-      `#{Shellwords.join([au_path, 'osx-archive-test.zip'])}`
+      
+      # Mark this test as skipped if the system does not have the binary
+      open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
     end
-
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')
   end
@@ -188,8 +178,7 @@ describe ZipTricks::Streamer do
     wd = Dir.pwd
     Dir.mktmpdir do | td |
       Dir.chdir(td)
-      output = `unzip -v #{zip_buf.path}`
-      puts output.inspect
+      inspect_zip_with_external_tool(zip_buf.path)
     end
     Dir.chdir(wd)
   end

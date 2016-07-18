@@ -13,6 +13,7 @@ class ZipTricks::Microzip
   DEFLATED = 8
 
   TooMuch = Class.new(StandardError)
+  PathError = Class.new(StandardError)
   DuplicateFilenames = Class.new(StandardError)
   UnknownMode = Class.new(StandardError)
   
@@ -45,10 +46,11 @@ class ZipTricks::Microzip
   class Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime)
     def initialize(*)
       super
+      filename.force_encoding(Encoding::UTF_8)
+      @requires_efs_flag = !(filename.encode(Encoding::ASCII) rescue false)
       @requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
-      if filename.bytesize > TWO_BYTE_MAX_UINT
-        raise TooMuch, "The given filename is too long to fit (%d bytes)" % filename.bytesize
-      end
+      raise TooMuch, "Filename is too long" if filename.bytesize > TWO_BYTE_MAX_UINT
+      raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
     end
 
     def requires_zip64?
@@ -60,10 +62,7 @@ class ZipTricks::Microzip
     # bit so that the unarchiving application knows that the filename in the archive is UTF-8
     # encoded, and not some DOS default. For ASCII entries it does not matter.
     def gp_flags_based_on_filename
-      filename.encode(Encoding::ASCII)
-      0b00000000000
-    rescue EncodingError
-      0b00000000000 | 0b100000000000
+      @requires_efs_flag ? (0b00000000000 | 0b100000000000) : 0b00000000000
     end
 
     def write_local_file_header(io)
@@ -226,7 +225,6 @@ class ZipTricks::Microzip
   # @param mtime[Time] What modification time to record for the file
   # @return [void]
   def add_local_file_header(io:, filename:, crc32:, compressed_size:, uncompressed_size:, storage_mode:, mtime: Time.now.utc)
-    filename.force_encoding(Encoding::UTF_8)
     if @files.any?{|e| e.filename == filename }
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end

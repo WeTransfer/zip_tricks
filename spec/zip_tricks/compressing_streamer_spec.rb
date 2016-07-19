@@ -22,19 +22,19 @@ describe ZipTricks::CompressingStreamer do
         # Make sure it is tagged as UNIX
         expect(entry.fstype).to eq(3)
 
+         # The CRC
+        expect(entry.crc).to eq(Zlib.crc32(File.read(__dir__ + '/war-and-peace.txt')))
+
+        # Check the name
+        expect(entry.name).to match(/\.bin$/)
+
+        # Check the right external attributes (non-executable on UNIX)
+        expect(entry.external_file_attributes).to eq(2175008768)
+        
         # Check the file contents
         readback = entry.get_input_stream.read
         readback.force_encoding(Encoding::BINARY)
         expect(readback[0..10]).to eq(File.read(__dir__ + '/war-and-peace.txt')[0..10])
-
-        # The CRC
-        expect(entry.crc).to eq(crc)
-
-        # Check the name
-        expect(entry.name).to match(/test/)
-
-        # Check the right external attributes (non-executable on UNIX)
-        expect(entry.external_file_attributes).to eq(2175008768)
       end
     end
 

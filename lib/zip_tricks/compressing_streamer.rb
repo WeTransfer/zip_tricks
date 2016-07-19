@@ -36,7 +36,7 @@ class ZipTricks::CompressingStreamer
       @io = io
       @uncompressed_size = 0
       @compressed_size = 0
-      @started_at = io.tell
+      @started_at = @io.tell
       @crc = ZipTricks::StreamCRC32.new
     end
     

@@ -24,6 +24,12 @@ describe ZipTricks::Microzip do
     end
   end
 
+  class IOWrapper < ZipTricks::WriteAndTell
+    def read(n)
+      @io.read(n)
+    end
+  end
+
   def check_file_in_central_directory(br, compressed_method:, compressed_size:, uncompressed_size:, filename:, crc32:, version:, relative_offset:)
     extra_field = version == 45 ? 32 : 0 # zip64 specific value
 
@@ -297,12 +303,11 @@ describe ZipTricks::Microzip do
     it 'writes the central directory 1 file that is larger than 4GB' do
       zip   = described_class.new
       buf   = StringIO.new
-      big   = generate_big_entry(0xFFFFFFFF + 2048)
+      big   = 0xFFFFFFFF + 2048
       mtime = Time.utc(2016, 7, 17, 13, 48)
 
-      zip.add_local_file_header(io: buf, filename: 'big-file.bin', crc32: big.crc32, compressed_size: big.size,
-                                uncompressed_size: big.size, storage_mode: 0, mtime: mtime)
-      big.write_to(buf)
+      zip.add_local_file_header(io: buf, filename: 'big-file.bin', crc32: 12345, compressed_size: big,
+                                uncompressed_size: big, storage_mode: 0, mtime: mtime)
 
       central_dir_offset = buf.tell
 
@@ -316,46 +321,44 @@ describe ZipTricks::Microzip do
       size = 0xFFFFFFFF # because zip64 set FOUR_BYTE_MAX_UINT for a size in common places
 
       check_file_in_central_directory(br, compressed_method: 0, compressed_size: size, uncompressed_size: size,
-                                      filename: 'big-file.bin', crc32: big.crc32, version: 45, relative_offset: size)
+                                      filename: 'big-file.bin', crc32: 12345, version: 45, relative_offset: size)
       # specific zip64 data
       expect(br.read_2b).to eq(0x0001) # Tag for the "extra" block
       expect(br.read_2b).to eq(28) # Size of this "extra" block. For us it will always be 28
-      expect(br.read_8b).to eq(big.size) # Original uncompressed file size
-      expect(br.read_8b).to eq(big.size) # Original compressed file size
+      expect(br.read_8b).to eq(big) # Original uncompressed file size
+      expect(br.read_8b).to eq(big) # Original compressed file size
       expect(br.read_8b).to eq(0) # Offset of local header record
       expect(br.read_4b).to eq(0) # Number of the disk on which this file starts
     end
 
     it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold' do
       zip   = described_class.new
-      buf   = StringIO.new
-      big1  = generate_big_entry(0xFFFFFFFF/2 + 512)
-      big2  = generate_big_entry(0xFFFFFFFF/2 + 1024)
+      buf   = IOWrapper.new(StringIO.new)
+      big1  = 0xFFFFFFFF/2 + 512
+      big2  = 0xFFFFFFFF/2 + 1024
       mtime = Time.utc(2016, 7, 17, 13, 48)
 
-      zip.add_local_file_header(io: buf, filename: 'first-big-file.bin', crc32: big1.crc32, compressed_size: big1.size,
-                                uncompressed_size: big1.size, storage_mode: 0, mtime: mtime)
-      big1.write_to(buf)
+      zip.add_local_file_header(io: buf, filename: 'first-big-file.bin', crc32: 12345, compressed_size: big1,
+                                uncompressed_size: big1, storage_mode: 0, mtime: mtime)
 
-      zip.add_local_file_header(io: buf, filename: 'second-big-file.bin', crc32: big2.crc32, compressed_size: big2.size,
-                                uncompressed_size: big2.size, storage_mode: 0, mtime: mtime)
-      big2.write_to(buf)
+      zip.add_local_file_header(io: buf, filename: 'second-big-file.bin', crc32: 54321, compressed_size: big2,
+                                uncompressed_size: big2, storage_mode: 0, mtime: mtime)
 
       central_dir_offset = buf.tell
+      buf.advance_position_by(big2 + big1)
 
       zip.write_central_directory(buf)
 
       # Seek to where the central directory begins
-      buf.rewind
-      buf.seek(central_dir_offset)
+      buf.instance_variable_get(:@io).rewind
+      buf.instance_variable_get(:@io).seek(central_dir_offset)
 
       br = ByteReader.new(buf)
 
-      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big1.size, uncompressed_size: big1.size,
-                                      filename: 'first-big-file.bin', crc32: big1.crc32, version: 20, relative_offset: 0)
-      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big2.size, uncompressed_size: big2.size,
-                                      filename: 'second-big-file.bin', crc32: big2.crc32, version: 20, relative_offset: 2147706028)
-
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big1, uncompressed_size: big1,
+                                      filename: 'first-big-file.bin', crc32: 12345, version: 20, relative_offset: 0)
+      check_file_in_central_directory(br, compressed_method: 0, compressed_size: big2, uncompressed_size: big2,
+                                      filename: 'second-big-file.bin', crc32: 54321, version: 20, relative_offset: 48)
       # zip64 specific values for a whole central directory
       expect(br.read_4b).to eq(0x06064b50) # zip64 end of central dir signature
       expect(br.read_8b).to eq(44) # size of zip64 end of central directory record
@@ -366,23 +369,11 @@ describe ZipTricks::Microzip do
       expect(br.read_8b).to eq(2) # total number of entries in the central directory on this disk
       expect(br.read_8b).to eq(2) # total number of entries in the central directory
       expect(br.read_8b).to eq(129) # size of central directory
-      expect(br.read_8b).to eq(4295412057) # starting disk number
+      expect(br.read_8b).to eq(4294968927) # starting disk number
       expect(br.read_4b).to eq(0x07064b50) # zip64 end of central dir locator signature
       expect(br.read_4b).to eq(0) # number of disk ...
-      expect(br.read_8b).to eq(4295412186) # relative offset zip64
+      expect(br.read_8b).to eq(4294969056) # relative offset zip64
       expect(br.read_4b).to eq(1) # total number of disks
-
-      # common part
-      expect(br.read_4b).to eq(0x06054b50) # end of central dir signature
-      br.read_2b
-      br.read_2b
-      br.read_2b
-      br.read_2b
-      br.read_4b
-      br.read_4b
-      br.read_2b
-
-      expect(buf).to be_eof
     end
   end
 end

@@ -18,7 +18,7 @@ build_test "Filename with diacritics" do |zip|
   zip << $war_and_peace
 end
 
-xbuild_test "Purely UTF-8 filename" do |zip|
+build_test "Purely UTF-8 filename" do |zip|
   zip.add_stored_entry('Война и мир.txt', $war_and_peace.bytesize, $war_and_peace_crc)
   zip << $war_and_peace
 end

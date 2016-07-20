@@ -52,11 +52,40 @@ build_test "One tiny entry followed by second that requires Zip64" do |zip|
   big.write_to(zip)
 end
 
-build_test "Two entries both requiring Zip64" do |zip|
+xbuild_test "Two entries both requiring Zip64" do |zip|
   big = generate_big_entry(0xFFFFFFFF + 2048)
   zip.add_stored_entry('huge-file-1.bin', big.size, big.crc32)
   big.write_to(zip)
 
   zip.add_stored_entry('huge-file-2.bin', big.size, big.crc32)
   big.write_to(zip)
+end
+
+DD = ZipTricks::CompressingStreamer 
+
+build_test "Two stored entries using data descriptors", streamer_class: DD do |zip|
+  zip.write_stored_file('stored.1.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 4)
+  end
+  zip.write_stored_file('stored.2.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 3)
+  end
+end
+
+build_test "One entry deflated using data descriptors", streamer_class: DD do |zip|
+  zip.write_deflated_file('compressed_text.txt') do |sink|
+    sink << $war_and_peace
+  end
+end
+
+build_test "Two entries larger than the overall Zip64 offset using data descriptors", streamer_class: DD do |zip|
+  big = generate_big_entry((0xFFFFFFFF / 2) + 1024)
+  
+  zip.write_stored_file('repeated-A.txt') do |sink|
+    big.write_to(sink)
+  end
+  
+  zip.write_stored_file('repeated-B.txt') do |sink|
+    big.write_to(sink)
+  end
 end

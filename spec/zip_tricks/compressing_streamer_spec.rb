@@ -5,10 +5,10 @@ describe ZipTricks::CompressingStreamer do
   it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     z = described_class.open(tf) do |zip|
-      zip.add_file_deflated('defl.bin') do |sink|
+      zip.write_deflated_file('defl.bin') do |sink|
         sink << File.read(__dir__ + '/war-and-peace.txt')
       end
-      zip.add_file_stored('stor.bin') do |sink|
+      zip.write_stored_file('stor.bin') do |sink|
         sink << File.read(__dir__ + '/war-and-peace.txt')
       end
     end

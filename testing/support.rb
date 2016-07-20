@@ -34,7 +34,7 @@ at_exit { $builder_threads.map(&:join) }
 def build_test(test_description, desired_outcome: "Opens and files extract", streamer_class: ZipTricks::Streamer)
   $tests_performed += 1
 
-  test_file_base = test_description.downcase.gsub(/\-/, '').gsub(/[\s\:]+/, '_')
+  test_file_base = test_description.downcase.gsub(/[^\w]/, '_').gsub(/[\s\:]+/, '_')
   filename = '%02d-%s.zip' % [$tests_performed, test_file_base]
 
   puts 'Test %02d: %s' % [$tests_performed, test_description]

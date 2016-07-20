@@ -18,7 +18,7 @@ build_test "Filename with diacritics" do |zip|
   zip << $war_and_peace
 end
 
-build_test "Purely UTF-8 filename" do |zip|
+xbuild_test "Purely UTF-8 filename" do |zip|
   zip.add_stored_entry('Война и мир.txt', $war_and_peace.bytesize, $war_and_peace_crc)
   zip << $war_and_peace
 end
@@ -52,7 +52,7 @@ build_test "One tiny entry followed by second that requires Zip64" do |zip|
   big.write_to(zip)
 end
 
-xbuild_test "Two entries both requiring Zip64" do |zip|
+build_test "Two entries both requiring Zip64" do |zip|
   big = generate_big_entry(0xFFFFFFFF + 2048)
   zip.add_stored_entry('huge-file-1.bin', big.size, big.crc32)
   big.write_to(zip)
@@ -63,18 +63,21 @@ end
 
 DD = ZipTricks::CompressingStreamer 
 
-build_test "Two stored entries using data descriptors", streamer_class: DD do |zip|
+build_test "Five different entries (stored/deflated) using data descriptors", streamer_class: DD do |zip|
   zip.write_stored_file('stored.1.bin') do |sink|
     sink << Random.new.bytes(1024 * 1024 * 4)
   end
   zip.write_stored_file('stored.2.bin') do |sink|
-    sink << Random.new.bytes(1024 * 1024 * 3)
+    sink << Random.new.bytes(1024 * 1024 * 2)
   end
-end
-
-build_test "One entry deflated using data descriptors", streamer_class: DD do |zip|
   zip.write_deflated_file('compressed_text.txt') do |sink|
     sink << $war_and_peace
+  end
+  zip.write_stored_file('stored.3.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 1)
+  end
+  zip.write_deflated_file('deflated.4.bin') do |sink|
+    sink << Random.new.bytes(1024 * 1024 * 2)
   end
 end
 

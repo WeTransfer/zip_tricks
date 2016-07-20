@@ -31,7 +31,6 @@ class ZipTricks::CompressingStreamer
       @uncompressed_size = 0
       @started_at = @io.tell
       @crc = ZipTricks::StreamCRC32.new
-      self << '' # Start the deflate stream correctly
     end
 
     def <<(data)

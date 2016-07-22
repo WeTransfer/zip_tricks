@@ -285,10 +285,10 @@ class ZipTricks::Microzip
                                                              # offset of start of central
                                                              # directory with respect to
       io << [start_of_central_directory].pack(C_Qe)          # the starting disk number        8 bytes
-                                                              # zip64 extensible data sector    (variable size)
+                                                             # zip64 extensible data sector    (variable size), blank for us
 
       # [zip64 end of central directory locator]
-      io << [0x07064b50].pack("V")                           # zip64 end of central dir locator
+      io << [0x07064b50].pack(C_V)                           # zip64 end of central dir locator
                                                              # signature                       4 bytes  (0x07064b50)
       io << [0].pack(C_V)                                    # number of the disk with the
                                                              # start of the zip64 end of

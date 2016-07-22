@@ -276,7 +276,7 @@ describe ZipTricks::Microzip do
       expect(br.read_4b).to eq(2175008768) # external file attributes
       expect(br.read_4b).to eq(0)          # relative offset of local header
       expect(br.read_n(14)).to eq('first-file.bin') # the filename
-      
+
       # Central directory entry for the second file
       expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
       expect(br.read_2b).to eq(820)        # version made by
@@ -296,7 +296,7 @@ describe ZipTricks::Microzip do
       expect(br.read_4b).to eq(2175008768) # external file attributes
       expect(br.read_4b).to eq(49)         # relative offset of local header
       expect(br.read_n('second-file.txt'.bytesize)).to eq('second-file.txt') # the filename
-      
+
       expect(br.read_4b).to eq(0x06054b50) # end of central dir signature
       br.read_2b
       br.read_2b
@@ -360,7 +360,7 @@ describe ZipTricks::Microzip do
     it 'writes the central directory for 2 files which, together, make the central directory start beyound the 4GB threshold' do
       zip   = described_class.new
       raw_buf = StringIO.new
-      
+
       zip_write_buf   = IOWrapper.new(raw_buf)
       big1  = 0xFFFFFFFF/2 + 512
       big2  = 0xFFFFFFFF/2 + 1024
@@ -369,7 +369,7 @@ describe ZipTricks::Microzip do
       zip.add_local_file_header(io: zip_write_buf, filename: 'first-big-file.bin', crc32: 12345, compressed_size: big1,
                                 uncompressed_size: big1, storage_mode: 0, mtime: mtime)
       zip_write_buf.advance_position_by(big1)
-      
+
       zip.add_local_file_header(io: zip_write_buf, filename: 'second-big-file.bin', crc32: 54321, compressed_size: big2,
                                 uncompressed_size: big2, storage_mode: 0, mtime: mtime)
       zip_write_buf.advance_position_by(big2)
@@ -403,7 +403,7 @@ describe ZipTricks::Microzip do
       expect(br.read_4b).to eq(2175008768)  # external file attributes
       expect(br.read_4b).to eq(0)           # relative offset of local header
       expect(br.read_n(18)).to eq("first-big-file.bin") # the filename
-      
+
       # Standard central directory entry (similar to the local file header)
       expect(br.read_4b).to eq(0x02014b50)  # Central directory entry sig
       expect(br.read_2b).to eq(820)         # version made by
@@ -423,7 +423,7 @@ describe ZipTricks::Microzip do
       expect(br.read_4b).to eq(2175008768)  # external file attributes
       expect(br.read_4b).to eq(2147484207)  # relative offset of local header
       expect(br.read_n(19)).to eq('second-big-file.bin') # the filename
-      
+
       # zip64 specific values for a whole central directory
       expect(br.read_4b).to eq(0x06064b50) # zip64 end of central dir signature
       expect(br.read_8b).to eq(44) # size of zip64 end of central directory record
@@ -439,6 +439,108 @@ describe ZipTricks::Microzip do
       expect(br.read_4b).to eq(0) # number of disk ...
       expect(br.read_8b).to eq(4294969056) # relative offset zip64
       expect(br.read_4b).to eq(1) # total number of disks
+    end
+
+    it 'writes the central directory for 3 files which, the third of which will require the Zip64 extra since it is past the 4GB offset' do
+      zip   = described_class.new
+      raw_buf = StringIO.new
+
+      zip_write_buf   = IOWrapper.new(raw_buf)
+      big1  = 0xFFFFFFFF/2 + 512
+      big2  = 0xFFFFFFFF/2 + 1024
+      big3  = 0xFFFFFFFF/2 + 1024
+      mtime = Time.utc(2016, 7, 17, 13, 48)
+
+      zip.add_local_file_header(io: zip_write_buf, filename: 'one', crc32: 12345, compressed_size: big1,
+                                uncompressed_size: big1, storage_mode: 0, mtime: mtime)
+      zip_write_buf.advance_position_by(big1)
+
+      zip.add_local_file_header(io: zip_write_buf, filename: 'two', crc32: 54321, compressed_size: big2,
+                                uncompressed_size: big2, storage_mode: 0, mtime: mtime)
+      zip_write_buf.advance_position_by(big2)
+
+      big3_offset = zip_write_buf.tell
+      
+      zip.add_local_file_header(io: zip_write_buf, filename: 'three', crc32: 54321, compressed_size: big2,
+                                uncompressed_size: big2, storage_mode: 0, mtime: mtime)
+      zip_write_buf.advance_position_by(big3)
+
+      fake_central_dir_offset   = zip_write_buf.tell # Grab the position in the underlying buffer
+      actual_central_dir_offset = raw_buf.tell # Grab the position in the underlying buffer
+
+      zip.write_central_directory(zip_write_buf)
+
+      # Seek to where the central directory begins
+      raw_buf.seek(actual_central_dir_offset, IO::SEEK_SET)
+
+      br = ByteReader.new(raw_buf)
+
+      # Standard central directory entry (similar to the local file header)
+      # Skip over two entries, because the other example has a 1-to-1 repeat of this
+      2.times {
+        br.read_4b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_4b
+        br.read_4b
+        br.read_4b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_2b
+        br.read_4b
+        br.read_4b
+        br.read_n(3)
+      }
+
+      # Entry for the third file DOES bear the Zip64 extra field
+      expect(br.read_4b).to eq(0x02014b50)  # Central directory entry sig
+      expect(br.read_2b).to eq(820)         # version made by
+      expect(br.read_2b).to eq(45)          # version need to extract (45 for Zip64) - this entry requires it
+      expect(br.read_2b).to eq(0)           # general purpose bit flag
+      expect(br.read_2b).to eq(0)           # compression method (stored here)
+      expect(br.read_2b).to eq(28160)       # last mod file time
+      expect(br.read_2b).to eq(18673)       # last mod file date
+      expect(br.read_4b).to eq(54321)       # crc32
+      expect(br.read_4b).to eq(0xFFFFFFFF)  # compressed size - blanked for Zip64
+      expect(br.read_4b).to eq(0xFFFFFFFF)  # uncompressed size - blanked for Zip64
+      expect(br.read_2b).to eq(5)           # filename length
+      expect(br.read_2b).to eq(32)          # extra field length (length of the ZIp64 extra)
+      expect(br.read_2b).to eq(0)           # file comment length
+      expect(br.read_2b).to eq(0xFFFF)      # disk number, with Zip64 must be blanked to the maximum value because of The Unarchiver bug
+      expect(br.read_2b).to eq(0)           # internal file attributes
+      expect(br.read_4b).to eq(2175008768)  # external file attributes
+      expect(br.read_4b).to eq(4294967295)  # relative offset of local header
+      expect(br.read_n(5)).to eq('three') # the filename
+      # then the Zip64 extra for that last file _only_
+      expect(br.read_2b).to eq(0x0001) # Tag for the "extra" block
+      expect(br.read_2b).to eq(28) # Size of this "extra" block. For us it will always be 28
+      expect(br.read_8b).to eq(big3) # Original uncompressed file size
+      expect(br.read_8b).to eq(big3) # Original compressed file size
+      expect(br.read_8b).to eq(big3_offset) # Offset of local header record
+      expect(br.read_4b).to eq(0) # Number of the disk on which this file starts
+      
+      # zip64 specific values for a whole central directory
+      expect(br.read_4b).to eq(0x06064b50)  # zip64 end of central dir signature
+      expect(br.read_8b).to eq(44)          # size of zip64 end of central directory record
+      expect(br.read_2b).to eq(820)         # version made by
+      expect(br.read_2b).to eq(45)          # version need to extract
+      expect(br.read_4b).to eq(0)           # number of this disk
+      expect(br.read_4b).to eq(0)           # another number related to disk
+      expect(br.read_8b).to eq(3)           # total number of entries in the central directory on this disk
+      expect(br.read_8b).to eq(3)           # total number of entries in the central directory
+      expect(br.read_8b).to eq(181)         # size of central directory
+      expect(br.read_8b).to eq(6442453602)  # central directory offset from start of disk
+      
+      expect(br.read_4b).to eq(0x07064b50)  # Zip64 EOCD locator signature
+      expect(br.read_4b).to eq(0)           # Disk number with the start of central directory
+      expect(br.read_8b).to eq(6442453783)  # relative offset of the zip64 end of central directory record
+      expect(br.read_4b).to eq(1)           # total number of disks
     end
   end
 end

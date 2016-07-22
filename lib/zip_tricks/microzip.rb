@@ -173,9 +173,16 @@ class ZipTricks::Microzip
       io << [extra_size].pack(C_v)                        # extra field length              2 bytes
 
       io << [0].pack(C_v)                                 # file comment length             2 bytes
-      io << [0].pack(C_v)                                 # disk number start               2 bytes
-      io << [0].pack(C_v)                                 # internal file attributes        2 bytes
       
+      # For The Unarchiver < 3.11.1 this field has to be set to the overflow value if zip64 is used
+      # because otherwise it does not properly advance the pointer when reading the Zip64 extra field
+      # https://bitbucket.org/WAHa_06x36/theunarchiver/pull-requests/2/bug-fix-for-zip64-extra-field-parser/diff
+      if @requires_zip64
+        io << [TWO_BYTE_MAX_UINT].pack(C_v)               # disk number start               2 bytes
+      else
+        io << [0].pack(C_v)                               # disk number start               2 bytes
+      end
+      io << [0].pack(C_v)                                # internal file attributes        2 bytes
       io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
 
       if @requires_zip64
@@ -278,10 +285,10 @@ class ZipTricks::Microzip
                                                              # offset of start of central
                                                              # directory with respect to
       io << [start_of_central_directory].pack(C_Qe)          # the starting disk number        8 bytes
-                                                              # zip64 extensible data sector    (variable size)
+                                                             # zip64 extensible data sector    (variable size), blank for us
 
       # [zip64 end of central directory locator]
-      io << [0x07064b50].pack("V")                           # zip64 end of central dir locator
+      io << [0x07064b50].pack(C_V)                           # zip64 end of central dir locator
                                                              # signature                       4 bytes  (0x07064b50)
       io << [0].pack(C_V)                                    # number of the disk with the
                                                              # start of the zip64 end of

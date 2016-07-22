@@ -9,8 +9,8 @@ The ZipTricks streaming implementation is designed around the following requirem
 It strives to be compatible with the following unzip programs _at the minimum:_
 
 * OSX - builtin ArchiveUtility (except the Zip64 support when files larger than 4GB are in the archive)
-* OSX - The Unarchiver, recent versions
-* Windows 7 -built-in Explorer zip browser (except for Unicode filenames which it just doesn't support)
+* OSX - The Unarchiver, at least 3.10.1
+* Windows 7 - built-in Explorer zip browser (except for Unicode filenames which it just doesn't support)
 * Windows 7 - 7Zip 9.20
 
 Below is the list of _specific_ decisions taken when writing the implementation, with an explanation for each.

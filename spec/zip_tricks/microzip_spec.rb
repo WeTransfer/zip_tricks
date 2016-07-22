@@ -46,7 +46,7 @@ describe ZipTricks::Microzip do
     expect(br.read_2b).to eq(filename.size)         # filename length
     expect(br.read_2b).to eq(extra_field)          # extra field
     expect(br.read_2b).to eq(0)          # file comment
-    expect(br.read_2b).to eq(0)          # disk number
+    expect(br.read_2b).to eq(0xFFFF)     # disk number, must be blanked to the maximum value because of The Unarchiver bug
     expect(br.read_2b).to eq(0)          # internal file attributes
     expect(br.read_4b).to eq(2175008768) # external file attributes
     expect(br.read_4b).to eq(relative_offset)          # relative offset of local header

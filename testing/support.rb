@@ -31,10 +31,10 @@ $tests_performed = 0
 $test_descs = []
 $builder_threads = []
 at_exit { $builder_threads.map(&:join) }
-def build_test(test_description, desired_outcome="Opens and files extract")
+def build_test(test_description, desired_outcome: "Opens and files extract", streamer_class: ZipTricks::Streamer)
   $tests_performed += 1
 
-  test_file_base = test_description.downcase.gsub(/\-/, '').gsub(/[\s\:]+/, '_')
+  test_file_base = test_description.downcase.gsub(/[^\w]/, '_').gsub(/[\s\:]+/, '_')
   filename = '%02d-%s.zip' % [$tests_performed, test_file_base]
 
   puts 'Test %02d: %s' % [$tests_performed, test_description]
@@ -44,7 +44,7 @@ def build_test(test_description, desired_outcome="Opens and files extract")
   $test_descs << TestDesc.new(test_description, filename, desired_outcome)
   $builder_threads << Thread.new do
     File.open(File.join(__dir__, filename + '.tmp'), 'wb') do |of|
-      ZipTricks::Streamer.open(of) do |zip|
+      streamer_class.open(of) do |zip|
         yield(zip)
       end
     end

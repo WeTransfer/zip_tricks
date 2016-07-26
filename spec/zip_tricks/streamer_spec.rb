@@ -256,7 +256,6 @@ describe ZipTricks::Streamer do
       entries = zip_file.to_a
       expect(entries.length).to eq(2)
       entries.each_with_index do |entry, i|
-        $stderr.puts("Decoding #{i}")
         # Make sure it is tagged as UNIX
         expect(entry.fstype).to eq(3)
 

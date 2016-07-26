@@ -11,14 +11,14 @@
 # For compressed entries, you need to know the bytesize of the precompressed entry
 # as well.
 class ZipTricks::Streamer
+  require_relative 'streamer/deflated_writer'
+  require_relative 'streamer/writable'
+  require_relative 'streamer/stored_writer'
+  
   EntryBodySizeMismatch = Class.new(StandardError)
   InvalidOutput = Class.new(ArgumentError)
 
-  # Language encoding flag (EFS) bit (general purpose bit 11)
-  EFS = 0b100000000000
-
-  # Default general purpose flags for each entry.
-  DEFAULT_GP_FLAGS = 0b00000000000
+  private_constant :DeflatedWriter, :StoredWriter
 
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central
@@ -43,11 +43,15 @@ class ZipTricks::Streamer
     @zip = ZipTricks::Microzip.new
     
     @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
-    @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :closed
+    @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :in_data_descriptor, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
     @state_monitor.permit_transition :in_entry_header => :in_entry_body
+    @state_monitor.permit_transition :in_entry_header => :in_data_descriptor
     @state_monitor.permit_transition :in_entry_body => :in_entry_header
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
+    @state_monitor.permit_transition :in_entry_body => :in_data_descriptor
+    @state_monitor.permit_transition :in_data_descriptor => :in_entry_header
+    @state_monitor.permit_transition :in_data_descriptor => :in_central_directory
     @state_monitor.permit_transition :in_central_directory => :closed
   end
 
@@ -132,6 +136,42 @@ class ZipTricks::Streamer
     @state_monitor.transition! :in_central_directory
     @zip.write_central_directory(@output_stream)
     @output_stream.tell
+  end
+
+  # Opens the stream for a stored file in the archive, and yields a writer for that file to the block.
+  # Once the write completes, a data descriptor will be written with the actual compressed/uncompressed
+  # sizes and the CRC32 checksum.
+  #
+  # @param filename[String] the name of the file in the archive
+  # @yieldd [#<<, #write] an object that the file contents must be written to
+  def write_stored_file(filename)
+    @state_monitor.transition! :in_entry_header
+    @zip.add_local_file_header_of_unknown_size(io: @output_stream, filename: filename, storage_mode: 0)
+    @state_monitor.transition! :in_entry_body
+    w = StoredWriter.new(@output_stream)
+    yield(Writable.new(w))
+    crc, comp, uncomp = w.finish
+    @state_monitor.transition! :in_data_descriptor
+    @zip.write_data_descriptor(io: @output_stream, crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
+  end
+
+  # Opens the stream for a deflated file in the archive, and yields a writer for that file to the block.
+  # Once the write completes, a data descriptor will be written with the actual compressed/uncompressed
+  # sizes and the CRC32 checksum.
+  #
+  # @param filename[String] the name of the file in the archive
+  # @param flush_deflate_after_bytes[Fixnum] how many bytes may be written before the deflater should flush.
+  #       The default value for this method should be sufficient for most uses.
+  # @yield [#<<, #write] an object that the file contents must be written to
+  def write_deflated_file(filename)
+    @state_monitor.transition! :in_entry_header
+    @zip.add_local_file_header_of_unknown_size(io: @output_stream, filename: filename, storage_mode: 8)
+    @state_monitor.transition! :in_entry_body
+    w = DeflatedWriter.new(@output_stream)
+    yield(Writable.new(w))
+    crc, comp, uncomp = w.finish
+    @state_monitor.transition! :in_data_descriptor
+    @zip.write_data_descriptor(io: @output_stream, crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
   end
 
   # Closes the archive. Writes the central directory if it has not yet been written.

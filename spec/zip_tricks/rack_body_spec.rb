@@ -17,7 +17,7 @@ describe ZipTricks::RackBody do
     body.close
 
     output_buf.rewind
-    expect(output_buf.size).to eq(1057667)
+    expect(output_buf.size).to eq(1057696)
 
     per_filename = {}
     Zip::File.open(output_buf.path) do |zip_file|

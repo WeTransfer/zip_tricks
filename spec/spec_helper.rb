@@ -22,7 +22,6 @@ module Keepalive
   extend self
 end
 
-
 class ManagedTempfile < Tempfile
   @@managed_tempfiles = []
   
@@ -36,38 +35,6 @@ class ManagedTempfile < Tempfile
       (tf.close; tf.unlink) rescue nil
     end
     @@managed_tempfiles.clear
-  end
-end
-
-# A Tempfile filled with N bytes of random data, that also knows the CRC32 of that data
-class RandomFile < ManagedTempfile
-  attr_reader :crc32
-  RANDOM_MEG = Random.new.bytes(1024 * 1024) # Allocate it once to prevent heap churn
-  def initialize(size)
-    super('random-bin')
-    binmode
-    crc = ZipTricks::StreamCRC32.new
-    bytes = size % (1024 * 1024)
-    megs = size / (1024 * 1024)
-    megs.times do
-      Keepalive.still_alive!
-      self << RANDOM_MEG
-      crc << RANDOM_MEG
-    end
-    random_blob = Random.new.bytes(bytes)
-    self << random_blob
-    crc << random_blob
-    @crc32 = crc.to_i
-    rewind
-  end
-
-  def copy_to(io)
-    rewind
-    while data = read(10*1024*1024)
-      io << data
-      Keepalive.still_alive!
-    end
-    rewind
   end
 end
 

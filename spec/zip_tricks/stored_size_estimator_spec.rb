@@ -17,6 +17,6 @@ describe ZipTricks::StoredSizeEstimator do
       expect(r).to eq(estimator), "add_compressed_entry should return self"
     end
 
-    expect(predicted_size).to eq(1410585)
+    expect(predicted_size).to eq(1410614)
   end
 end

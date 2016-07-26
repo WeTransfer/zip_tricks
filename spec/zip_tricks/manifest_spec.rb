@@ -24,8 +24,8 @@ describe ZipTricks::Manifest do
     total_size_of_all_parts = manifest.inject(0) do | total_bytes, span |
       total_bytes + RangeUtils.size_from_range(span.byte_range_in_zip)
     end
-    expect(total_size_of_all_parts).to eq(1410595)
-    expect(bytesize).to eq(1410595)
+    expect(total_size_of_all_parts).to eq(1410624)
+    expect(bytesize).to eq(1410624)
 
     expect(manifest.length).to eq(7)
 
@@ -55,6 +55,6 @@ describe ZipTricks::Manifest do
 
     cd = manifest[-1]
     expect(cd.part_type).to eq(:central_directory)
-    expect(cd.byte_range_in_zip).to eq(1410386..1410594)
+    expect(cd.byte_range_in_zip).to eq(1410386..1410623)
   end
 end

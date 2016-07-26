@@ -96,11 +96,6 @@ module ZipInspection
     au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/Contents/MacOS/Archive Utility'
     open_with_external_app(au_path, path_to_zip, skip_if_missing)
   end
-  
-  def open_zip_with_unarchiver(path_to_zip, skip_if_missing: false)
-    ua_path = '/Applications/The Unarchiver.app/Contents/MacOS/The Unarchiver'
-    open_with_external_app(ua_path, path_to_zip, skip_if_missing)
-  end
 end
 
 RSpec.configure do |config|

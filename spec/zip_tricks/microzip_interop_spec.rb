@@ -63,6 +63,8 @@ describe 'Microzip in interop context' do
     z.write_central_directory(tf)
     tf.flush
 
+    pending 'https://github.com/rubyzip/rubyzip/issues/295'
+
     Zip::File.open(tf.path) do |zip_file|
       entries = zip_file.to_a
       expect(entries.length).to eq(3)

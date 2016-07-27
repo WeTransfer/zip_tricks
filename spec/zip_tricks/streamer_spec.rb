@@ -268,7 +268,7 @@ describe ZipTricks::Streamer do
       expect(entry.external_file_attributes).to eq(2175008768)
       
       # Check the file contents
-      readback = entry.read
+      readback = entry.get_input_stream.read
       readback.force_encoding(Encoding::BINARY)
       expect(readback[0..10]).to eq(File.read(__dir__ + '/war-and-peace.txt')[0..10])
     end

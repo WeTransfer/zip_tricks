@@ -56,9 +56,7 @@ build_test "Two entries both requiring Zip64" do |zip|
   big.write_to(zip)
 end
 
-DD = ZipTricks::CompressingStreamer 
-
-build_test "Two stored entries using data descriptors", streamer_class: DD do |zip|
+build_test "Two stored entries using data descriptors" do |zip|
   zip.write_stored_file('stored.1.bin') do |sink|
     sink << Random.new.bytes(1024 * 1024 * 4)
   end
@@ -67,14 +65,14 @@ build_test "Two stored entries using data descriptors", streamer_class: DD do |z
   end
 end
 
-build_test "One entry deflated using data descriptors", streamer_class: DD do |zip|
+build_test "One entry deflated using data descriptors" do |zip|
   big = generate_big_entry(0xFFFFFFFF / 64)
   zip.write_deflated_file('war-and-peace-repeated-compressed.txt') do |sink|
     big.write_to(sink)
   end
 end
 
-build_test "Two entries larger than the overall Zip64 offset using data descriptors", streamer_class: DD do |zip|
+build_test "Two entries larger than the overall Zip64 offset using data descriptors" do |zip|
   big = generate_big_entry((0xFFFFFFFF / 2) + 1024)
   
   zip.write_stored_file('repeated-A.txt') do |sink|

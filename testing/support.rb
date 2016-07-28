@@ -32,7 +32,7 @@ $test_descs = []
 $builder_threads = []
 at_exit { $builder_threads.map(&:join) }
 
-def build_test(test_description, streamer_class: ZipTricks::Streamer)
+def build_test(test_description)
   $tests_performed += 1
 
   test_file_base = test_description.downcase.gsub(/\-/, '').gsub(/[\s\:]+/, '_')
@@ -45,7 +45,7 @@ def build_test(test_description, streamer_class: ZipTricks::Streamer)
   $test_descs << TestDesc.new(test_description, filename)
   $builder_threads << Thread.new do
     File.open(File.join(__dir__, filename + '.tmp'), 'wb') do |of|
-      streamer_class.open(of) do |zip|
+      ZipTricks::Streamer.open(of) do |zip|
         yield(zip)
       end
     end

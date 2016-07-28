@@ -2,77 +2,81 @@
 
 [![Build Status](https://travis-ci.org/WeTransfer/zip_tricks.svg?branch=master)](https://travis-ci.org/WeTransfer/zip_tricks)
 
-Makes Rubyzip sing, dance and play saxophone for streaming applications.
+Allows streaming, non-rewinding ZIP file output from Ruby.
 Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
 Requires Ruby 2.1+, rubyzip and a couple of other gems (all available to jRuby as well).
-The library is composed of a loose set of modules.
 
-## Usage by example
+## Create a ZIP file without size estimation, compress on-the-fly)
+
+When you compress on the fly and use data descriptors it is not really possible to compute the file size upfront.
+But it is very likely to yield good compression - especially if you send things like CSV files.
+
+    out = my_tempfile # can also be a socket
+    ZipTricks::Streamer.open(out) do |zip|
+      zip.write_stored_file('mov.mp4.txt') do |sink|
+        File.open('mov.mp4', 'rb'){|source| IO.copy_stream(source, sink) }
+      end
+      zip.write_deflated_file('long-novel.txt') do |sink|
+        File.open('novel.txt', 'rb'){|source| IO.copy_stream(source, sink) }
+      end
+    end
+
+## Send the same ZIP file from a Rack response
+
+Create a `RackBody` object and give it's constructor a block that adds files.
+The block will only be called when actually sending the response to the client
+(unless you are using a buffering Rack webserver, such as Webrick).
+
+    body = ZipTricks::RackBody.new do | zip |
+      zip.write_stored_file('mov.mp4.txt') do |sink|
+        File.open('mov.mp4', 'rb'){|source| IO.copy_stream(source, sink) }
+      end
+      zip.write_deflated_file('long-novel.txt') do |sink|
+        File.open('novel.txt', 'rb'){|source| IO.copy_stream(source, sink) }
+      end
+    end
+    [200, {'Transfer-Encoding' => 'chunked'}, body]
+
+## Send a ZIP file of known size, with correct headers
+
+Use the `StoredSizeEstimator` to compute the correct size of the resulting archive.
+
+    zip_body = ZipTricks::RackBody.new do | zip |
+      zip.add_stored_entry("myfile1.bin", size=9090821, crc32=12485)
+      zip << read_file('myfile1.bin')
+      zip.add_stored_entry("myfile2.bin", size=458678, crc32=89568)
+      zip << read_file('myfile2.bin')
+    end
+    bytesize = ZipTricks::StoredSizeEstimator.perform_fake_archiving do |z|
+     z.add_stored_entry('myfile1.bin', size=9090821)
+     z.add_stored_entry('myfile2.bin', size=458678)
+    end
+    [200, {'Content-Length' => bytesize.to_s}, zip_body]
+
+## Other usage examples
 
 Check out the `examples/` directory at the root of the project. This will give you a good idea
 of various use cases the library supports.
 
-## BlockDeflate
+## Writing ZIP files using the Streamer bypass
 
-Deflate a byte stream in blocks of N bytes, optionally writing a terminator marker. This can be used to
-compress a file in parts.
+You do not have to "feed" all the contents of the files you put in the archive through the Streamer object.
+If the write destination for your use case is a `Socket` (say, you are writing using Rack hijack) and you know
+the metadata of the file upfront (the CRC32 of the uncompressed file and the sizes), you can write directly
+to that socket using some accelerated writing technique, and only use the Streamer to write out the ZIP metadata.
 
-    source_file = File.open('12_gigs.bin', 'rb')
-    compressed = Tempfile.new
-    # Will not compress everything in memory, but do it per chunk to spare memory. `compressed`
-    # will be written to at the end of each chunk.
-    ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file, compressed)
-
-You can also do the same to parts that you will later concatenate together elsewhere, in that case
-you need to skip the end marker:
-
-    compressed = Tempfile.new
-    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb), compressed)
-    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part2.bin', 'rb), compressed)
-    ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb), compressed)
-    ZipTricks::BlockDeflate.write_terminator(compressed)
-
-You can also elect to just compress strings in memory (to splice them later):
-
-    compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
-
-## Streamer
-
-Is used to write a streaming ZIP file when you know the CRC32 for the raw files
-and the sizes of these files upfront. This writes the local headers immediately, without having to
-rewind the output IO. It also avoids using the local footers instead of headers, therefore permitting
-Zip64-sized entries to be stored easily.
-
-    # io has to be an object that supports #<< and #tell
-    io = ... # can be a Tempfile, but can also be a BlockWrite adapter for, say, Rack
-    
+    # io has to be an object that supports #<<
     ZipTricks::Streamer.open(io) do | zip |
-      
-      # raw_file is written "as is" (STORED mode)
+      # raw_file is written "as is" (STORED mode).
+      # Write the local file header first..
       zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
-      while blob = raw_file.read(2048)
-        zip << blob
-      end
       
-      # another_file is assumed to be block-deflated (DEFLATE mode)
-      zip.add_compressed_entry("another-file.bin", another_file_size, another_file_crc32, compressed_file.size)
-      while blob = compressed_file.read(2048)
-        zip << blob
-      end
+      # then send the actual file contents bypassing the Streamer interface
+      io.sendfile(my_temp_file)
       
-      # If you are storing block-deflated parts of a single file, you have to terminate the output
-      # with an end marker manually
-      zip.add_compressed_entry("compressed-in-parts.bin", another_file_size, another_file_crc32, deflated_size)
-      while blob = part1.read(2048)
-        zip << blob
-      end
-      while blob = part2.read(2048)
-        zip << blob
-      end
-      ZipTricks::BlockDeflate.write_terminator(zip)
-      
-      ... # more file writes etc.
+      # ...and then adjust the ZIP offsets within the Streamer
+      zip.simulate_write(my_temp_file.size)
     end
 
 ## RackBody
@@ -94,7 +98,7 @@ The archive will be automatically closed at the end of the block.
       ...
     end
     
-    return [200, {'Content-Type' => 'binary/octet-stream', 'Content-Length' => content_length.to_s}, body]
+    [200, {'Content-Type' => 'binary/octet-stream', 'Content-Length' => content_length.to_s}, body]
   
 ## BlockWrite
 

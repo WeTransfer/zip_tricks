@@ -34,7 +34,7 @@ class ZipTricks::Streamer
 
   # Creates a new Streamer on top of the given IO-ish object.
   #
-  # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
+  # @param stream [IO] the destination IO for the ZIP (should respond to `<<`)
   def initialize(stream)
     raise InvalidOutput, "The stream should respond to #<<" unless stream.respond_to?(:<<)
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)

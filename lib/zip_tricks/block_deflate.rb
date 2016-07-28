@@ -13,6 +13,27 @@
 # When you deflate the chunks separately, you need to write the end marker yourself (using `write_terminator`).
 # If you just want to deflate a large IO's contents, use `deflate_in_blocks_and_terminate` to have the end marker
 # written out for you.
+#
+# Basic usage to compress a file in parts:
+# 
+#     source_file = File.open('12_gigs.bin', 'rb')
+#     compressed = Tempfile.new
+#     # Will not compress everything in memory, but do it per chunk to spare memory. `compressed`
+#     # will be written to at the end of each chunk.
+#     ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file, compressed)
+# 
+# You can also do the same to parts that you will later concatenate together elsewhere, in that case
+# you need to skip the end marker:
+# 
+#     compressed = Tempfile.new
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb), compressed)
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part2.bin', 'rb), compressed)
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb), compressed)
+#     ZipTricks::BlockDeflate.write_terminator(compressed)
+# 
+# You can also elect to just compress strings in memory (to splice them later):
+# 
+#     compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
 module ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1024*1024*5
   END_MARKER = [3, 0].pack("C*")

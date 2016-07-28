@@ -96,12 +96,12 @@ class ZipTricks::Microzip
       io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
       io << [crc32].pack(C_V)                             # crc-32                          4 bytes
 
-      if !@requires_zip64
-        io << [compressed_size].pack(C_V)                 # compressed size              4 bytes
-        io << [uncompressed_size].pack(C_V)               # uncompressed size            4 bytes
-      else
+      if @requires_zip64
         io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
         io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
+      else
+        io << [compressed_size].pack(C_V)                 # compressed size              4 bytes
+        io << [uncompressed_size].pack(C_V)               # uncompressed size            4 bytes
       end
 
       # Filename should not be longer than 0xFFFF otherwise this wont fit here

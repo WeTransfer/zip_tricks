@@ -24,16 +24,8 @@ Data descriptors permit you to generate "postfix" ZIP files (where you write the
 know the CRC32 and the file size upfront, then write the compressed file data, and only then - once you know what your CRC32,
 compressed and uncompressed sizes are etc. - write them into a data descriptor that follows the file data.
 
-The streamer does _not_ use data descriptors, because their use [is problematic](https://github.com/thejoshwolfe/yazl/issues/13)
-with the 7Zip version that we want to support. Or rather - not the use of data descriptors themselves, but the use of the GP flag
-bit 3 that trips up that version of 7Zip. If we were to use data descriptors, we would have to up the minimum supported version
-of 7Zip.
-
-That means, in turn, that **to use the ZipTricks streamer you have to know the CRC32 and the sizes of the compressed/uncompressed
-file upfront.** So you have to precompute them in some way. To do that, you can use `BlockDeflate` to precompress the file in
-parallel, and `StreamCRC32` to compute the CRC checksum, before feeding them to the ZIP writer.
-
-This approach might be reconsidered in the future.
+The streamer has optional support for data descriptors. Their use can apparently [ be problematic](https://github.com/thejoshwolfe/yazl/issues/13)
+with the 7Zip version that we want to support, but in our tests everything worked fine.
 
 For more info see https://github.com/thejoshwolfe/yazl#general-purpose-bit-flag
 

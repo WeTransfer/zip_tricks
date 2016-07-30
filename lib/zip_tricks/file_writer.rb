@@ -1,13 +1,12 @@
-# A replacement for RubyZip for streaming, with a couple of small differences.
-# The first difference is that it is verbosely-written-to-the-spec and you can actually
-# follow what is happening. It does not support quite a few fancy features of Rubyzip,
+# A farily low-level ZIP file writer. Will write all the data straight-ahead and never rewind.
+#
+# It does not support quite a few fancy features of Rubyzip,
 # but instead it can be digested in one reading, and has solid Zip64 support. It also does
 # not attempt any tricks with Zip64 placeholder extra fields because the ZipTricks streaming
 # engine assumes you _know_ how large your file is (both compressed and uncompressed) _and_
 # you have the file's CRC32 checksum upfront.
 #
-# Just like Rubyzip it will switch to Zip64 automatically if required, but there is no global
-# setting to enable that behavior - it is always on.
+# Zip64 extra fields and central directory information will switch on and off automatically.
 class ZipTricks::FileWriter
   STORED   = 0
   DEFLATED = 8

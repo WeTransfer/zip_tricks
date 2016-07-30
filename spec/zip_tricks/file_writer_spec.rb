@@ -1,7 +1,7 @@
 require_relative '../spec_helper'
 require_relative '../../testing/support'
 
-describe ZipTricks::Microzip do
+describe ZipTricks::FileWriter do
   class ByteReader < Struct.new(:io)
     def read_2b
       read_n(2).unpack('v').first

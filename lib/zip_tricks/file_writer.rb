@@ -8,7 +8,7 @@
 #
 # Just like Rubyzip it will switch to Zip64 automatically if required, but there is no global
 # setting to enable that behavior - it is always on.
-class ZipTricks::Microzip
+class ZipTricks::FileWriter
   STORED   = 0
   DEFLATED = 8
 

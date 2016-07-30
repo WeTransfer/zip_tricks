@@ -1,7 +1,7 @@
 require_relative '../spec_helper'
 
-describe 'Microzip in interop context' do
-  let(:described_class) { ZipTricks::Microzip}
+describe 'FileWriter in interop context' do
+  let(:described_class) { ZipTricks::FileWriter}
   
   it 'creates an archive that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')

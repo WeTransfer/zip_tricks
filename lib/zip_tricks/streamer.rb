@@ -195,8 +195,6 @@ class ZipTricks::Streamer
   # sizes and the CRC32 checksum.
   #
   # @param filename[String] the name of the file in the archive
-  # @param flush_deflate_after_bytes[Fixnum] how many bytes may be written before the deflater should flush.
-  #       The default value for this method should be sufficient for most uses.
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
     @state_monitor.transition! :in_entry_header

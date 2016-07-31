@@ -40,12 +40,6 @@ describe ZipTricks::ZipWriter do
     end
   end
 
-  class IOWrapper < ZipTricks::WriteAndTell
-    def read(n)
-      @io.read(n)
-    end
-  end
-
   describe '#write_local_file_header' do
     it 'writes the local file header for an entry that does not require Zip64' do
       buf = StringIO.new

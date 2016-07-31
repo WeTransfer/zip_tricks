@@ -16,11 +16,11 @@ class ZipTricks::Streamer
   require_relative 'streamer/stored_writer'
   require_relative 'streamer/entry'
 
+  STORED = 0
+  DEFLATED = 8
+
   EntryBodySizeMismatch = Class.new(StandardError)
   InvalidOutput = Class.new(ArgumentError)
-
-  STORED, DEFLATED = 0, 8
-
   Overflow = Class.new(StandardError)
   PathError = Class.new(StandardError)
   DuplicateFilenames = Class.new(StandardError)

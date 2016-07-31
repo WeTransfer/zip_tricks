@@ -19,8 +19,7 @@ class ZipTricks::Streamer
   EntryBodySizeMismatch = Class.new(StandardError)
   InvalidOutput = Class.new(ArgumentError)
 
-  STORED   = 0
-  DEFLATED = 8
+  STORED, DEFLATED = 0, 8
 
   Overflow = Class.new(StandardError)
   PathError = Class.new(StandardError)
@@ -169,7 +168,7 @@ class ZipTricks::Streamer
   # sizes and the CRC32 checksum.
   #
   # @param filename[String] the name of the file in the archive
-  # @yieldd [#<<, #write] an object that the file contents must be written to
+  # @yield [#<<, #write] an object that the file contents must be written to
   def write_stored_file(filename)
     @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, storage_mode: STORED,

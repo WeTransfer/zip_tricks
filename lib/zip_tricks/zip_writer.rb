@@ -27,7 +27,18 @@ class ZipTricks::ZipWriter
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
 
-  def write_local_file_header(io:, gp_flags:, crc32:, compressed_size:, uncompressed_size:, mtime:, filename:, storage_mode:)
+  # Writes the local file header, that precedes the actual file _data_. 
+  # 
+  # @param io[#<<] the buffer to write the local file header to
+  # @param filename[String]  the name of the file in the archive
+  # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
+  # @param uncompressed_size[Fixnum]  The size of the file once extracted
+  # @param crc32[Fixnum] The CRC32 checksum of the file
+  # @param mtime[Time]  the modification time to be recorded in the ZIP
+  # @param gp_flags[Fixnum] bit-packed general purpose flags
+  # @param storage_mode[Fixnum] 8 for deflated, 0 for stored...
+  # @return [void]
+  def write_local_file_header(io:, filename:, compressed_size:, uncompressed_size:, crc32:, gp_flags:, mtime:, storage_mode:)
     requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
 
     io << [0x04034b50].pack(C_V)                        # local file header signature     4 bytes  (0x04034b50)
@@ -71,9 +82,8 @@ class ZipTricks::ZipWriter
     end
   end
 
-  # Writes the file header for the central directory. The central directory is followed by the end-of-central-directory-record.
-  # When writing out this data, please ensure that the CRC32 and both sizes (compressed/uncompressed) are correct for the entry in
-  # question.
+  # Writes the file header for the central directory, for a particular file in the archive. When writing out this data,
+  # ensure that the CRC32 and both sizes (compressed/uncompressed) are correct for the entry in question.
   #
   # @param io[#<<] the buffer to write the local file header to
   # @param filename[String]  the name of the file in the archive
@@ -153,9 +163,8 @@ class ZipTricks::ZipWriter
   end
 
   # Writes the data descriptor following the file data for a file whose local file header
-  # was written using `add_local_file_header_of_unknown_size`. If the one of the sizes
-  # exceeds the Zip64 threshold, the data descriptor will have the sizes written out as
-  # 8-byte values instead of 4-byte values.
+  # was written with general-purpose flag bit 3 set. If the one of the sizes exceeds the Zip64 threshold,
+  # the data descriptor will have the sizes written out as 8-byte values instead of 4-byte values.
   #
   # @param io[#<<] the buffer to write the local file header to
   # @param crc32[Fixnum]    The CRC32 checksum of the file

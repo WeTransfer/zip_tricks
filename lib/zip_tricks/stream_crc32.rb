@@ -26,7 +26,7 @@ class ZipTricks::StreamCRC32
 
   # Returns the CRC32 value computed so far
   #
-  # @return crc[Fixnum] the updated CRC32 value for all the blobs so far
+  # @return [Fixnum] the updated CRC32 value for all the blobs so far
   def to_i
     @crc
   end
@@ -36,7 +36,7 @@ class ZipTricks::StreamCRC32
   #
   # @param crc32[Fixnum] the CRC32 value to append
   # @param blob_size[Fixnum] the size of the daata the `crc32` is computed from
-  # @return crc[Fixnum] the updated CRC32 value for all the blobs so far
+  # @return [Fixnum] the updated CRC32 value for all the blobs so far
   def append(crc32, blob_size)
     @crc = Zlib.crc32_combine(@crc, crc32, blob_size)
   end

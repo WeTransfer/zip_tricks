@@ -1,20 +1,20 @@
 require_relative 'support'
 
 build_test "Two small stored files" do |zip|
-  zip.add_stored_entry('text.txt', $war_and_peace.bytesize, $war_and_peace_crc)
+  zip.add_stored_entry(filename: 'text.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace
 
-  zip.add_stored_entry('image.jpg', $image_file.bytesize, $image_file_crc)
+  zip.add_stored_entry(filename: 'image.jpg', size: $image_file.bytesize, crc32: $image_file_crc)
   zip << $image_file
 end
 
 build_test "Filename with diacritics" do |zip|
-  zip.add_stored_entry('Kungälv.txt', $war_and_peace.bytesize, $war_and_peace_crc)
+  zip.add_stored_entry(filename: 'Kungälv.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace
 end
 
 build_test "Purely UTF-8 filename" do |zip|
-  zip.add_stored_entry('Война и мир.txt', $war_and_peace.bytesize, $war_and_peace_crc)
+  zip.add_stored_entry(filename: 'Война и мир.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace
 end
 
@@ -22,37 +22,37 @@ end
 # size threshold for Zip64. Together, however, they do.
 build_test "Two entries larger than the overall Zip64 offset" do |zip|
   big = generate_big_entry((0xFFFFFFFF / 2) + 1024)
-  zip.add_stored_entry('repeated-A.txt', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'repeated-A.txt', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 
-  zip.add_stored_entry('repeated-B.txt', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'repeated-B.txt', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 end
 
 build_test "One entry that requires Zip64 and a tiny entry following it" do |zip|
   big = generate_big_entry(0xFFFFFFFF + 2048)
-  zip.add_stored_entry('large-requires-zip64.bin', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'large-requires-zip64.bin', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 
-  zip.add_stored_entry('tiny-after.txt', $war_and_peace.bytesize, $war_and_peace_crc)
+  zip.add_stored_entry(filename: 'tiny-after.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace
 end
 
 build_test "One tiny entry followed by second that requires Zip64" do |zip|
-  zip.add_stored_entry('tiny-at-start.txt', $war_and_peace.bytesize, $war_and_peace_crc)
+  zip.add_stored_entry(filename: 'tiny-at-start.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace
 
   big = generate_big_entry(0xFFFFFFFF + 2048)
-  zip.add_stored_entry('large-requires-zip64.bin', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'large-requires-zip64.bin', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 end
 
 build_test "Two entries both requiring Zip64" do |zip|
   big = generate_big_entry(0xFFFFFFFF + 2048)
-  zip.add_stored_entry('huge-file-1.bin', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'huge-file-1.bin', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 
-  zip.add_stored_entry('huge-file-2.bin', big.size, big.crc32)
+  zip.add_stored_entry(filename: 'huge-file-2.bin', size: big.size, crc32: big.crc32)
   big.write_to(zip)
 end
 
@@ -75,19 +75,12 @@ end
 build_test "Two entries larger than the overall Zip64 offset using data descriptors" do |zip|
   big = generate_big_entry((0xFFFFFFFF / 2) + 1024)
   
-  zip.write_stored_file('repeated-A.txt') do |sink|
-    big.write_to(sink)
-  end
-  
-  zip.write_stored_file('repeated-B.txt') do |sink|
-    big.write_to(sink)
-  end
+  zip.write_stored_file('repeated-A.txt') { |sink| big.write_to(sink) }
+  zip.write_stored_file('repeated-B.txt') { |sink| big.write_to(sink) }
 end
 
-build_test "One stored entry larger than Zip64 threshold using data descriptors", streamer_class: DD do |zip|
+build_test "One stored entry larger than Zip64 threshold using data descriptors" do |zip|
   big = generate_big_entry(0xFFFFFFFF + 64000)
   
-  zip.write_stored_file('repeated-A.txt') do |sink|
-    big.write_to(sink)
-  end
+  zip.write_stored_file('repeated-A.txt') { |sink| big.write_to(sink) }
 end

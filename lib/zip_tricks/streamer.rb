@@ -81,17 +81,21 @@ class ZipTricks::Streamer
   # @param stream [IO] the destination IO for the ZIP (should respond to `<<`)
   def initialize(stream)
     raise InvalidOutput, "The stream must respond to #<<" unless stream.respond_to?(:<<)
-    stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
-
+    unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
+      stream = ZipTricks::WriteAndTell.new(stream) 
+    end
+    
     @out = stream
     @files = []
     @local_header_offsets = []
     @writer = ZipTricks::ZipWriter.new
 
     @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
-    @state_monitor.permit_state :in_entry_header, :in_entry_body, :in_central_directory, :in_data_descriptor, :closed
+    @state_monitor.permit_state :in_entry_header, :in_entry_body
+    @state_monitor.permit_state :in_central_directory, :in_data_descriptor, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
     @state_monitor.permit_transition :in_entry_header => :in_entry_body
+    @state_monitor.permit_transition :in_entry_header => :in_entry_header # 0-size entries, like directories
     @state_monitor.permit_transition :in_entry_header => :in_data_descriptor
     @state_monitor.permit_transition :in_entry_body => :in_entry_header
     @state_monitor.permit_transition :in_entry_body => :in_central_directory
@@ -279,6 +283,8 @@ class ZipTricks::Streamer
     @local_header_offsets << @out.tell
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
+
+    @state_monitor.transition! :in_entry_header
   end
   
   def write_data_descriptor_for_last_entry
@@ -289,7 +295,10 @@ class ZipTricks::Streamer
   
   # Checks whether the number of bytes written conforms to the declared entry size
   def leaving_in_entry_body_state
-    if @check_compressed_size_after_leaving_body && (@bytes_written_for_entry != @expected_bytes_for_entry)
+    # The check is skipped when the data descriptor will be written after
+    return unless @check_compressed_size_after_leaving_body
+    
+    if @bytes_written_for_entry != @expected_bytes_for_entry
       msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry,
           @bytes_written_for_entry]
       raise EntryBodySizeMismatch, msg

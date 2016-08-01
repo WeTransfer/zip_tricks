@@ -9,13 +9,13 @@ class ZipTricks::RackBody
   # The archive will be automatically closed at the end of the block.
   #
   #     # Precompute the Content-Length ahead of time
-  #     content_length = ZipTricks::StoredSizeEstimator.perform_fake_archiving do | estimator |
-  #       estimator.add_stored_entry('large.tif', size=1289894)
+  #     content_length = ZipTricks::SizeEstimator.estimate do | estimator |
+  #       estimator.add_stored_entry(filename: 'large.tif', size: 1289894)
   #     end
   #
   #     # Prepare the response body. The block will only be called when the response starts to be written.
   #     body = ZipTricks::RackBody.new do | streamer |
-  #       streamer.add_stored_entry('large.tif', size=1289894, crc32=198210)
+  #       streamer.add_stored_entry(filename: 'large.tif', size: 1289894, crc32: 198210)
   #       streamer << large_file.read(1024*1024) until large_file.eof?
   #       ...
   #     end

@@ -40,10 +40,10 @@ class ZipTricks::RemoteUncap
     entries = ZipTricks.const_get(:FileReader).read_zip_structure(fake_io)
     entries.map do | remote_entry |
       RemoteZipEntry.new do | entry |
-        entry.name = rubyzip_entry.filename
-        entry.starts_at_offset = remote_entry.local_header_offset
-        entry.size_uncompressed = remote_entry.uncompressed_size
-        entry.size_compressed =   remote_entry.compressed_size
+        entry.name               = remote_entry.filename
+        entry.starts_at_offset   = remote_entry.compressed_data_offset
+        entry.size_uncompressed  = remote_entry.uncompressed_size
+        entry.size_compressed    = remote_entry.compressed_size
         entry.compression_method = remote_entry.storage_mode
       end
     end

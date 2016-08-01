@@ -209,8 +209,10 @@ module ZipTricks::FileReader
     # TODO: what to do if multiple occurrences of the signature are found, somehow?
     eocd_sig = [0x06054b50].pack(C_V)
     eocd_idx_in_buf = str_containing_eocd_record.index(eocd_sig)
+    
     raise "Could not find the EOCD signature in the buffer - maybe a malformed ZIP file" unless eocd_idx_in_buf
-    eocd_position_in_io = implied_position_of_eocd_record + eocd_idx_in_buf
+    
+    implied_position_of_eocd_record + eocd_idx_in_buf
   end
 
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the
@@ -263,15 +265,6 @@ module ZipTricks::FileReader
     [num_files_total, central_dir_offset, central_dir_size]
   end
 
-  SIZE_OF_USABLE_EOCD_RECORD = begin
-    4 + # Signature
-    2 + # Number of this disk
-    2 + # Number of the disk with the EOCD record
-    2 + # Number of entries in the central directory
-    4 + # Size of the central directory
-    4   # Start of the central directory offset
-  end
-  
   C_V = 'V'.freeze
   C_v = 'v'.freeze
   C_Qe = 'Q<'.freeze
@@ -307,6 +300,16 @@ module ZipTricks::FileReader
     2 + # Extra fields size
     0xFFFF + # Maximum filename size
     0xFFFF   # Maximum extra fields size
+  end
+  
+  SIZE_OF_USABLE_EOCD_RECORD = begin
+    4 + # Signature
+    2 + # Number of this disk
+    2 + # Number of the disk with the EOCD record
+    2 + # Number of entries in the central directory of this disk
+    2 + # Number of entries in the central directory total
+    4 + # Size of the central directory
+    4   # Start of the central directory offset
   end
   
   def self.num_files_and_central_directory_offset(file_io, eocd_offset)

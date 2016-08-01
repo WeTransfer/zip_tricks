@@ -38,7 +38,7 @@ describe ZipTricks::RemoteIO do
         uncap = described_class.new
         expect {
           uncap.seek(123, :UNSUPPORTED)
-        }.to raise_error(Errno::ENOTSUP)
+        }.to raise_error(/unsupported/i)
       end
     end
 
@@ -48,18 +48,6 @@ describe ZipTricks::RemoteIO do
         expect(uncap).to receive(:request_object_size).and_return(100)
         mode = IO::SEEK_SET
         expect(uncap.seek(10, mode)).to eq(0)
-      end
-    end
-
-    context 'with SEEK_END mode' do
-      it 'seens to 10 bytes to the end of the IO' do
-        uncap = described_class.new
-        expect(uncap).to receive(:request_object_size).and_return(100)
-
-        mode = IO::SEEK_END
-        offset = -10
-        expect(uncap.seek(-10, IO::SEEK_END)).to eq(0)
-        expect(uncap.pos).to eq(90)
       end
     end
   end
@@ -87,10 +75,10 @@ describe ZipTricks::RemoteIO do
 
     context 'without arguments' do
       it 'reads the entire buffer and alters the position pointer' do
-        expect(@subject.pos).to eq(0)
+        expect(@subject.tell).to eq(0)
         read = @subject.read
         expect(read.bytesize).to eq(@buf.size)
-        expect(@subject.pos).to eq(@buf.size)
+        expect(@subject.tell).to eq(@buf.size)
       end
     end
 
@@ -105,7 +93,7 @@ describe ZipTricks::RemoteIO do
       
       it 'returns exact amount of bytes at the start of the buffer' do
         bytes_read = @subject.read(10)
-        expect(@subject.pos).to eq(10)
+        expect(@subject.tell).to eq(10)
         @buf.seek(0)
         expect(bytes_read).to eq(@buf.read(10))
       end
@@ -114,7 +102,7 @@ describe ZipTricks::RemoteIO do
         @subject.seek(456, IO::SEEK_SET)
 
         bytes_read = @subject.read(10)
-        expect(@subject.pos).to eq(456+10)
+        expect(@subject.tell).to eq(456+10)
 
         @buf.seek(456)
         expect(bytes_read).to eq(@buf.read(10))
@@ -124,13 +112,13 @@ describe ZipTricks::RemoteIO do
         at_end = @buf.size - 4
         @subject.seek(at_end, IO::SEEK_SET)
 
-        expect(@subject.pos).to eq(15728636)
+        expect(@subject.tell).to eq(15728636)
         bytes_read = @subject.read(10)
-        expect(@subject.pos).to eq(@buf.size) # Should have moved the pos pointer to the end
+        expect(@subject.tell).to eq(@buf.size) # Should have moved the pos pointer to the end
 
         expect(bytes_read.bytesize).to eq(4)
 
-        expect(@subject.pos).to eq(@buf.size)
+        expect(@subject.tell).to eq(@buf.size)
       end
     end
   end

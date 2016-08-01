@@ -12,26 +12,29 @@ class ZipTricks::RemoteIO
 
   # Emulates IO#seek
   def seek(offset, mode = IO::SEEK_SET)
-    case mode
-      when IO::SEEK_SET
-        @remote_size ||= request_object_size
-        @pos = clamp(0, offset, @remote_size)
-      when IO::SEEK_END
-        @remote_size ||= request_object_size
-        @pos = clamp(0, @remote_size + offset, @remote_size)
-      else
-        raise Errno::ENOTSUP, "Seek mode #{mode.inspect} not supported"
-    end
+    raise "Unsupported read mode #{mode}" unless mode == IO::SEEK_SET
+    @remote_size ||= request_object_size
+    @pos = clamp(0, offset, @remote_size)
     0 # always return 0!
   end
   
-  # Emulates IO#size
+  # Emulates IO#size.
+  #
+  # @return [Fixnum] the size of the remote resource
   def size
     @remote_size ||= request_object_size
   end
   
-  # Emulates IO#read
-  def read(n_bytes = nil)
+  # Emulates IO#read, but requires the number of bytes to read
+  # The method will raise if the number of bytes read from remote does
+  # not match the number requested. The read will be limited to the
+  # size of the remote resource relative to the current offset in the IO,
+  # so if you are at offset 0 in the IO of size 10, doing a `read(20)`
+  # will only return you 10 bytes of result, and not raise any exceptions. 
+  #
+  # @param n_bytes[Fixnum, nil] how many bytes to read, or `nil` to read all the way to the end
+  # @return [String] the read bytes
+  def read(n_bytes=nil)
     @remote_size ||= request_object_size
 
     # If the resource is empty there is nothing to read
@@ -52,14 +55,12 @@ class ZipTricks::RemoteIO
     end
   end
 
-  # Returns the current pointer position within the IO.
-  # Not used by RubyZip but used in tests of our own
+  # Returns the current pointer position within the IO
   #
   # @return [Fixnum]
   def tell
     @pos
   end
-  alias_method :pos, :tell
 
   protected
 

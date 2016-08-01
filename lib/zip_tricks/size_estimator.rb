@@ -31,7 +31,7 @@ class ZipTricks::SizeEstimator
 
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
-  # @param name [String] the name of the file (filenames are variable-width in the ZIP)
+  # @param filename [String] the name of the file (filenames are variable-width in the ZIP)
   # @param size [Fixnum] size of the uncompressed entry
   # @param use_data_descriptor[Boolean] whether the entry uses a postfix data descriptor to specify size
   # @return self
@@ -46,9 +46,9 @@ class ZipTricks::SizeEstimator
 
   # Add a fake entry to the archive, to see how big it is going to be in the end.
   #
-  # @param name [String] the name of the file (filenames are variable-width in the ZIP)
-  # @param size_uncompressed [Fixnum] size of the uncompressed entry
-  # @param size_compressed [Fixnum] size of the compressed entry
+  # @param filename [String] the name of the file (filenames are variable-width in the ZIP)
+  # @param uncompressed_size [Fixnum] size of the uncompressed entry
+  # @param compressed_size [Fixnum] size of the compressed entry
   # @param use_data_descriptor[Boolean] whether the entry uses a postfix data descriptor to specify size
   # @return self
   def add_compressed_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)

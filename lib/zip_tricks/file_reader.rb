@@ -3,24 +3,57 @@ require 'stringio'
 module ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
-  
+
   # Represents a file within the ZIP archive being read
   class ZipEntry
+    # @return [Fixnum] bit-packed version signature of the program that made the archive
     attr_accessor :made_by
+    
+    # @return [Fixnum] ZIP version support needed to extract this file
     attr_accessor :version_needed_to_extract
+    
+    # @return [Fixnum] bit-packed general purpose flags
     attr_accessor :gp_flags
+    
+    # @return [Fixnum] Storage mode (0 for stored, 8 for deflate)
     attr_accessor :storage_mode
+
+    # @return [Fixnum] the bit-packed DOS time
     attr_accessor :dos_time
+
+    # @return [Fixnum] the bit-packed DOS date
     attr_accessor :dos_date
+
+    # @return [Fixnum] the CRC32 checksum of this file
     attr_accessor :crc32
+
+    # @return [Fixnum] size of compressed file data in the ZIP
     attr_accessor :compressed_size
+
+    # @return [Fixnum] size of the file once uncompressed
     attr_accessor :uncompressed_size
+
+    # @return [String] the filename
     attr_accessor :filename
+
+    # @return [Fixnum] disk number where this file starts
     attr_accessor :disk_number_start
+
+    # @return [Fixnum] internal attributes of the file
     attr_accessor :internal_attrs
+
+    # @return [Fixnum] external attributes of the file
     attr_accessor :external_attrs
+
+    # @return [Fixnum] at what offset the local file header starts
+    #        in your original IO object
     attr_accessor :local_file_header_offset
+
+    # @return [String] the file comment
     attr_accessor :comment
+
+    # @return [Fixnum] at what offset you should start reading
+    #       for the compressed data in your original IO object
     attr_accessor :compressed_data_offset
   end
 
@@ -31,7 +64,7 @@ module ZipTricks::FileReader
   def self.read_zip_structure(io)
     zip_file_size = io.size
     eocd_offset = get_eocd_offset(io, zip_file_size)
-    
+
     zip64_end_of_cdir_location = get_zip64_eocd_locator_offset(io, eocd_offset)
     num_files, cdir_location, cdir_size = if zip64_end_of_cdir_location
       num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
@@ -39,19 +72,19 @@ module ZipTricks::FileReader
       num_files_and_central_directory_offset(io, eocd_offset)
     end
     seek(io, cdir_location)
-    
+
     # Read the entire central directory in one fell swoop
     central_directory_str = read_n(io, cdir_size)
     central_directory_io = StringIO.new(central_directory_str)
-    
+
     entries = (1..num_files).map { read_cdir_entry(central_directory_io) }
     entries.each do |entry|
       entry.compressed_data_offset = find_compressed_data_start_offset(io, entry.local_file_header_offset)
     end
   end
-  
+
   private
-  
+
   def self.skip_ahead_2(io)
     skip_ahead_n(io, 2)
     nil
@@ -82,7 +115,7 @@ module ZipTricks::FileReader
       raise "Expected signature #{expected}, but read #{actual}"
     end
   end
-  
+
   def self.skip_ahead_n(io, n)
     pos_before = io.tell
     io.seek(io.tell + n, IO::SEEK_SET)
@@ -114,9 +147,9 @@ module ZipTricks::FileReader
   def self.find_compressed_data_start_offset(file_io, local_header_offset)
     seek(file_io, local_header_offset)
     local_file_header_str_plus_headroom = file_io.read(MAX_LOCAL_HEADER_SIZE)
-    
+
     io = StringIO.new(local_file_header_str_plus_headroom)
-    
+
     local_header_signature = [0x04034b50].pack(C_V)
     sig = read_n(io, 4)
     unless sig == local_header_signature
@@ -133,17 +166,17 @@ module ZipTricks::FileReader
 
     skip_ahead_4(io) # Comp size
     skip_ahead_4(io) # Uncomp size
-    
-    # We need the two values after as they contain the offsets, combine them into one read()
-    filename_size, extra_size = read_n(io, 4).unpack('vv')
-    
+
+    filename_size = read_2b(io)
+    extra_size = read_2b(io)
+
     skip_ahead_n(io, filename_size)
     skip_ahead_n(io, extra_size)
-    
+
     local_header_offset + io.tell
   end
 
-  
+
   def self.read_cdir_entry(io)
     expected_at = io.tell
     cdir_entry_sig = [0x02014b50].pack(C_V)
@@ -169,12 +202,12 @@ module ZipTricks::FileReader
       e.external_attrs = read_4b(io)
       e.local_file_header_offset = read_4b(io)
       e.filename = read_n(io, filename_size)
-  
+
       # Extra fields
       extras = read_n(io, extra_size)
       # Comment
       e.comment = read_n(io, comment_len)
-      
+
       # Parse out the extra fields
       extra_table = {}
       extras_buf = StringIO.new(extras)
@@ -184,7 +217,7 @@ module ZipTricks::FileReader
         extra_contents = read_n(extras_buf, extra_size)
         extra_table[extra_id] = extra_contents
       end
-  
+
       # ...of which we really only need the Zip64 extra
       if zip64_extra_contents = extra_table[1] # Zip64 extra
         zip64_extra = StringIO.new(zip64_extra_contents)
@@ -200,18 +233,18 @@ module ZipTricks::FileReader
     # The maximum size of the comment is 0xFFFF (what fits in 2 bytes)
     implied_position_of_eocd_record = zip_file_size - MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE
     implied_position_of_eocd_record = 0 if implied_position_of_eocd_record < 0
-    
+
     # Use a soft seek (we might not be able to get as far behind in the IO as we want)
     # and a soft read (we might not be able to read as many bytes as we want)
     file_io.seek(implied_position_of_eocd_record, IO::SEEK_SET)
     str_containing_eocd_record = file_io.read(MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE)
-  
+
     # TODO: what to do if multiple occurrences of the signature are found, somehow?
     eocd_sig = [0x06054b50].pack(C_V)
     eocd_idx_in_buf = str_containing_eocd_record.index(eocd_sig)
-    
+
     raise "Could not find the EOCD signature in the buffer - maybe a malformed ZIP file" unless eocd_idx_in_buf
-    
+
     implied_position_of_eocd_record + eocd_idx_in_buf
   end
 
@@ -223,15 +256,15 @@ module ZipTricks::FileReader
     zip64_eocd_loc_offset -= 4 # Which disk has the Zip64 end of central directory record
     zip64_eocd_loc_offset -= 8 # Offset of the zip64 central directory record
     zip64_eocd_loc_offset -= 4 # Total number of disks
-  
+
     # If the offset is negative there is certainly no Zip64 EOCD locator here
     return unless zip64_eocd_loc_offset >= 0
-  
+
     file_io.seek(zip64_eocd_loc_offset, IO::SEEK_SET)
     zip64_eocd_locator_sig = [0x07064b50].pack(C_V)
-  
+
     return unless file_io.read(4) == zip64_eocd_locator_sig
-    
+
     disk_num = read_4b(file_io) # number of the disk
     raise "The archive spans multiple disks" if disk_num != 0
     read_8b(file_io)
@@ -243,25 +276,25 @@ module ZipTricks::FileReader
     if io.read(4) != zip64_eocd_sig
       raise UnsupportedFeature, "Expected Zip64 EOCD record at #{zip64_end_of_cdir_location} but found something different"
     end
-  
+
     zip64_eocdr_size = read_8b(io)
     zip64_eocdr = read_n(io, zip64_eocdr_size) # Reading in bulk is cheaper
     zip64_eocdr = StringIO.new(zip64_eocdr)
     skip_ahead_2(zip64_eocdr) # version made by
     skip_ahead_2(zip64_eocdr) # version needed to extract
-    
+
     disk_n = read_4b(zip64_eocdr) # number of this disk
     disk_n_with_eocdr = read_4b(zip64_eocdr) # number of the disk with the EOCDR
     raise UnsupportedFeature, "The archive spans multiple disks" if disk_n != disk_n_with_eocdr
-    
+
     num_files_this_disk = read_8b(zip64_eocdr) # number of files on this disk
     num_files_total     = read_8b(zip64_eocdr) # files total in the central directory
-    
+
     raise UnsupportedFeature, "The archive spans multiple disks" if num_files_this_disk != num_files_total
-    
+
     central_dir_size    = read_8b(zip64_eocdr) # Size of the central directory
     central_dir_offset  = read_8b(zip64_eocdr) # Where the central directory starts
-  
+
     [num_files_total, central_dir_offset, central_dir_size]
   end
 
@@ -301,7 +334,7 @@ module ZipTricks::FileReader
     0xFFFF + # Maximum filename size
     0xFFFF   # Maximum extra fields size
   end
-  
+
   SIZE_OF_USABLE_EOCD_RECORD = begin
     4 + # Signature
     2 + # Number of this disk
@@ -311,16 +344,16 @@ module ZipTricks::FileReader
     4 + # Size of the central directory
     4   # Start of the central directory offset
   end
-  
+
   def self.num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)
-    
+
     io = StringIO.new(read_n(file_io, SIZE_OF_USABLE_EOCD_RECORD))
     eocd_sig = [0x06054b50].pack(C_V)
     if io.read(4) != eocd_sig
       raise "Expected EOCD signature at #{eocd_offset} but found something different"
     end
-  
+
     skip_ahead_2(io) # number_of_this_disk
     skip_ahead_2(io) # number of the disk with the EOCD record
     skip_ahead_2(io) # number of entries in the central directory of this disk
@@ -329,7 +362,7 @@ module ZipTricks::FileReader
     cdir_offset = read_4b(io) # start of central directorty offset
     [num_files, cdir_offset, cdir_size]
   end
-  
+
   private_constant :C_V, :C_v, :C_Qe, :MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE,
     :MAX_LOCAL_HEADER_SIZE, :SIZE_OF_USABLE_EOCD_RECORD
 end

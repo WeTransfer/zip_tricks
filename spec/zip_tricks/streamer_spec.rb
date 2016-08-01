@@ -283,12 +283,12 @@ describe ZipTricks::Streamer do
     
     described_class.open(tf) do |zip|
     end
-    
+
     tf.flush
     tf.rewind
-    
-    Zip::File.foreach(tf.path) do|e|
-      raise "Should not yield anything"
-    end
+
+    expect { |b|
+      Zip::File.foreach(tf.path, &b)
+    }.not_to yield_control
   end
 end

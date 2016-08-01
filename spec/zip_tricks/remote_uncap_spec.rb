@@ -21,11 +21,11 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     File.open('temp.zip', 'wb') do |f|
       ZipTricks::Streamer.open(f) do | zip |
-        zip.add_stored_entry('first-file.bin', payload1.size, payload1_crc)
+        zip.add_stored_entry(filename: 'first-file.bin', size: payload1.size, crc32: payload1_crc)
         while blob = payload1.read(1024 * 5)
           zip << blob
         end
-        zip.add_stored_entry('second-file.bin', payload2.size, payload2_crc)
+        zip.add_stored_entry(filename: 'second-file.bin', size: payload2.size, crc32: payload2_crc)
         while blob = payload2.read(1024 * 5)
           zip << blob
         end
@@ -81,9 +81,9 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     File.open('temp.zip', 'wb') do |f|
       ZipTricks::Streamer.open(f) do | zip |
-        zip.add_stored_entry('first-file.bin', payload1.size, payload1_crc)
+        zip.add_stored_entry(filename: 'first-file.bin', size: payload1.size, crc32: payload1_crc)
         zip << '' # It is empty, so a read() would return nil
-        zip.add_stored_entry('second-file.bin', payload2.size, payload2_crc)
+        zip.add_stored_entry(filename: 'second-file.bin', size: payload2.size, crc32: payload2_crc)
         while blob = payload2.read(1024 * 5)
           zip << blob
         end

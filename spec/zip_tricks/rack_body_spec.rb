@@ -7,7 +7,7 @@ describe ZipTricks::RackBody do
     file_body = SecureRandom.random_bytes(1024 * 1024 + 8981)
 
     body = described_class.new do | zip |
-      zip.add_stored_entry("A file", file_body.bytesize, Zlib.crc32(file_body))
+      zip.add_stored_entry(filename: "A file", size: file_body.bytesize, crc32: Zlib.crc32(file_body))
       zip << file_body
     end
 

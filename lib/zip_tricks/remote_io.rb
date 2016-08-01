@@ -1,9 +1,12 @@
 # An object that fakes just-enough of an IO to be dangerous
-# - or, more precisely, to be useful as a source for the RubyZip
-# central directory parser
+# - or, more precisely, to be useful as a source for the FileReader
+# central directory parser. Effectively we substitute an IO object
+# for an object that fetches parts of the remote file over HTTP using `Range:`
+# headers. The `RemoteIO` acts as an adapter between an object that performs the
+# actual fetches over HTTP and an object that expects a handful of IO methods to be
+# available.
 class ZipTricks::RemoteIO
-
-  # @param fetcher[#request_object_size, #request_range] an object that can fetch
+  # @param fetcher[#request_object_size, #request_range] an object that perform fetches
   def initialize(fetcher = :NOT_SET)
     @pos = 0
     @fetcher = fetcher

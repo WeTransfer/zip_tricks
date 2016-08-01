@@ -1,5 +1,5 @@
 # Helps to estimate archive sizes
-class ZipTricks::StoredSizeEstimator
+class ZipTricks::SizeEstimator
   require_relative 'streamer'
   class DetailStreamer < ::ZipTricks::Streamer
     public :add_file_and_write_local_header, :write_data_descriptor_for_last_entry
@@ -7,7 +7,7 @@ class ZipTricks::StoredSizeEstimator
   private_constant :DetailStreamer
   
   # Creates a new estimator with a Streamer object. Normally you should use
-  # `perform_fake_archiving` instead an not use this method directly.
+  # `estimate` instead an not use this method directly.
   def initialize(streamer)
     @streamer = streamer
   end
@@ -16,14 +16,14 @@ class ZipTricks::StoredSizeEstimator
   # Performs the estimate using fake archiving. It needs to know the sizes of the
   # entries upfront. Usage:
   #
-  #     expected_zip_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
+  #     expected_zip_size = SizeEstimator.estimate do | estimator |
   #       estimator.add_stored_entry(filename: "file.doc", size: 898291)
   #       estimator.add_compressed_entry(filename: "family.tif", uncompressed_size: 89281911, compressed_size: 121908)
   #     end
   #
   # @return [Fixnum] the size of the resulting archive, in bytes
-  # @yield [StoredSizeEstimator] the estimator
-  def self.perform_fake_archiving
+  # @yield [SizeEstimator] the estimator
+  def self.estimate
     output_io = ZipTricks::WriteAndTell.new(ZipTricks::NullWriter)
     DetailStreamer.open(output_io) { |zip| yield(new(zip)) }
     output_io.tell

@@ -27,7 +27,7 @@ class ZipDownload
     # the user that the download stalled or was aborted in-flight.
     # Note that using the size estimator here does _not_ read or compress
     # your original file, so it is very fast.
-    size = ZipTricks::StoredSizeEstimator.perform_fake_archiving do |ar|
+    size = ZipTricks::SizeEstimator.estimate do |ar|
       ar.add_stored_entry(filename, f.size)
     end
     

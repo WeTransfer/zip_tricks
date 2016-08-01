@@ -8,8 +8,44 @@
 # For stored entries, you need to know the CRC32 (as a uint) and the filesize upfront,
 # before the writing of the entry body starts.
 #
-# For compressed entries, you need to know the bytesize of the precompressed entry
-# as well.
+# Any object that responds to `<<` can be used as the Streamer target - you can use
+# a String, an Array, a Socket or a File, at your leisure.
+#
+# ## Using the Streamer with runtime compression
+#
+# You can use the Streamer with data descriptors (the CRC32 and the sizes will be
+# written after the file data). This allows non-rewinding on-the-fly compression.
+# If you are compressing large files, the Deflater object that the Streamer controls
+# will be regularly flushed to prevent memory inflation. 
+#
+#     ZipTricks::Streamer.open(file_socket_or_string) do |zip|
+#       zip.write_stored_file('mov.mp4') do |sink|
+#         File.open('mov.mp4', 'rb'){|source| IO.copy_stream(source, sink) }
+#       end
+#       zip.write_deflated_file('long-novel.txt') do |sink|
+#         File.open('novel.txt', 'rb'){|source| IO.copy_stream(source, sink) }
+#       end
+#     end
+#
+# The central directory will be written automatically at the end of the block.
+#
+# ## Using the Streamer with entries of known size and having a known CRC32 checksum
+#
+# Streamer allows "IO splicing" - in this mode it will only control the metadata output,
+# but you can write the data to the socket/file outside of the Streamer. For example, when
+# using the sendfile gem:
+#
+#     ZipTricks::Streamer.open(socket) do | zip |
+#       zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
+#       zip.simulate_write(tempfile1.size)
+#       socket.sendfile(tempfile1)
+#       zip.add_stored_entry(filename: "myfile2.bin", size: 458678, crc32: 89568)
+#       zip.simulate_write(tempfile2.size)
+#       socket.sendfile(tempfile2)
+#     end
+#
+# Note that you need to use `simulate_write` to let the 
+# The central directory will be written automatically at the end of the block.
 class ZipTricks::Streamer
   require_relative 'streamer/deflated_writer'
   require_relative 'streamer/writable'
@@ -44,7 +80,7 @@ class ZipTricks::Streamer
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `<<`)
   def initialize(stream)
-    raise InvalidOutput, "The stream should respond to #<<" unless stream.respond_to?(:<<)
+    raise InvalidOutput, "The stream must respond to #<<" unless stream.respond_to?(:<<)
     stream = ZipTricks::WriteAndTell.new(stream) unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
 
     @out = stream
@@ -106,14 +142,14 @@ class ZipTricks::Streamer
   # Note that the deflated body that is going to be written into the output has to be _precompressed_ (pre-deflated)
   # before writing it into the Streamer, because otherwise it is impossible to know it's size upfront.
   #
-  # @param entry_name [String] the name of the file in the entry
+  # @param filename [String] the name of the file in the entry
+  # @param compressed_size [Fixnum] the size of the compressed entry that is going to be written into the archive
   # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
-  # @param compressed_size [Fixnum] the size of the compressed entry that is going to be written into the archive
   # @return [Fixnum] the offset the output IO is at after writing the entry header
-  def add_compressed_entry(entry_name, uncompressed_size, crc32, compressed_size)
+  def add_compressed_entry(filename:, compressed_size:, uncompressed_size:, crc32:)
     @state_monitor.transition! :in_entry_header
-    add_file_and_write_local_header(filename: entry_name, crc32: crc32, storage_mode: DEFLATED, 
+    add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: DEFLATED, 
       compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     @bytes_written_for_entry = 0
     @expected_bytes_for_entry = compressed_size
@@ -123,16 +159,16 @@ class ZipTricks::Streamer
   # Writes out the local header for an entry (file in the ZIP) that is using the stored storage model (is stored as-is).
   # Once this method is called, the `<<` method has to be called one or more times to write the actual contents of the body.
   #
-  # @param entry_name [String] the name of the file in the entry
-  # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
+  # @param filename [String] the name of the file in the entry
+  # @param size [Fixnum] the size of the file when uncompressed, in bytes
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
-  def add_stored_entry(entry_name, uncompressed_size, crc32)
+  def add_stored_entry(filename:, size:, crc32:)
     @state_monitor.transition! :in_entry_header
-    add_file_and_write_local_header(filename: entry_name, crc32: crc32, storage_mode: STORED,
-      compressed_size: uncompressed_size, uncompressed_size: uncompressed_size)
+    add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: STORED,
+      compressed_size: size, uncompressed_size: size)
     @bytes_written_for_entry = 0
-    @expected_bytes_for_entry = uncompressed_size
+    @expected_bytes_for_entry = size
     @out.tell
   end
 
@@ -149,9 +185,9 @@ class ZipTricks::Streamer
     cdir_starts_at = @out.tell
     @files.each_with_index do |entry, i|
       header_loc = @local_header_offsets.fetch(i)
-
       @writer.write_central_directory_file_header(io: @out, local_file_header_location: header_loc,
-        gp_flags: entry.gp_flags, storage_mode: entry.storage_mode, compressed_size: entry.compressed_size, uncompressed_size: entry.uncompressed_size,
+        gp_flags: entry.gp_flags, storage_mode: entry.storage_mode,
+        compressed_size: entry.compressed_size, uncompressed_size: entry.uncompressed_size,
         mtime: entry.mtime, crc32: entry.crc32, filename: entry.filename) #, external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
     cdir_size = @out.tell - cdir_starts_at
@@ -159,7 +195,6 @@ class ZipTricks::Streamer
     # Write out the EOCDR
     @writer. write_end_of_central_directory(io: @out, start_of_central_directory_location: cdir_starts_at,
        central_directory_size: cdir_size, num_files_in_archive: @files.length)
-
     @out.tell
   end
 

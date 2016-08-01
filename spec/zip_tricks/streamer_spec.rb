@@ -30,7 +30,7 @@ describe ZipTricks::Streamer do
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)
-    pos = zip.add_compressed_entry('file.jpg', 182919, 8921, 8912)
+    pos = zip.add_compressed_entry(filename: 'file.jpg', uncompressed_size: 182919, compressed_size: 8912, crc32: 8912)
     expect(pos).to eq(io.tell)
     expect(pos).to eq(38)
 
@@ -38,7 +38,7 @@ describe ZipTricks::Streamer do
     expect(retval).to eq(zip)
     expect(io.tell).to eq(8950)
 
-    pos = zip.add_stored_entry('filf.jpg', 8921, 182919)
+    pos = zip.add_stored_entry(filename: 'filf.jpg', size: 8921, crc32: 182919)
     expect(pos).to eq(8988)
     zip << SecureRandom.random_bytes(8921)
     expect(io.tell).to eq(17909)
@@ -73,7 +73,8 @@ describe ZipTricks::Streamer do
     zip_file.binmode
 
     described_class.open(zip_file) do |zip|
-      zip.add_compressed_entry("compressed-file.bin", f.size, crc, compressed_blockwise.size)
+      zip.add_compressed_entry(filename: "compressed-file.bin", uncompressed_size: f.size,
+        crc32: crc, compressed_size: compressed_blockwise.size)
       zip << compressed_blockwise.read
     end
     zip_file.flush
@@ -112,11 +113,12 @@ describe ZipTricks::Streamer do
       end
 
       # Add this file compressed...
-      zip.add_compressed_entry('war-and-peace.txt', source_f.size, crc32, compressed_buffer.size)
+      zip.add_compressed_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
+        crc32: crc32, compressed_size: compressed_buffer.size)
       zip << compressed_buffer.string
 
       # ...and stored.
-      zip.add_stored_entry('war-and-peace-raw.txt', source_f.size, crc32)
+      zip.add_stored_entry(filename: 'war-and-peace-raw.txt', size: source_f.size, crc32: crc32)
       zip << source_f.read
 
       zip.close
@@ -154,9 +156,9 @@ describe ZipTricks::Streamer do
 
     # Perform the zipping
     zip = described_class.new(output_io)
-    zip.add_stored_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
+    zip.add_stored_entry(filename: "first-file.bin", size: raw_file_1.size, crc32: Zlib.crc32(raw_file_1))
     zip << raw_file_1
-    zip.add_stored_entry("second-file.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
+    zip.add_stored_entry(filename: "second-file.bin", size: raw_file_2.size, crc32: Zlib.crc32(raw_file_2))
     zip << raw_file_2
     zip.close
 
@@ -193,9 +195,9 @@ describe ZipTricks::Streamer do
 
     # Perform the zipping
     zip = described_class.new(zip_buf)
-    zip.add_stored_entry("first-file.bin", raw_file_1.size, Zlib.crc32(raw_file_1))
+    zip.add_stored_entry(filename: "first-file.bin", size: raw_file_1.size, crc32: Zlib.crc32(raw_file_1))
     zip << raw_file_1
-    zip.add_stored_entry("второй-файл.bin", raw_file_2.size, Zlib.crc32(raw_file_2))
+    zip.add_stored_entry(filename: "второй-файл.bin", size: raw_file_2.size, crc32: Zlib.crc32(raw_file_2))
     IO.copy_stream(StringIO.new(raw_file_2), zip)
     zip.close
 
@@ -219,7 +221,7 @@ describe ZipTricks::Streamer do
   it 'raises when the actual bytes written for a stored entry does not match the entry header' do
     expect {
       ZipTricks::Streamer.open(StringIO.new) do | zip |
-        zip.add_stored_entry('file', 123, 0)
+        zip.add_stored_entry(filename: 'file', size: 123, crc32: 0)
         zip << 'xx'
       end
     }.to raise_error {|e|
@@ -231,7 +233,7 @@ describe ZipTricks::Streamer do
   it 'raises when the actual bytes written for a compressed entry does not match the entry header' do
     expect {
       ZipTricks::Streamer.open(StringIO.new) do | zip |
-        zip.add_compressed_entry('file', 1898121, 0, 123)
+        zip.add_compressed_entry(filename: 'file', uncompressed_size: 1898121, crc32: 0, compressed_size: 123)
         zip << 'xx'
       end
     }.to raise_error {|e|

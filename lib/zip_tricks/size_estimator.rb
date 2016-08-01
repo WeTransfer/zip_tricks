@@ -1,6 +1,8 @@
 # Helps to estimate archive sizes
 class ZipTricks::SizeEstimator
   require_relative 'streamer'
+  
+  # Used to mark a couple of methods public
   class DetailStreamer < ::ZipTricks::Streamer
     public :add_file_and_write_local_header, :write_data_descriptor_for_last_entry
   end

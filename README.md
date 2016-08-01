@@ -40,17 +40,17 @@ The block will only be called when actually sending the response to the client
 
 ## Send a ZIP file of known size, with correct headers
 
-Use the `StoredSizeEstimator` to compute the correct size of the resulting archive.
+Use the `SizeEstimator` to compute the correct size of the resulting archive.
 
     zip_body = ZipTricks::RackBody.new do | zip |
-      zip.add_stored_entry("myfile1.bin", size=9090821, crc32=12485)
+      zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
       zip << read_file('myfile1.bin')
-      zip.add_stored_entry("myfile2.bin", size=458678, crc32=89568)
+      zip.add_stored_entry(filename: "myfile2.bin", size: 458678, crc32: 89568)
       zip << read_file('myfile2.bin')
     end
-    bytesize = ZipTricks::StoredSizeEstimator.perform_fake_archiving do |z|
-     z.add_stored_entry('myfile1.bin', size=9090821)
-     z.add_stored_entry('myfile2.bin', size=458678)
+    bytesize = ZipTricks::SizeEstimator.estimate do |z|
+     z.add_stored_entry(filename: 'myfile1.bin', size: 9090821)
+     z.add_stored_entry(filename: 'myfile2.bin', size: 458678)
     end
     [200, {'Content-Length' => bytesize.to_s}, zip_body]
 
@@ -87,7 +87,7 @@ and will receive a {ZipTricks::Streamer} as it's block argument. You can then ad
 The archive will be automatically closed at the end of the block.
 
     # Precompute the Content-Length ahead of time
-    content_length = ZipTricks::StoredSizeEstimator.perform_fake_archiving do | estimator |
+    content_length = ZipTricks::SizeEstimator.estimate do | estimator |
       estimator.add_stored_entry('large.tif', size=1289894)
     end
     
@@ -112,13 +112,13 @@ destination. For Rack/Rails just use RackBody since it sets this up for you.
       ....
     end
 
-## StoredSizeEstimator
+## SizeEstimator
 
 Is used to predict the size of the ZIP archive after output. This can be used to generate, say, a `Content-Length` header,
 or to predict the size of the resulting archive on the storage device. The size is estimated using a very fast "fake archiving"
 procedure, so it computes the sizes of all the headers and the central directory very accurately.
 
-    expected_zip_archive_size = StoredSizeEstimator.perform_fake_archiving do | estimator |
+    expected_zip_archive_size = SizeEstimator.estimate do | estimator |
       estimator.add_stored_entry("file.doc", size=898291)
       estimator.add_compressed_entry("family.JPG", size=89281911, compressed_size=89218)
     end

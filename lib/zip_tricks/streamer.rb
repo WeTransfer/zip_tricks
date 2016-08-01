@@ -151,8 +151,6 @@ class ZipTricks::Streamer
     @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: DEFLATED, 
       compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    @bytes_written_for_entry = 0
-    @expected_bytes_for_entry = compressed_size
     @out.tell
   end
 
@@ -167,8 +165,6 @@ class ZipTricks::Streamer
     @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: STORED,
       compressed_size: size, uncompressed_size: size)
-    @bytes_written_for_entry = 0
-    @expected_bytes_for_entry = size
     @out.tell
   end
 
@@ -205,7 +201,6 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_stored_file(filename)
-    @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, storage_mode: STORED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
@@ -232,7 +227,6 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
-    @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
@@ -247,9 +241,7 @@ class ZipTricks::Streamer
     last_entry.crc32 = crc
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
-
-    @state_monitor.transition! :in_data_descriptor
-    @writer.write_data_descriptor(io: @out, crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
+    write_data_descriptor_for_last_entry
   end
 
   # Closes the archive. Writes the central directory if it has not yet been written.
@@ -263,19 +255,25 @@ class ZipTricks::Streamer
     @state_monitor.transition! :closed
     @out.tell
   end
-
+  
   private
-
-  def add_file_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:, uncompressed_size:, use_data_descriptor: false)
+  
+  def add_file_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:,
+      uncompressed_size:, use_data_descriptor: false)
     if @files.any?{|e| e.filename == filename }
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end
     
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
-    
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
     raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
-    
+
+    @state_monitor.transition! :in_entry_header
+
+    @check_compressed_size_after_leaving_body = !use_data_descriptor
+    @bytes_written_for_entry = 0
+    @expected_bytes_for_entry = compressed_size
+
     e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
     @files << e
     @local_header_offsets << @out.tell
@@ -283,10 +281,17 @@ class ZipTricks::Streamer
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
   
+  def write_data_descriptor_for_last_entry
+    @state_monitor.transition! :in_data_descriptor
+    e = @files.fetch(-1)
+    @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)
+  end
+  
   # Checks whether the number of bytes written conforms to the declared entry size
   def leaving_in_entry_body_state
-    if @bytes_written_for_entry != @expected_bytes_for_entry
-      msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry, @bytes_written_for_entry]
+    if @check_compressed_size_after_leaving_body && (@bytes_written_for_entry != @expected_bytes_for_entry)
+      msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry,
+          @bytes_written_for_entry]
       raise EntryBodySizeMismatch, msg
     end
   end

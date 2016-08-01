@@ -94,6 +94,7 @@ class ZipTricks::Streamer
     @state_monitor.permit_state :in_entry_header, :in_entry_body
     @state_monitor.permit_state :in_central_directory, :in_data_descriptor, :closed
     @state_monitor.permit_transition :before_entry => :in_entry_header
+    @state_monitor.permit_transition :before_entry => :in_central_directory # When no files are given
     @state_monitor.permit_transition :in_entry_header => :in_entry_body
     @state_monitor.permit_transition :in_entry_header => :in_entry_header # 0-size entries, like directories
     @state_monitor.permit_transition :in_entry_header => :in_data_descriptor

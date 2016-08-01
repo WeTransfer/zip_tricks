@@ -277,4 +277,18 @@ describe ZipTricks::Streamer do
 
     inspect_zip_with_external_tool(tf.path)
   end
+
+  it 'can create a valid ZIP archive without any files' do
+    tf = ManagedTempfile.new('zip')
+    
+    described_class.open(tf) do |zip|
+    end
+    
+    tf.flush
+    tf.rewind
+    
+    Zip::File.foreach(tf.path) do|e|
+      raise "Should not yield anything"
+    end
+  end
 end

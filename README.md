@@ -7,6 +7,10 @@ Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
 Requires Ruby 2.1+, rubyzip and a couple of other gems (all available to jRuby as well).
 
+## Upgrading from versions 1.x and 2.x to 3.x
+
+The API of the library has changed, please review the documentation.
+
 ## Create a ZIP file without size estimation, compress on-the-fly)
 
 When you compress on the fly and use data descriptors it is not really possible to compute the file size upfront.

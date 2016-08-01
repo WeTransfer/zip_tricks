@@ -24,7 +24,12 @@ class ZipTricks::RemoteIO
     end
     0 # always return 0!
   end
-
+  
+  # Emulates IO#size
+  def size
+    @remote_size ||= request_object_size
+  end
+  
   # Emulates IO#read
   def read(n_bytes = nil)
     @remote_size ||= request_object_size
@@ -51,9 +56,10 @@ class ZipTricks::RemoteIO
   # Not used by RubyZip but used in tests of our own
   #
   # @return [Fixnum]
-  def pos
+  def tell
     @pos
   end
+  alias_method :pos, :tell
 
   protected
 

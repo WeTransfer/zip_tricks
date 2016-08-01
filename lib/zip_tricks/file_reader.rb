@@ -1,5 +1,5 @@
 require 'stringio'
-module ZipTricks;end
+
 module ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
@@ -31,6 +31,7 @@ module ZipTricks::FileReader
   def self.read_zip_structure(io)
     zip_file_size = io.size
     eocd_offset = get_eocd_offset(io, zip_file_size)
+    
     zip64_end_of_cdir_location = get_zip64_eocd_locator_offset(io, eocd_offset)
     num_files, cdir_location, cdir_size = if zip64_end_of_cdir_location
       num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
@@ -68,7 +69,7 @@ module ZipTricks::FileReader
 
   def self.seek(io, absolute_pos)
     io.seek(absolute_pos, IO::SEEK_SET)
-    raise ReadError, "Expected to seek to #{absolute_pos} but only got to #{pos_after}" unless absolute_pos == io.tell
+    raise ReadError, "Expected to seek to #{absolute_pos} but only got to #{io.tell}" unless absolute_pos == io.tell
     nil
   end
 
@@ -198,6 +199,8 @@ module ZipTricks::FileReader
     # Start reading from the _comment_ of the zip file (from the very end).
     # The maximum size of the comment is 0xFFFF (what fits in 2 bytes)
     implied_position_of_eocd_record = zip_file_size - MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE
+    implied_position_of_eocd_record = 0 if implied_position_of_eocd_record < 0
+    
     # Use a soft seek (we might not be able to get as far behind in the IO as we want)
     # and a soft read (we might not be able to read as many bytes as we want)
     file_io.seek(implied_position_of_eocd_record, IO::SEEK_SET)

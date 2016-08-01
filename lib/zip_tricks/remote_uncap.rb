@@ -37,17 +37,14 @@ class ZipTricks::RemoteUncap
   def self.files_within_zip_at(uri)
     fetcher = new(uri)
     fake_io = ZipTricks::RemoteIO.new(fetcher)
-    dir = Zip::CentralDirectory.read_from_stream(fake_io)
-
-    dir.entries.map do | rubyzip_entry |
+    entries = ZipTricks.const_get(:FileReader).read_zip_structure(fake_io)
+    entries.map do | remote_entry |
       RemoteZipEntry.new do | entry |
-        entry.name = rubyzip_entry.name
-        entry.size_uncompressed = rubyzip_entry.size
-        entry.size_compressed = rubyzip_entry.compressed_size
-        entry.compression_method = rubyzip_entry.compression_method
-
-        entry.starts_at_offset = rubyzip_entry.local_header_offset + rubyzip_entry.calculate_local_header_size
-        entry.ends_at_offset = entry.starts_at_offset + rubyzip_entry.compressed_size
+        entry.name = rubyzip_entry.filename
+        entry.starts_at_offset = remote_entry.local_header_offset
+        entry.size_uncompressed = remote_entry.uncompressed_size
+        entry.size_compressed =   remote_entry.compressed_size
+        entry.compression_method = remote_entry.storage_mode
       end
     end
   end

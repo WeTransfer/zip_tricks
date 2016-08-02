@@ -4,17 +4,78 @@ module ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
 
+  class InflatingReader
+    def initialize(from_io, compressed_data_size)
+      @io = from_io
+      @compressed_data_size = compressed_data_size
+      @already_read = 0
+      @zlib_inflater = ::Zlib::Inflate.new(-Zlib::MAX_WBITS)
+    end
+
+    def decompress(n_bytes=nil)
+      n_bytes ||= (@compressed_data_size - @already_read)
+
+      return if eof?
+
+      available = @compressed_data_size - @already_read
+
+      return if available.zero?
+
+      n_bytes = available if n_bytes > available
+
+      return '' if n_bytes.zero?
+
+      compressed_chunk = @io.read(n_bytes)
+      @already_read += compressed_chunk.bytesize
+      @zlib_inflater.inflate(compressed_chunk)
+    end
+
+    def eof?
+      @zlib_inflater.finished?
+    end
+  end
+
+  class StoreadReader
+    def initialize(from_io, compressed_data_size)
+      @io = from_io
+      @compressed_data_size = compressed_data_size
+      @already_read = 0
+    end
+
+    def decompress(n_bytes=nil)
+      n_bytes ||= (@compressed_data_size - @already_read)
+
+      return if eof?
+
+      available = @compressed_data_size - @already_read
+
+      return if available.zero?
+
+      n_bytes = available if n_bytes > available
+
+      return '' if n_bytes.zero?
+
+      compressed_chunk = @io.read(n_bytes)
+      @already_read += compressed_chunk.bytesize
+      compressed_chunk
+    end
+
+    def eof?
+      @already_read >= @compressed_data_size
+    end
+  end
+
   # Represents a file within the ZIP archive being read
   class ZipEntry
     # @return [Fixnum] bit-packed version signature of the program that made the archive
     attr_accessor :made_by
-    
+
     # @return [Fixnum] ZIP version support needed to extract this file
     attr_accessor :version_needed_to_extract
-    
+
     # @return [Fixnum] bit-packed general purpose flags
     attr_accessor :gp_flags
-    
+
     # @return [Fixnum] Storage mode (0 for stored, 8 for deflate)
     attr_accessor :storage_mode
 
@@ -55,6 +116,24 @@ module ZipTricks::FileReader
     # @return [Fixnum] at what offset you should start reading
     #       for the compressed data in your original IO object
     attr_accessor :compressed_data_offset
+
+    # Returns a reader for the actual compressed data of the entry.
+    #
+    #   reader = entry.reader(source_file)
+    #   outfile << reader.read(1024) until reader.eof?
+    #
+    # @return [InflatingReader] the reader for the data
+    def reader(from_io)
+      from_io.seek(compressed_data_offset, IO::SEEK_SET)
+      case storage_mode
+        when 8
+          InflatingReader.new(from_io, compressed_size)
+        when 0
+          StoreadReader.new(from_io, compressed_size)
+        else
+          raise "Unsupported storage mode for reading (#{storage_mode})"
+      end
+    end
   end
 
   # Parse an IO handle to a ZIP archive into an array of Entry objects.

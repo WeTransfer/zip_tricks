@@ -42,16 +42,20 @@ The block will only be called when actually sending the response to the client
 
 Use the `SizeEstimator` to compute the correct size of the resulting archive.
 
+    # Prepare the response body. The block will only be called when the response starts to be written.
     zip_body = ZipTricks::RackBody.new do | zip |
       zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
       zip << read_file('myfile1.bin')
       zip.add_stored_entry(filename: "myfile2.bin", size: 458678, crc32: 89568)
       zip << read_file('myfile2.bin')
     end
+    
+    # Precompute the Content-Length ahead of time
     bytesize = ZipTricks::SizeEstimator.estimate do |z|
      z.add_stored_entry(filename: 'myfile1.bin', size: 9090821)
      z.add_stored_entry(filename: 'myfile2.bin', size: 458678)
     end
+    
     [200, {'Content-Length' => bytesize.to_s}, zip_body]
 
 ## Other usage examples
@@ -79,55 +83,10 @@ to that socket using some accelerated writing technique, and only use the Stream
       zip.simulate_write(my_temp_file.size)
     end
 
-## RackBody
+## Computing the CRC32 value of a large file
 
-Can be used to output a streamed ZIP archive directly through a Rack response body.
-The block given to the constructor will be called when the response body will be read by the webserver,
-and will receive a {ZipTricks::Streamer} as it's block argument. You can then add entries to the Streamer as usual.
-The archive will be automatically closed at the end of the block.
-
-    # Precompute the Content-Length ahead of time
-    content_length = ZipTricks::SizeEstimator.estimate do | estimator |
-      estimator.add_stored_entry('large.tif', size=1289894)
-    end
-    
-    # Prepare the response body. The block will only be called when the response starts to be written.
-    body = ZipTricks::RackBody.new do | streamer |
-      streamer.add_stored_entry('large.tif', size=1289894, crc32=198210)
-      streamer << large_file.read(1024*1024) until large_file.eof?
-      ...
-    end
-    
-    [200, {'Content-Type' => 'binary/octet-stream', 'Content-Length' => content_length.to_s}, body]
-  
-## BlockWrite
-
-Can be used as the destination IO, but will call the given block instead on every call to `:<<`.
-This can be used to attach the output of the zip compressor to the Rack response body, or another
-destination. For Rack/Rails just use RackBody since it sets this up for you.
-
-    io = ZipTricks::BlockWrite.new{|data| socket << data }
-    ZipTricks::Streamer.open(io) do | zip |
-      zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
-      ....
-    end
-
-## SizeEstimator
-
-Is used to predict the size of the ZIP archive after output. This can be used to generate, say, a `Content-Length` header,
-or to predict the size of the resulting archive on the storage device. The size is estimated using a very fast "fake archiving"
-procedure, so it computes the sizes of all the headers and the central directory very accurately.
-
-    expected_zip_archive_size = SizeEstimator.estimate do | estimator |
-      estimator.add_stored_entry("file.doc", size=898291)
-      estimator.add_compressed_entry("family.JPG", size=89281911, compressed_size=89218)
-    end
-
-
-## StreamCRC32
-
-Computes the CRC32 value in a streaming fashion. Is slightly more convenient for the purpose than using the raw Zlib
-library functions.
+`BlockCRC32` computes the CRC32 checksum of an IO in a streaming fashion. It is slightly more convenient for the purpose
+than using the raw Zlib library functions.
 
     crc = ZipTricks::StreamCRC32.new
     crc << large_file.read(1024 * 12) until large_file.eof?

@@ -5,7 +5,7 @@
 Allows streaming, non-rewinding ZIP file output from Ruby.
 Spiritual successor to [zipline](https://github.com/fringd/zipline)
 
-Requires Ruby 2.1+, rubyzip and a couple of other gems (all available to jRuby as well).
+Requires Ruby 2.1+ syntax support and a working zlib (all available to jRuby as well).
 
 ## Create a ZIP file without size estimation, compress on-the-fly)
 

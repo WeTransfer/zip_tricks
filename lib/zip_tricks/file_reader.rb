@@ -1,5 +1,51 @@
 require 'stringio'
 
+# A very barebones ZIP file reader. Is made for maximum interoperability, but at the same
+# time we attempt to keep it somewhat concise.
+#
+# ## REALLY CRAZY IMPORTANT STUFF: SECURITY IMPLICATIONS
+#
+# Please **BEWARE** - using this is a security risk if you are reading files that have been
+# supplied by users. This implementation has _not_ been formally verified for correctness. As
+# ZIP files contain relative offsets in lots of places it might be possible for a maliciously
+# crafted ZIP file to put the decode procedure in an endless loop, make it attempt huge reads
+# from the input file and so on. Additionally, the reader module for deflated data has
+# no support for ZIP bomb protection. So either limit the `FileReader` usage to the files you
+# trust, or triple-check all the inputs upfront. Patches to make this reader more secure
+# are welcome of course.
+#
+# ## Usage
+#
+#     File.open('zipfile.zip', 'rb') do |f|
+#       entries = FileReader.read_zip_structure(f)
+#       entries.each do |e|
+#         File.open(e.filename, 'wb') do |extracted_file|
+#           ex = e.extractor_from(f)
+#           extracted_file << ex.extract(1024 * 1024) until ex.eof?
+#         end
+#       end
+#     end
+#
+# ## Supported features
+#
+# * Deflate and stored storage modes
+# * Zip64 (extra fields and offsets)
+# * Data descriptors
+#
+# ## Unsupported features
+#
+# * Archives split over multiple disks/files
+# * Any ZIP encryption
+# * EFS language flag and InfoZIP filename extra field
+# * CRC32 checksums are _not_ verified
+#
+# ## Mode of operation
+#
+# Basically, `FileReader` _ignores_ the data in local file headers (as it is often unreliable).
+# It reads the ZIP file "from the tail", finds the end-of-central-directory signatures, then
+# reads the central directory entries, reconstitutes the entries with their filenames, attributes
+# and so on, and sets these entries up with the absolute _offsets_ into the source file/IO object.
+# These offsets can then be used to extract the actual compressed data of the files and to expand it.
 class ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
@@ -13,7 +59,7 @@ class ZipTricks::FileReader
       @zlib_inflater = ::Zlib::Inflate.new(-Zlib::MAX_WBITS)
     end
 
-    def decompress(n_bytes=nil)
+    def extract(n_bytes=nil)
       n_bytes ||= (@compressed_data_size - @already_read)
 
       return if eof?
@@ -36,14 +82,14 @@ class ZipTricks::FileReader
     end
   end
 
-  class StoreadReader
+  class StoredReader
     def initialize(from_io, compressed_data_size)
       @io = from_io
       @compressed_data_size = compressed_data_size
       @already_read = 0
     end
 
-    def decompress(n_bytes=nil)
+    def extract(n_bytes=nil)
       n_bytes ||= (@compressed_data_size - @already_read)
 
       return if eof?
@@ -66,6 +112,8 @@ class ZipTricks::FileReader
     end
   end
 
+  private_constant :StoredReader, :InflatingReader
+  
   # Represents a file within the ZIP archive being read
   class ZipEntry
     # @return [Fixnum] bit-packed version signature of the program that made the archive
@@ -121,18 +169,18 @@ class ZipTricks::FileReader
     # Returns a reader for the actual compressed data of the entry.
     #
     #   reader = entry.reader(source_file)
-    #   outfile << reader.decompress(512 * 1024) until reader.eof?
+    #   outfile << reader.extract(512 * 1024) until reader.eof?
     #
-    # @return [InflatingReader] the reader for the data
-    def reader(from_io)
+    # @return [#extract(n_bytes), #eof?] the reader for the data
+    def extractor_from(from_io)
       from_io.seek(compressed_data_offset, IO::SEEK_SET)
       case storage_mode
-        when 8
-          InflatingReader.new(from_io, compressed_size)
-        when 0
-          StoreadReader.new(from_io, compressed_size)
-        else
-          raise "Unsupported storage mode for reading (#{storage_mode})"
+      when 8
+        InflatingReader.new(from_io, compressed_size)
+      when 0
+        StoredReader.new(from_io, compressed_size)
+      else
+        raise "Unsupported storage mode for reading (#{storage_mode})"
       end
     end
   end

@@ -18,8 +18,8 @@ describe ZipTricks::FileReader do
     entry = entries.first
 
     readback = ''
-    reader = entry.reader(zipfile)
-    readback << reader.decompress(10) until reader.eof?
+    reader = entry.extractor_from(zipfile)
+    readback << reader.extract(10) until reader.eof?
 
     expect(readback.bytesize).to eq(tolstoy.bytesize)
     expect(readback[0..10]).to eq(tolstoy[0..10])
@@ -40,7 +40,7 @@ describe ZipTricks::FileReader do
 
     entry = entries.first
 
-    readback = entry.reader(zipfile).decompress
+    readback = entry.extractor_from(zipfile).extract
     expect(readback.bytesize).to eq(tolstoy.bytesize)
     expect(readback[0..10]).to eq(tolstoy[0..10])
   end

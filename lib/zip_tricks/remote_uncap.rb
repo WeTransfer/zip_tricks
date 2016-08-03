@@ -2,6 +2,9 @@
 # downloading the entire file. The central directory provides the
 # offsets at which the actual file contents is located. You can then
 # use the `Range:` HTTP headers to download those entries separately.
+#
+# Please read the security warning in `FileReader` _VERY CAREFULLY_
+# before you use this module.
 class ZipTricks::RemoteUncap
 
   # Represents a file embedded within a remote ZIP archive

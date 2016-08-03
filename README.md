@@ -154,5 +154,4 @@ library functions.
 
 ## Copyright
 
-Copyright (c) 2015 WeTransfer. See LICENSE.txt for
-further details.
+Copyright (c) 2016 WeTransfer. See LICENSE.txt for further details.

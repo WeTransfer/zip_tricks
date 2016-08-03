@@ -3,7 +3,8 @@ require 'stringio'
 module ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
-
+  InvalidStructure = Class.new(ReadError)
+  
   class InflatingReader
     def initialize(from_io, compressed_data_size)
       @io = from_io
@@ -120,7 +121,7 @@ module ZipTricks::FileReader
     # Returns a reader for the actual compressed data of the entry.
     #
     #   reader = entry.reader(source_file)
-    #   outfile << reader.read(1024) until reader.eof?
+    #   outfile << reader.decompress(512 * 1024) until reader.eof?
     #
     # @return [InflatingReader] the reader for the data
     def reader(from_io)
@@ -166,17 +167,14 @@ module ZipTricks::FileReader
 
   def self.skip_ahead_2(io)
     skip_ahead_n(io, 2)
-    nil
   end
 
   def self.skip_ahead_4(io)
     skip_ahead_n(io, 4)
-    nil
   end
 
   def self.skip_ahead_8(io)
     skip_ahead_n(io, 8)
-    nil
   end
 
   def self.seek(io, absolute_pos)
@@ -191,7 +189,7 @@ module ZipTricks::FileReader
     if readback != signature_magic_number
       expected = '0x0' + signature_magic_number.to_s(16)
       actual = '0x0' + readback.to_s(16)
-      raise "Expected signature #{expected}, but read #{actual}"
+      raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
     end
   end
 
@@ -205,10 +203,10 @@ module ZipTricks::FileReader
   end
 
   def self.read_n(io, n_bytes)
-    d = io.read(n_bytes)
-    raise ReadError, "Expected to read #{n_bytes} bytes, but the IO was at the end" if d.nil?
-    raise ReadError, "Expected to read #{n_bytes} bytes, read #{d.bytesize}" unless d.bytesize == n_bytes
-    d
+    io.read(n_bytes).tap {|d|
+      raise ReadError, "Expected to read #{n_bytes} bytes, but the IO was at the end" if d.nil?
+      raise ReadError, "Expected to read #{n_bytes} bytes, read #{d.bytesize}" unless d.bytesize == n_bytes
+    }
   end
 
   def self.read_2b(io)
@@ -225,15 +223,14 @@ module ZipTricks::FileReader
 
   def self.find_compressed_data_start_offset(file_io, local_header_offset)
     seek(file_io, local_header_offset)
+    
+    # Reading in bulk is cheaper - grab the maximum length of the local header, including
+    # any headroom
     local_file_header_str_plus_headroom = file_io.read(MAX_LOCAL_HEADER_SIZE)
-
     io = StringIO.new(local_file_header_str_plus_headroom)
 
-    local_header_signature = [0x04034b50].pack(C_V)
-    sig = read_n(io, 4)
-    unless sig == local_header_signature
-      raise "Expected local file header signature, but found #{sig.inspect}"
-    end
+    assert_signature(io, 0x04034b50)
+
     # The rest is unreliable, and we have that information from the central directory already.
     # So just skip over it to get at the offset where the compressed data begins
     skip_ahead_2(io) # Version needed to extract
@@ -258,11 +255,7 @@ module ZipTricks::FileReader
 
   def self.read_cdir_entry(io)
     expected_at = io.tell
-    cdir_entry_sig = [0x02014b50].pack(C_V)
-    sig = io.read(4)
-    unless sig == cdir_entry_sig
-      raise "Expected central directory entry signature at #{expected_at}, but found #{sig.inspect}"
-    end
+    assert_signature(io, 0x02014b50)
     ZipEntry.new.tap do |e|
       e.made_by = read_2b(io)
       e.version_needed_to_extract = read_2b(io)
@@ -340,22 +333,19 @@ module ZipTricks::FileReader
     return unless zip64_eocd_loc_offset >= 0
 
     file_io.seek(zip64_eocd_loc_offset, IO::SEEK_SET)
-    zip64_eocd_locator_sig = [0x07064b50].pack(C_V)
-
-    return unless file_io.read(4) == zip64_eocd_locator_sig
-
+    assert_signature(file_io, 0x07064b50)
     disk_num = read_4b(file_io) # number of the disk
-    raise "The archive spans multiple disks" if disk_num != 0
+    raise UnsupportedFeature, "The archive spans multiple disks" if disk_num != 0
     read_8b(file_io)
+  rescue ReadError
+    nil
   end
 
   def self.num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
     seek(io, zip64_end_of_cdir_location)
-    zip64_eocd_sig = [0x06064b50].pack(C_V)
-    if io.read(4) != zip64_eocd_sig
-      raise UnsupportedFeature, "Expected Zip64 EOCD record at #{zip64_end_of_cdir_location} but found something different"
-    end
-
+    
+    assert_signature(io, 0x06064b50)
+    
     zip64_eocdr_size = read_8b(io)
     zip64_eocdr = read_n(io, zip64_eocdr_size) # Reading in bulk is cheaper
     zip64_eocdr = StringIO.new(zip64_eocdr)
@@ -428,10 +418,8 @@ module ZipTricks::FileReader
     seek(file_io, eocd_offset)
 
     io = StringIO.new(read_n(file_io, SIZE_OF_USABLE_EOCD_RECORD))
-    eocd_sig = [0x06054b50].pack(C_V)
-    if io.read(4) != eocd_sig
-      raise "Expected EOCD signature at #{eocd_offset} but found something different"
-    end
+    
+    assert_signature(io, 0x06054b50)
 
     skip_ahead_2(io) # number_of_this_disk
     skip_ahead_2(io) # number of the disk with the EOCD record

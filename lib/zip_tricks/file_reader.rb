@@ -1,6 +1,6 @@
 require 'stringio'
 
-module ZipTricks::FileReader
+class ZipTricks::FileReader
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
   InvalidStructure = Class.new(ReadError)
@@ -141,7 +141,7 @@ module ZipTricks::FileReader
   #
   # @param io[#tell, #seek, #read, #size] an IO-ish object
   # @return [Array<Entry>] an array of entries within the ZIP being parsed
-  def self.read_zip_structure(io)
+  def read_zip_structure(io)
     zip_file_size = io.size
     eocd_offset = get_eocd_offset(io, zip_file_size)
 
@@ -163,27 +163,35 @@ module ZipTricks::FileReader
     end
   end
 
+  # Parse an IO handle to a ZIP archive into an array of Entry objects.
+  #
+  # @param io[#tell, #seek, #read, #size] an IO-ish object
+  # @return [Array<Entry>] an array of entries within the ZIP being parsed
+  def self.read_zip_structure(io)
+    new.read_zip_structure(io)
+  end
+  
   private
 
-  def self.skip_ahead_2(io)
+  def skip_ahead_2(io)
     skip_ahead_n(io, 2)
   end
 
-  def self.skip_ahead_4(io)
+  def skip_ahead_4(io)
     skip_ahead_n(io, 4)
   end
 
-  def self.skip_ahead_8(io)
+  def skip_ahead_8(io)
     skip_ahead_n(io, 8)
   end
 
-  def self.seek(io, absolute_pos)
+  def seek(io, absolute_pos)
     io.seek(absolute_pos, IO::SEEK_SET)
     raise ReadError, "Expected to seek to #{absolute_pos} but only got to #{io.tell}" unless absolute_pos == io.tell
     nil
   end
 
-  def self.assert_signature(io, signature_magic_number)
+  def assert_signature(io, signature_magic_number)
     packed = [signature_magic_number].pack(C_V)
     readback = read_4b(io)
     if readback != signature_magic_number
@@ -193,7 +201,7 @@ module ZipTricks::FileReader
     end
   end
 
-  def self.skip_ahead_n(io, n)
+  def skip_ahead_n(io, n)
     pos_before = io.tell
     io.seek(io.tell + n, IO::SEEK_SET)
     pos_after = io.tell
@@ -202,26 +210,26 @@ module ZipTricks::FileReader
     nil
   end
 
-  def self.read_n(io, n_bytes)
+  def read_n(io, n_bytes)
     io.read(n_bytes).tap {|d|
       raise ReadError, "Expected to read #{n_bytes} bytes, but the IO was at the end" if d.nil?
       raise ReadError, "Expected to read #{n_bytes} bytes, read #{d.bytesize}" unless d.bytesize == n_bytes
     }
   end
 
-  def self.read_2b(io)
+  def read_2b(io)
     read_n(io, 2).unpack(C_v).shift
   end
 
-  def self.read_4b(io)
+  def read_4b(io)
     read_n(io, 4).unpack(C_V).shift
   end
 
-  def self.read_8b(io)
+  def read_8b(io)
     read_n(io, 8).unpack(C_Qe).shift
   end
 
-  def self.find_compressed_data_start_offset(file_io, local_header_offset)
+  def find_compressed_data_start_offset(file_io, local_header_offset)
     seek(file_io, local_header_offset)
     
     # Reading in bulk is cheaper - grab the maximum length of the local header, including
@@ -253,7 +261,7 @@ module ZipTricks::FileReader
   end
 
 
-  def self.read_cdir_entry(io)
+  def read_cdir_entry(io)
     expected_at = io.tell
     assert_signature(io, 0x02014b50)
     ZipEntry.new.tap do |e|
@@ -300,7 +308,7 @@ module ZipTricks::FileReader
     end
   end
 
-  def self.get_eocd_offset(file_io, zip_file_size)
+  def get_eocd_offset(file_io, zip_file_size)
     # Start reading from the _comment_ of the zip file (from the very end).
     # The maximum size of the comment is 0xFFFF (what fits in 2 bytes)
     implied_position_of_eocd_record = zip_file_size - MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE
@@ -322,7 +330,7 @@ module ZipTricks::FileReader
 
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the
   # EOCD record in the archive by fixed offsets
-  def self.get_zip64_eocd_locator_offset(file_io, eocd_offset)
+  def get_zip64_eocd_locator_offset(file_io, eocd_offset)
     zip64_eocd_loc_offset = eocd_offset
     zip64_eocd_loc_offset -= 4 # The signature
     zip64_eocd_loc_offset -= 4 # Which disk has the Zip64 end of central directory record
@@ -341,7 +349,7 @@ module ZipTricks::FileReader
     nil
   end
 
-  def self.num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
+  def num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
     seek(io, zip64_end_of_cdir_location)
     
     assert_signature(io, 0x06064b50)
@@ -414,7 +422,7 @@ module ZipTricks::FileReader
     4   # Start of the central directory offset
   end
 
-  def self.num_files_and_central_directory_offset(file_io, eocd_offset)
+  def num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)
 
     io = StringIO.new(read_n(file_io, SIZE_OF_USABLE_EOCD_RECORD))

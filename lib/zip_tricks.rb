@@ -1,6 +1,3 @@
-require 'zip'
-require 'very_tiny_state_machine'
-
 module ZipTricks
   VERSION = '3.0.0'
   

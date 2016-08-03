@@ -1,6 +1,4 @@
 require_relative '../spec_helper'
-require 'fileutils'
-require 'shellwords'
 
 describe ZipTricks::Streamer do
   let(:test_text_file_path) {
@@ -43,12 +41,9 @@ describe ZipTricks::Streamer do
     zip << SecureRandom.random_bytes(8921)
     expect(io.tell).to eq(17909)
 
-    pos = zip.write_central_directory!
+    pos = zip.close
     expect(pos).to eq(io.tell)
     expect(pos).to eq(18068)
-
-    pos_after_close = zip.close
-    expect(pos_after_close).to eq(pos)
   end
 
   it 'can write and then read the block-deflated files' do
@@ -216,30 +211,6 @@ describe ZipTricks::Streamer do
       expect(second_entry.gp_flags).to eq(2048)
       expect(second_entry.name).to eq("второй-файл.bin".force_encoding(Encoding::BINARY))
     end
-  end
-
-  it 'raises when the actual bytes written for a stored entry does not match the entry header' do
-    expect {
-      ZipTricks::Streamer.open(StringIO.new) do | zip |
-        zip.add_stored_entry(filename: 'file', size: 123, crc32: 0)
-        zip << 'xx'
-      end
-    }.to raise_error {|e|
-      expect(e).to be_kind_of(ZipTricks::Streamer::EntryBodySizeMismatch)
-      expect(e.message).to eq('Wrong number of bytes written for entry (expected 123, got 2)')
-    }
-  end
-
-  it 'raises when the actual bytes written for a compressed entry does not match the entry header' do
-    expect {
-      ZipTricks::Streamer.open(StringIO.new) do | zip |
-        zip.add_compressed_entry(filename: 'file', uncompressed_size: 1898121, crc32: 0, compressed_size: 123)
-        zip << 'xx'
-      end
-    }.to raise_error {|e|
-      expect(e).to be_kind_of(ZipTricks::Streamer::EntryBodySizeMismatch)
-      expect(e.message).to eq('Wrong number of bytes written for entry (expected 123, got 2)')
-    }
   end
   
   it 'creates an archive with data descriptors that can be opened by Rubyzip, with a small number of very tiny text files' do

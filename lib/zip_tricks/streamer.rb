@@ -88,22 +88,7 @@ class ZipTricks::Streamer
     @out = stream
     @files = []
     @local_header_offsets = []
-    @writer = ZipTricks::ZipWriter.new
-
-    @state_monitor = VeryTinyStateMachine.new(:before_entry, callbacks_to=self)
-    @state_monitor.permit_state :in_entry_header, :in_entry_body
-    @state_monitor.permit_state :in_central_directory, :in_data_descriptor, :closed
-    @state_monitor.permit_transition :before_entry => :in_entry_header
-    @state_monitor.permit_transition :before_entry => :in_central_directory # When no files are given
-    @state_monitor.permit_transition :in_entry_header => :in_entry_body
-    @state_monitor.permit_transition :in_entry_header => :in_entry_header # 0-size entries, like directories
-    @state_monitor.permit_transition :in_entry_header => :in_data_descriptor
-    @state_monitor.permit_transition :in_entry_body => :in_entry_header
-    @state_monitor.permit_transition :in_entry_body => :in_central_directory
-    @state_monitor.permit_transition :in_entry_body => :in_data_descriptor
-    @state_monitor.permit_transition :in_data_descriptor => :in_entry_header
-    @state_monitor.permit_transition :in_data_descriptor => :in_central_directory
-    @state_monitor.permit_transition :in_central_directory => :closed
+    @writer = create_writer
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
@@ -111,9 +96,7 @@ class ZipTricks::Streamer
   # @param binary_data [String] a String in binary encoding
   # @return self
   def <<(binary_data)
-    @state_monitor.transition_or_maintain! :in_entry_body
     @out << binary_data
-    @bytes_written_for_entry += binary_data.bytesize
     self
   end
 
@@ -124,7 +107,7 @@ class ZipTricks::Streamer
   # @param binary_data [String] a String in binary encoding
   # @return [Fixnum] the number of bytes written
   def write(binary_data)
-    self << binary_data
+    @out << binary_data
     binary_data.bytesize
   end
 
@@ -135,9 +118,7 @@ class ZipTricks::Streamer
   # @param num_bytes [Numeric] how many bytes are going to be written bypassing the Streamer
   # @return [Numeric] position in the output stream / ZIP archive
   def simulate_write(num_bytes)
-    @state_monitor.transition_or_maintain! :in_entry_body
     @out.advance_position_by(num_bytes)
-    @bytes_written_for_entry += num_bytes
     @out.tell
   end
 
@@ -153,7 +134,6 @@ class ZipTricks::Streamer
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(filename:, compressed_size:, uncompressed_size:, crc32:)
-    @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: DEFLATED, 
       compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     @out.tell
@@ -167,35 +147,8 @@ class ZipTricks::Streamer
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(filename:, size:, crc32:)
-    @state_monitor.transition! :in_entry_header
     add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: STORED,
       compressed_size: size, uncompressed_size: size)
-    @out.tell
-  end
-
-  # Writes out the global footer and the directory entry header and the global directory of the ZIP
-  # archive using the information about the entries added using `add_stored_entry` and `add_compressed_entry`.
-  #
-  # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
-  #
-  # @return [Fixnum] the offset the output IO is at after writing the central directory
-  def write_central_directory!
-    @state_monitor.transition! :in_central_directory
-
-    # Write out the central directory file headers, one by one
-    cdir_starts_at = @out.tell
-    @files.each_with_index do |entry, i|
-      header_loc = @local_header_offsets.fetch(i)
-      @writer.write_central_directory_file_header(io: @out, local_file_header_location: header_loc,
-        gp_flags: entry.gp_flags, storage_mode: entry.storage_mode,
-        compressed_size: entry.compressed_size, uncompressed_size: entry.uncompressed_size,
-        mtime: entry.mtime, crc32: entry.crc32, filename: entry.filename) #, external_attrs: DEFAULT_EXTERNAL_ATTRS)
-    end
-    cdir_size = @out.tell - cdir_starts_at
-
-    # Write out the EOCDR
-    @writer. write_end_of_central_directory(io: @out, start_of_central_directory_location: cdir_starts_at,
-       central_directory_size: cdir_size, num_files_in_archive: @files.length)
     @out.tell
   end
 
@@ -209,8 +162,6 @@ class ZipTricks::Streamer
     add_file_and_write_local_header(filename: filename, storage_mode: STORED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
-    @state_monitor.transition! :in_entry_body
-    
     w = StoredWriter.new(@out)
     yield(Writable.new(w))
     crc, comp, uncomp = w.finish
@@ -221,7 +172,6 @@ class ZipTricks::Streamer
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
 
-    @state_monitor.transition! :in_data_descriptor
     @writer.write_data_descriptor(io: @out, crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
   end
 
@@ -235,8 +185,6 @@ class ZipTricks::Streamer
     add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
-    @state_monitor.transition! :in_entry_body
-    
     w = DeflatedWriter.new(@out)
     yield(Writable.new(w))
     crc, comp, uncomp = w.finish
@@ -249,16 +197,41 @@ class ZipTricks::Streamer
     write_data_descriptor_for_last_entry
   end
 
-  # Closes the archive. Writes the central directory if it has not yet been written.
-  # Switches the Streamer into a state where it can no longer be written to.
+  # Closes the archive. Writes the central directory, and switches the writer into
+  # a state where it can no longer be written to.
   #
   # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
   #
   # @return [Fixnum] the offset the output IO is at after closing the archive
   def close
-    write_central_directory! unless @state_monitor.in_state?(:in_central_directory)
-    @state_monitor.transition! :closed
+    # Record the central directory offset, so that it can be written into the EOCD record
+    cdir_starts_at = @out.tell
+    
+    # Write out the central directory entries, one for each file
+    @files.each_with_index do |entry, i|
+      header_loc = @local_header_offsets.fetch(i)
+      @writer.write_central_directory_file_header(io: @out, local_file_header_location: header_loc,
+        gp_flags: entry.gp_flags, storage_mode: entry.storage_mode,
+        compressed_size: entry.compressed_size, uncompressed_size: entry.uncompressed_size,
+        mtime: entry.mtime, crc32: entry.crc32, filename: entry.filename) #, external_attrs: DEFAULT_EXTERNAL_ATTRS)
+    end
+    
+    # Record the central directory size, for the EOCDR
+    cdir_size = @out.tell - cdir_starts_at
+
+    # Write out the EOCDR
+    @writer. write_end_of_central_directory(io: @out, start_of_central_directory_location: cdir_starts_at,
+       central_directory_size: cdir_size, num_files_in_archive: @files.length)
     @out.tell
+  end
+  
+  # Sets up the ZipWriter with wrappers if necessary. The method is called once, when the Streamer
+  # gets instantiated - the Writer then gets reused. This method is primarily there so that you
+  # can override it.
+  #
+  # @return [ZipTricks::ZipWriter] the writer to perform writes with
+  def create_writer
+    ZipTricks::ZipWriter.new
   end
   
   private
@@ -273,8 +246,6 @@ class ZipTricks::Streamer
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
     raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
 
-    @state_monitor.transition! :in_entry_header
-
     @check_compressed_size_after_leaving_body = !use_data_descriptor
     @bytes_written_for_entry = 0
     @expected_bytes_for_entry = compressed_size
@@ -284,25 +255,10 @@ class ZipTricks::Streamer
     @local_header_offsets << @out.tell
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
-
-    @state_monitor.transition! :in_entry_header
   end
   
   def write_data_descriptor_for_last_entry
-    @state_monitor.transition! :in_data_descriptor
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)
-  end
-  
-  # Checks whether the number of bytes written conforms to the declared entry size
-  def leaving_in_entry_body_state
-    # The check is skipped when the data descriptor will be written after
-    return unless @check_compressed_size_after_leaving_body
-    
-    if @bytes_written_for_entry != @expected_bytes_for_entry
-      msg = "Wrong number of bytes written for entry (expected %d, got %d)" % [@expected_bytes_for_entry,
-          @bytes_written_for_entry]
-      raise EntryBodySizeMismatch, msg
-    end
   end
 end

@@ -1,5 +1,27 @@
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.
+#
+# The primary reason the writer is a separate object is because it is kept stateless. That is, all the data that
+# is needed for writing a piece of the ZIP (say, the EOCD record, or a data descriptor) can be written
+# without depending on data available elsewhere. This makes the writer very easy to test, since each of
+# it's methods outputs something that only depends on the method's arguments. For example, we use this
+# to test writing Zip64 files which, when tested in a streaming fashion, would need tricky IO stubs
+# to wind IO objects back and forth by large offsets. Instead, we can just write out the EOCD record
+# with given offsets as arguments.
+#
+# Since some methods need a lot of data about the entity being written, everything is passed via
+# keyword arguments - this way it is much less likely that you can make a mistake writing something.
+#
+# Another reason for having a separate Writer is that most ZIP libraries attach the methods for
+# writing out the file headers to some sort of Entry object, which represents a file within the ZIP.
+# However, when you are diagnosing issues with the ZIP files you produce, you actually want to have
+# absolute _most_ of the code responsible for writing the actual encoded bytes available to you on
+# one screen. Altering or checking that code then becomes much, much easier. The methods doing the
+# writing are also intentionally left very verbose - so that you can follow what is happening at
+# all times.
+#
+# All methods of the writer accept anything that responds to `<<` as `io` argument - you can use
+# that to output to String objects, or to output to Arrays that you can later join together.
 class ZipTricks::ZipWriter
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF

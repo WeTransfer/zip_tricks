@@ -45,9 +45,14 @@ class ZipTricks::ZipWriter
     [VERSION_MADE_BY, os_type].pack('CC')
   end
 
-  C_V = 'V'.freeze
-  C_v = 'v'.freeze
-  C_Qe = 'Q<'.freeze
+  C_V = 'V'.freeze    # Encode a 4-byte little-endian uint
+  C_v = 'v'.freeze    # Encode a 2-byte little-endian uint
+  C_Qe = 'Q<'.freeze  # Encode an 8-byte little-endian uint
+
+  private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
+    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
+    :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
+    :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
 
   # Writes the local file header, that precedes the actual file _data_. 
   # 
@@ -294,11 +299,6 @@ class ZipTricks::ZipWriter
     io << [ZIP_TRICKS_COMMENT.bytesize].pack(C_v)           # .ZIP file comment length        2 bytes
     io << ZIP_TRICKS_COMMENT                                # .ZIP file comment       (variable size)
   end
-
-  private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
-    :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
-    :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
-    :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
   
   private
 

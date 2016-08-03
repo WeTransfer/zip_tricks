@@ -33,7 +33,7 @@ The block will only be called when actually sending the response to the client
 (unless you are using a buffering Rack webserver, such as Webrick).
 
     body = ZipTricks::RackBody.new do | zip |
-      zip.write_stored_file('mov.mp4.txt') do |sink|
+      zip.write_stored_file('mov.mp4') do |sink| # Those MPEG4 files do not compress that well
         File.open('mov.mp4', 'rb'){|source| IO.copy_stream(source, sink) }
       end
       zip.write_deflated_file('long-novel.txt') do |sink|

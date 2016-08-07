@@ -47,71 +47,18 @@ require 'stringio'
 # and so on, and sets these entries up with the absolute _offsets_ into the source file/IO object.
 # These offsets can then be used to extract the actual compressed data of the files and to expand it.
 class ZipTricks::FileReader
+  require_relative 'file_reader/stored_reader'
+  require_relative 'file_reader/inflating_reader'
+
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
   InvalidStructure = Class.new(ReadError)
+  LocalHeaderPending = Class.new(StandardError) do
+    def message
+      "The compressed data offset is not available (local header has not been read)" 
+    end
+  end
   
-  class InflatingReader
-    def initialize(from_io, compressed_data_size)
-      @io = from_io
-      @compressed_data_size = compressed_data_size
-      @already_read = 0
-      @zlib_inflater = ::Zlib::Inflate.new(-Zlib::MAX_WBITS)
-    end
-
-    def extract(n_bytes=nil)
-      n_bytes ||= (@compressed_data_size - @already_read)
-
-      return if eof?
-
-      available = @compressed_data_size - @already_read
-
-      return if available.zero?
-
-      n_bytes = available if n_bytes > available
-
-      return '' if n_bytes.zero?
-
-      compressed_chunk = @io.read(n_bytes)
-      @already_read += compressed_chunk.bytesize
-      @zlib_inflater.inflate(compressed_chunk)
-    end
-
-    def eof?
-      @zlib_inflater.finished?
-    end
-  end
-
-  class StoredReader
-    def initialize(from_io, compressed_data_size)
-      @io = from_io
-      @compressed_data_size = compressed_data_size
-      @already_read = 0
-    end
-
-    def extract(n_bytes=nil)
-      n_bytes ||= (@compressed_data_size - @already_read)
-
-      return if eof?
-
-      available = @compressed_data_size - @already_read
-
-      return if available.zero?
-
-      n_bytes = available if n_bytes > available
-
-      return '' if n_bytes.zero?
-
-      compressed_chunk = @io.read(n_bytes)
-      @already_read += compressed_chunk.bytesize
-      compressed_chunk
-    end
-
-    def eof?
-      @already_read >= @compressed_data_size
-    end
-  end
-
   private_constant :StoredReader, :InflatingReader
   
   # Represents a file within the ZIP archive being read
@@ -162,13 +109,9 @@ class ZipTricks::FileReader
     # @return [String] the file comment
     attr_accessor :comment
 
-    # @return [Fixnum] at what offset you should start reading
-    #       for the compressed data in your original IO object
-    attr_accessor :compressed_data_offset
-
     # Returns a reader for the actual compressed data of the entry.
     #
-    #   reader = entry.reader(source_file)
+    #   reader = entry.extractor_from(source_file)
     #   outfile << reader.extract(512 * 1024) until reader.eof?
     #
     # @return [#extract(n_bytes), #eof?] the reader for the data
@@ -180,17 +123,50 @@ class ZipTricks::FileReader
       when 0
         StoredReader.new(from_io, compressed_size)
       else
-        raise "Unsupported storage mode for reading (#{storage_mode})"
+        raise UnsupportedFeature, "Unsupported storage mode for reading - %d" % storage_mode
       end
+    end
+    
+    # @return [Fixnum] at what offset you should start reading
+    #       for the compressed data in your original IO object
+    def compressed_data_offset
+      @compressed_data_offset or raise LocalHeaderPending
+    end
+    
+    # Tells whether the compressed data offset is already known for this entry
+    # @return [Boolean]
+    def known_offset?
+      !@compressed_data_offset.nil?
+    end
+    
+    # Sets the offset at which the compressed data for this file starts in the ZIP.
+    # By default, the value will be set by the Reader for you. If you use delayed
+    # reading, you need to set it by using the `get_compressed_data_offset` on the Reader:
+    #
+    #     entry.compressed_data_offset = reader.get_compressed_data_offset(io: file,
+    #            local_header_offset: entry.local_header_offset)
+    def compressed_data_offset=(offset)
+      @compressed_data_offset = offset.to_i
     end
   end
 
   # Parse an IO handle to a ZIP archive into an array of Entry objects.
   #
   # @param io[#tell, #seek, #read, #size] an IO-ish object
-  # @param read_local_headers[Boolean] whether to proceed to read the local headers in addition to the central directory
+  # @param read_local_headers[Boolean] whether the local headers must be read upfront. When reading
+  #   a locally available ZIP file this option will not have much use since the small reads from
+  #   the file handle are not going to be that important. However, if you are using remote reads
+  #   to decipher a ZIP file located on an HTTP server, the operation _must_ perform an HTTP
+  #   request for _each entry in the ZIP file_ to determine where the actual file data starts.
+  #   This, for a ZIP archive of 1000 files, will incur 1000 extra HTTP requests - which you might
+  #   not want to perform upfront, or - at least - not want to perform _at once_. When the option is
+  #   set to `false`, you will be getting instances of `LazyEntry` instead of `Entry`. Those objects
+  #   will raise an exception when you attempt to access their compressed data offset in the ZIP
+  #   (since the reads have not been performed yet). As a rule, this option can be left in it's
+  #   default setting (`true`) unless you want to _only_ read the central directory, or you need
+  #   to limit the number of HTTP requests.
   # @return [Array<Entry>] an array of entries within the ZIP being parsed
-  def read_zip_structure(io, read_local_headers: true)
+  def read_zip_structure(io:, read_local_headers: true)
     zip_file_size = io.size
     eocd_offset = get_eocd_offset(io, zip_file_size)
 
@@ -213,24 +189,68 @@ class ZipTricks::FileReader
       read_cdir_entry(central_directory_io)
     end
     
-    entries.each_with_index do |entry, i|
-      if read_local_headers
-        log { 'Reading the local header for entry %d at offset %d' % [i, entry.local_file_header_offset] }
-        entry.compressed_data_offset = find_compressed_data_start_offset(io, entry.local_file_header_offset)
-      end
-    end
+    read_local_headers(entries, io) if read_local_headers
+    
+    entries
   end
 
+  # Get the offset in the IO at which the actual compressed data of the file starts within the ZIP.
+  # The method will eager-read the entire local header for the file (the maximum size the local header may use),
+  # starting at the given offset, and will then compute its size. That size plus the local header offset
+  # given will be the compressed data offset of the entry (read starting at this offset to get the data).
+  #
+  # @param io[#seek, #read] an IO-ish object the ZIP file can be read from
+  # @param local_header_offset[Fixnum] absolute offset (0-based) where the local file header is supposed to begin
+  # @return [Fixnum] absolute offset (0-based) of where the compressed data begins for this file within the ZIP
+  def get_compressed_data_offset(io:, local_header_offset:)
+    seek(io, local_header_offset)
+    
+    # Reading in bulk is cheaper - grab the maximum length of the local header,
+    # including any headroom
+    local_file_header_str_plus_headroom = io.read(MAX_LOCAL_HEADER_SIZE)
+    io_starting_at_local_header = StringIO.new(local_file_header_str_plus_headroom)
+
+    assert_signature(io_starting_at_local_header, 0x04034b50)
+
+    # The rest is unreliable, and we have that information from the central directory already.
+    # So just skip over it to get at the offset where the compressed data begins
+    skip_ahead_2(io_starting_at_local_header) # Version needed to extract
+    skip_ahead_2(io_starting_at_local_header) # gp flags
+    skip_ahead_2(io_starting_at_local_header) # storage mode
+    skip_ahead_2(io_starting_at_local_header) # dos time
+    skip_ahead_2(io_starting_at_local_header) # dos date
+    skip_ahead_4(io_starting_at_local_header) # CRC32
+
+    skip_ahead_4(io_starting_at_local_header) # Comp size
+    skip_ahead_4(io_starting_at_local_header) # Uncomp size
+
+    filename_size = read_2b(io_starting_at_local_header)
+    extra_size = read_2b(io_starting_at_local_header)
+
+    skip_ahead_n(io_starting_at_local_header, filename_size)
+    skip_ahead_n(io_starting_at_local_header, extra_size)
+
+    local_header_offset + io_starting_at_local_header.tell
+  end
+  
   # Parse an IO handle to a ZIP archive into an array of Entry objects.
   #
-  # @param io[#tell, #seek, #read, #size] an IO-ish object
+  # @param options[Hash] any options the instance method of the same name accepts
   # @return [Array<Entry>] an array of entries within the ZIP being parsed
-  def self.read_zip_structure(io)
-    new.read_zip_structure(io)
+  def self.read_zip_structure(**options)
+    new.read_zip_structure(**options)
   end
   
   private
 
+  def read_local_headers(entries, io)
+    entries.each_with_index do |entry, i|
+      log { 'Reading the local header for entry %d at offset %d' % [i, entry.local_file_header_offset] }
+      off = get_compressed_data_offset(io: io, local_header_offset: entry.local_file_header_offset)
+      entry.compressed_data_offset = off
+    end
+  end
+  
   def skip_ahead_2(io)
     skip_ahead_n(io, 2)
   end
@@ -287,40 +307,7 @@ class ZipTricks::FileReader
     read_n(io, 8).unpack(C_Qe).shift
   end
 
-  def find_compressed_data_start_offset(file_io, local_header_offset)
-    seek(file_io, local_header_offset)
-    
-    # Reading in bulk is cheaper - grab the maximum length of the local header, including
-    # any headroom
-    local_file_header_str_plus_headroom = file_io.read(MAX_LOCAL_HEADER_SIZE)
-    io = StringIO.new(local_file_header_str_plus_headroom)
-
-    assert_signature(io, 0x04034b50)
-
-    # The rest is unreliable, and we have that information from the central directory already.
-    # So just skip over it to get at the offset where the compressed data begins
-    skip_ahead_2(io) # Version needed to extract
-    skip_ahead_2(io) # gp flags
-    skip_ahead_2(io) # storage mode
-    skip_ahead_2(io) # dos time
-    skip_ahead_2(io) # dos date
-    skip_ahead_4(io) # CRC32
-
-    skip_ahead_4(io) # Comp size
-    skip_ahead_4(io) # Uncomp size
-
-    filename_size = read_2b(io)
-    extra_size = read_2b(io)
-
-    skip_ahead_n(io, filename_size)
-    skip_ahead_n(io, extra_size)
-
-    local_header_offset + io.tell
-  end
-
-
   def read_cdir_entry(io)
-    expected_at = io.tell
     assert_signature(io, 0x02014b50)
     ZipEntry.new.tap do |e|
       e.made_by = read_2b(io)
@@ -357,7 +344,9 @@ class ZipTricks::FileReader
       end
 
       # ...of which we really only need the Zip64 extra
-      if zip64_extra_contents = extra_table[1] # Zip64 extra
+      if zip64_extra_contents = extra_table[1]
+        # If the Zip64 extra is present, we let it override all
+        # the values fetched from the conventional header
         zip64_extra = StringIO.new(zip64_extra_contents)
         log { 'Will read Zip64 extra data for %s, %d bytes' % [e.filename, zip64_extra.size] }
         # Now here be dragons. The APPNOTE specifies that
@@ -533,10 +522,11 @@ class ZipTricks::FileReader
   def num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)
 
-    io = StringIO.new(read_n(file_io, SIZE_OF_USABLE_EOCD_RECORD))
-    
-    assert_signature(io, 0x06054b50)
+    # The size of the EOCD record is known upfront, so use a strict read
+    eocd_record_str = read_n(file_io, SIZE_OF_USABLE_EOCD_RECORD) 
+    io = StringIO.new(eocd_record_str)
 
+    assert_signature(io, 0x06054b50)
     skip_ahead_2(io) # number_of_this_disk
     skip_ahead_2(io) # number of the disk with the EOCD record
     skip_ahead_2(io) # number of entries in the central directory of this disk

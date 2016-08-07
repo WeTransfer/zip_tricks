@@ -7,6 +7,17 @@ require 'digest'
 require 'fileutils'
 require 'shellwords'
 require 'zip'
+require 'delegate'
+
+class ReadMonitor < SimpleDelegator
+  def read(*)
+    super.tap { @num_reads ||= 0; @num_reads += 1 }
+  end
+  
+  def num_reads
+    @num_reads || 0
+  end
+end
 
 module Keepalive
   # Travis-CI kills the build if it does not receive output on standard out or standard error

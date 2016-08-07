@@ -7,49 +7,13 @@
 # before you use this module.
 class ZipTricks::RemoteUncap
 
-  # Represents a file embedded within a remote ZIP archive
-  class RemoteZipEntry
-
-    # @return [String] filename of the file in the remote ZIP
-    attr_accessor :name
-
-    # @return [Fixnum] size in bytes of the file when uncompressed
-    attr_accessor :size_uncompressed
-
-    # @return [Fixnum] size in bytes of the file when compressed (the segment in the ZIP)
-    attr_accessor :size_compressed
-
-    # @return [Fixnum] compression method (0 for stored, 8 for deflate)
-    attr_accessor :compression_method
-
-    # @return [Fixnum] where the file data starts within the ZIP
-    attr_accessor :starts_at_offset
-
-    # @return [Fixnum] where the file data ends within the zip.
-    #     Will be equal to starts_at_offset if the file is empty
-    attr_accessor :ends_at_offset
-
-    # Yields the object during initialization
-    def initialize
-      yield self
-    end
-  end
-
   # @param uri[String] the HTTP(S) URL to read the ZIP footer from 
+  # @param options_for_zip_reader[Hash] any additional options to give to {ZipTricks::FileReader} when reading
   # @return [Array<RemoteZipEntry>] metadata about the files within the remote archive
-  def self.files_within_zip_at(uri)
+  def self.files_within_zip_at(uri, **options_for_zip_reader)
     fetcher = new(uri)
     fake_io = ZipTricks::RemoteIO.new(fetcher)
-    entries = ZipTricks.const_get(:FileReader).read_zip_structure(fake_io)
-    entries.map do | remote_entry |
-      RemoteZipEntry.new do | entry |
-        entry.name               = remote_entry.filename
-        entry.starts_at_offset   = remote_entry.compressed_data_offset
-        entry.size_uncompressed  = remote_entry.uncompressed_size
-        entry.size_compressed    = remote_entry.compressed_size
-        entry.compression_method = remote_entry.storage_mode
-      end
-    end
+    ZipTricks::FileReader.read_zip_structure(io: fake_io, **options_for_zip_reader)
   end
 
   def initialize(uri)

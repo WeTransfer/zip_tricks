@@ -16,19 +16,10 @@ describe ZipTricks::RemoteUncap, webmock: true do
     payload2 << Random.new.bytes(1024 * 1024 * 3)
     payload2.flush; payload2.rewind
 
-    payload1_crc = Zlib.crc32(payload1.read).tap { payload1.rewind }
-    payload2_crc = Zlib.crc32(payload2.read).tap { payload2.rewind }
-
     File.open('temp.zip', 'wb') do |f|
       ZipTricks::Streamer.open(f) do | zip |
-        zip.add_stored_entry(filename: 'first-file.bin', size: payload1.size, crc32: payload1_crc)
-        while blob = payload1.read(1024 * 5)
-          zip << blob
-        end
-        zip.add_stored_entry(filename: 'second-file.bin', size: payload2.size, crc32: payload2_crc)
-        while blob = payload2.read(1024 * 5)
-          zip << blob
-        end
+        zip.write_stored_file('first-file.bin') { |w| IO.copy_stream(payload1, w) }
+        zip.write_stored_file('second-file.bin') { |w| IO.copy_stream(payload2, w) }
       end
     end
     payload1.rewind; payload2.rewind
@@ -111,17 +102,17 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     first, second = *files
 
-    expect(first.name).to eq('first-file.bin')
-    expect(first.size_uncompressed).to eq(payload1.size)
+    expect(first.filename).to eq('first-file.bin')
+    expect(first.uncompressed_size).to eq(payload1.size)
     File.open('temp.zip', 'rb') do |readback|
-      readback.seek(first.starts_at_offset, IO::SEEK_SET)
-      expect(readback.read(0)).to eq(payload1.read(0))
+      readback.seek(first.compressed_data_offset, IO::SEEK_SET)
+      expect(readback.read(3)).to eq(payload1.read(3))
     end
 
-    expect(second.name).to eq('second-file.bin')
-    expect(second.size_uncompressed).to eq(payload2.size)
+    expect(second.filename).to eq('second-file.bin')
+    expect(second.uncompressed_size).to eq(payload2.size)
     File.open('temp.zip', 'rb') do |readback|
-      readback.seek(second.starts_at_offset, IO::SEEK_SET)
+      readback.seek(first.compressed_data_offset, IO::SEEK_SET)
       expect(readback.read(12)).to eq(payload2.read(12))
     end
   end

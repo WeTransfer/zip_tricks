@@ -366,16 +366,47 @@ class ZipTricks::FileReader
     # and a soft read (we might not be able to read as many bytes as we want)
     file_io.seek(implied_position_of_eocd_record, IO::SEEK_SET)
     str_containing_eocd_record = file_io.read(MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE)
-
-    # TODO: what to do if multiple occurrences of the signature are found, somehow?
-    eocd_sig = [0x06054b50].pack(C_V)
-    eocd_idx_in_buf = str_containing_eocd_record.index(eocd_sig)
-
+    eocd_idx_in_buf = locate_eocd_signature(str_containing_eocd_record)
+    
     raise "Could not find the EOCD signature in the buffer - maybe a malformed ZIP file" unless eocd_idx_in_buf
 
     implied_position_of_eocd_record + eocd_idx_in_buf
   end
 
+  # This is tricky. Essentially, we have to scan the maximum possible number of bytes (that the EOCD can
+  # theoretically occupy including the comment), and we have to find a combination of:
+  #   [EOCD signature, <some ZIP medatata>, comment byte size, the comment of that size, eof].
+  # The only way I could find to do this was with a sliding window, but there probably is a better way.
+  def locate_eocd_signature(in_str)
+    # We have to scan from the _very_ tail. We read the very minimum size
+    # the EOCD record can have (up to and including the comment size), using
+    # a sliding window. Once our end offset matches the comment size we found our
+    # EOCD marker.
+    eocd_signature_int = 0x06054b50
+    unpack_pattern = 'VvvvvVVv'
+    minimum_record_size = 22
+    end_location = minimum_record_size * -1
+    loop do
+      # If the window is nil, we have rolled off the start of the string, nothing to do here.
+      # We use negative values because if we used positive slice indices
+      # we would have to detect the rollover ourselves
+      break unless window = in_str[end_location, minimum_record_size]
+      
+      window_location = in_str.bytesize + end_location
+      unpacked = window.unpack(unpack_pattern)
+      
+      # If we found the signarue, pick up the comment size, and check if the size of the window
+      # plus that comment size is where we are in the string. If we are - bingo.
+      if unpacked[0] == 0x06054b50 && comment_size = unpacked[-1] 
+        assumed_eocd_location = in_str.bytesize - comment_size - minimum_record_size
+        # if the comment size is where we should be at - we found our EOCD
+        return assumed_eocd_location if assumed_eocd_location == window_location
+      end
+      
+      end_location -= 1 # Shift the window back, by one byte, and try again.
+    end
+  end
+  
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the
   # EOCD record in the archive by fixed offsets
   def get_zip64_eocd_locator_offset(file_io, eocd_offset)

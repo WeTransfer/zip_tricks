@@ -330,6 +330,17 @@ describe ZipTricks::ZipWriter do
       expect(br.read_n(comment_length)).to match(/ZipTricks/)
     end
     
+    it 'writes out the custom comment' do
+      buf = ''
+      comment = 'Ohai mate'
+      subject.write_end_of_central_directory(io: buf, start_of_central_directory_location: 9091211,
+        central_directory_size: 9091, num_files_in_archive: 4, comment: comment)
+      
+      size_and_comment = buf[((comment.bytesize + 2) * -1)..-1]
+      comment_size = size_and_comment.unpack('v')[0]
+      expect(comment_size).to eq(comment.bytesize)
+    end
+    
     it 'writes out the Zip64 EOCD as well if the central directory is located beyound 4GB in the archive' do
       buf = StringIO.new
     

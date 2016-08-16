@@ -221,8 +221,9 @@ class ZipTricks::ZipWriter
   # @param start_of_central_directory_location[Fixnum] byte offset of the start of central directory form the beginning of ZIP file
   # @param central_directory_size[Fixnum] the size of the central directory (only file headers) in bytes
   # @param num_files_in_archive[Fixnum] How many files the archive contains
+  # @param comment[String] the comment for the archive (defaults to ZIP_TRICKS_COMMENT)
   # @return [void]
-  def write_end_of_central_directory(io:, start_of_central_directory_location:, central_directory_size:, num_files_in_archive:)
+  def write_end_of_central_directory(io:, start_of_central_directory_location:, central_directory_size:, num_files_in_archive:, comment: ZIP_TRICKS_COMMENT)
     zip64_eocdr_offset = start_of_central_directory_location + central_directory_size
     
     zip64_required = central_directory_size > FOUR_BYTE_MAX_UINT ||
@@ -296,8 +297,8 @@ class ZipTricks::ZipWriter
                                                             # directory with respect to
                                                             # the starting disk number        4 bytes
     end
-    io << [ZIP_TRICKS_COMMENT.bytesize].pack(C_v)           # .ZIP file comment length        2 bytes
-    io << ZIP_TRICKS_COMMENT                                # .ZIP file comment       (variable size)
+    io << [comment.bytesize].pack(C_v)                      # .ZIP file comment length        2 bytes
+    io << comment                                           # .ZIP file comment       (variable size)
   end
   
   private

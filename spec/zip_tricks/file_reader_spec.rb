@@ -63,7 +63,7 @@ describe ZipTricks::FileReader do
       central_directory_size: z.tell - where, num_files_in_archive: 1, comment: evil_str)
     
     z.rewind
-    entries = described_class.read_zip_structure(io: z)
+    entries = described_class.read_zip_structure(z)
     expect(entries.length).to eq(1)
   end
 end

@@ -66,4 +66,17 @@ describe ZipTricks::FileReader do
     entries = described_class.read_zip_structure(z)
     expect(entries.length).to eq(1)
   end
+  
+  it 'can handle a Zip64 central directory fields that only contains the required fields (substitutes for standard fields)' do
+    # In this example central directory, 2 entries contain Zip64 extra where only the local header offset is set (8 bytes each)
+    # This is the exceptional case where we have to poke at a private method directly
+    File.open(__dir__ + '/cdir_entry_with_partial_use_of_zip64_extra_fields.bin', 'rb') do |f|
+      reader = described_class.new
+      entry = reader.send(:read_cdir_entry, f)
+      expect(entry.local_file_header_offset).to eq(4312401349)
+      expect(entry.filename).to eq('Motorhead - Ace Of Spades.srt')
+      expect(entry.compressed_size).to eq(69121)
+      expect(entry.uncompressed_size).to eq(69121)
+    end
+  end
 end

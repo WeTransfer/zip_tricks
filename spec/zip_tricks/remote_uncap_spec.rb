@@ -44,17 +44,17 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     first, second = *files
 
-    expect(first.name).to eq('first-file.bin')
-    expect(first.size_uncompressed).to eq(payload1.size)
+    expect(first.filename).to eq('first-file.bin')
+    expect(first.uncompressed_size).to eq(payload1.size)
     File.open('temp.zip', 'rb') do |readback|
-      readback.seek(first.starts_at_offset, IO::SEEK_SET)
+      readback.seek(first.compressed_data_offset, IO::SEEK_SET)
       expect(readback.read(12)).to eq(payload1.read(12))
     end
 
-    expect(second.name).to eq('second-file.bin')
-    expect(second.size_uncompressed).to eq(payload2.size)
+    expect(second.filename).to eq('second-file.bin')
+    expect(second.uncompressed_size).to eq(payload2.size)
     File.open('temp.zip', 'rb') do |readback|
-      readback.seek(second.starts_at_offset, IO::SEEK_SET)
+      readback.seek(second.compressed_data_offset, IO::SEEK_SET)
       expect(readback.read(12)).to eq(payload2.read(12))
     end
   end
@@ -70,50 +70,31 @@ describe ZipTricks::RemoteUncap, webmock: true do
     payload1_crc = Zlib.crc32(payload1.read).tap { payload1.rewind }
     payload2_crc = Zlib.crc32(payload2.read).tap { payload2.rewind }
 
-    File.open('temp.zip', 'wb') do |f|
-      ZipTricks::Streamer.open(f) do | zip |
-        zip.add_stored_entry(filename: 'first-file.bin', size: payload1.size, crc32: payload1_crc)
-        zip << '' # It is empty, so a read() would return nil
-        zip.add_stored_entry(filename: 'second-file.bin', size: payload2.size, crc32: payload2_crc)
-        while blob = payload2.read(1024 * 5)
-          zip << blob
-        end
-      end
+    readable_zip = Tempfile.new 'somezip'
+    ZipTricks::Streamer.open(readable_zip) do | zip |
+      zip.add_stored_entry(filename: 'first-file-zero-size.bin', size: payload1.size, crc32: payload1_crc)
+      zip.write_stored_file('second-file.bin') {|w| IO.copy_stream(payload2, w) }
     end
-    payload1.rewind; payload2.rewind
-
-    expect(File).to be_exist('temp.zip')
+    readable_zip.flush; readable_zip.rewind
 
     allow_any_instance_of(described_class).to receive(:request_object_size) {
-      File.size('temp.zip')
+      readable_zip.size
     }
     allow_any_instance_of(described_class).to receive(:request_range) {|_instance, range|
-      File.open('temp.zip', 'rb') do |f|
-        f.seek(range.begin)
-        f.read(range.end - range.begin + 1)
-      end
+      readable_zip.seek(range.begin, IO::SEEK_SET)
+      readable_zip.read(range.end - range.begin + 1)
     }
 
     payload1.rewind; payload2.rewind
 
-    files = described_class.files_within_zip_at('http://fake.example.com')
-    expect(files).to be_kind_of(Array)
-    expect(files.length).to eq(2)
+    first, second  = described_class.files_within_zip_at('http://fake.example.com')
 
-    first, second = *files
-
-    expect(first.filename).to eq('first-file.bin')
-    expect(first.uncompressed_size).to eq(payload1.size)
-    File.open('temp.zip', 'rb') do |readback|
-      readback.seek(first.compressed_data_offset, IO::SEEK_SET)
-      expect(readback.read(3)).to eq(payload1.read(3))
-    end
-
+    expect(first.filename).to eq('first-file-zero-size.bin')
+    expect(first.compressed_size).to be_zero
+    
     expect(second.filename).to eq('second-file.bin')
     expect(second.uncompressed_size).to eq(payload2.size)
-    File.open('temp.zip', 'rb') do |readback|
-      readback.seek(first.compressed_data_offset, IO::SEEK_SET)
-      expect(readback.read(12)).to eq(payload2.read(12))
-    end
+    readable_zip.seek(second.compressed_data_offset, IO::SEEK_SET)
+    expect(readable_zip.read(12)).to eq(payload2.read(12))
   end
 end

@@ -16,5 +16,5 @@ class ZipTricks::Streamer::Writable
   #
   # @param d[String] the binary string to write (part of the uncompressed file)
   # @return [Fixnum] the number of bytes written
-  def write(d); @writer << d; end
+  def write(d); @writer << d; d.bytesize; end
 end

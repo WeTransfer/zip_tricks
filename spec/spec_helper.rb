@@ -56,7 +56,7 @@ module ZipInspection
     $zip_inspection_buf ||= StringIO.new
     $zip_inspection_buf.puts "\n"
     $zip_inspection_buf.puts "Inspecting ZIP output of #{inspect}." # The only way to get at the RSpec example without using the block argument
-    $zip_inspection_buf.puts "Be aware that the zipinfo version on OSX is too old to deal with Zip6."
+    $zip_inspection_buf.puts "Be aware that the zipinfo version on OSX is too old to deal with Zip64."
     escaped_cmd = Shellwords.join([zipinfo_path, '-tlhvz', path_to_zip])
     $zip_inspection_buf.puts `#{escaped_cmd}`
   end

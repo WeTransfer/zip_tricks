@@ -200,7 +200,7 @@ class ZipTricks::FileReader
   # given will be the compressed data offset of the entry (read starting at this offset to get the data).
   #
   # @param io[#seek, #read] an IO-ish object the ZIP file can be read from
-  # @param local_header_offset[Fixnum] absolute offset (0-based) where the local file header is supposed to begin
+  # @param local_file_header_offset[Fixnum] absolute offset (0-based) where the local file header is supposed to begin
   # @return [Fixnum] absolute offset (0-based) of where the compressed data begins for this file within the ZIP
   def get_compressed_data_offset(io:, local_file_header_offset:)
     seek(io, local_file_header_offset)

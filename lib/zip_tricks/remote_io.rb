@@ -29,8 +29,7 @@ class ZipTricks::RemoteIO
   end
   
   # Emulates IO#read, but requires the number of bytes to read
-  # The method will raise if the number of bytes read from remote does
-  # not match the number requested. The read will be limited to the
+  # The read will be limited to the
   # size of the remote resource relative to the current offset in the IO,
   # so if you are at offset 0 in the IO of size 10, doing a `read(20)`
   # will only return you 10 bytes of result, and not raise any exceptions. 

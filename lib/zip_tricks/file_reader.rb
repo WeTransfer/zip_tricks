@@ -144,7 +144,7 @@ class ZipTricks::FileReader
     # reading, you need to set it by using the `get_compressed_data_offset` on the Reader:
     #
     #     entry.compressed_data_offset = reader.get_compressed_data_offset(io: file,
-    #            local_header_offset: entry.local_header_offset)
+    #            local_file_header_offset: entry.local_header_offset)
     def compressed_data_offset=(offset)
       @compressed_data_offset = offset.to_i
     end
@@ -202,8 +202,8 @@ class ZipTricks::FileReader
   # @param io[#seek, #read] an IO-ish object the ZIP file can be read from
   # @param local_header_offset[Fixnum] absolute offset (0-based) where the local file header is supposed to begin
   # @return [Fixnum] absolute offset (0-based) of where the compressed data begins for this file within the ZIP
-  def get_compressed_data_offset(io:, local_header_offset:)
-    seek(io, local_header_offset)
+  def get_compressed_data_offset(io:, local_file_header_offset:)
+    seek(io, local_file_header_offset)
     
     # Reading in bulk is cheaper - grab the maximum length of the local header,
     # including any headroom
@@ -230,7 +230,7 @@ class ZipTricks::FileReader
     skip_ahead_n(io_starting_at_local_header, filename_size)
     skip_ahead_n(io_starting_at_local_header, extra_size)
 
-    local_header_offset + io_starting_at_local_header.tell
+    local_file_header_offset + io_starting_at_local_header.tell
   end
   
   # Parse an IO handle to a ZIP archive into an array of Entry objects.
@@ -246,7 +246,7 @@ class ZipTricks::FileReader
   def read_local_headers(entries, io)
     entries.each_with_index do |entry, i|
       log { 'Reading the local header for entry %d at offset %d' % [i, entry.local_file_header_offset] }
-      off = get_compressed_data_offset(io: io, local_header_offset: entry.local_file_header_offset)
+      off = get_compressed_data_offset(io: io, local_file_header_offset: entry.local_file_header_offset)
       entry.compressed_data_offset = off
     end
   end

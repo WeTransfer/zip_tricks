@@ -120,7 +120,7 @@ describe ZipTricks::FileReader do
       
       out.rewind
       
-      compressed_data_offset = subject.get_compressed_data_offset(io: out, local_header_offset: 7656177)
+      compressed_data_offset = subject.get_compressed_data_offset(io: out, local_file_header_offset: 7656177)
       expect(compressed_data_offset).to eq(7656236)
     end
     
@@ -134,7 +134,7 @@ describe ZipTricks::FileReader do
       
       out.rewind
       
-      compressed_data_offset = subject.get_compressed_data_offset(io: out, local_header_offset: 7)
+      compressed_data_offset = subject.get_compressed_data_offset(io: out, local_file_header_offset: 7)
       expect(compressed_data_offset).to eq(85)
     end
   end

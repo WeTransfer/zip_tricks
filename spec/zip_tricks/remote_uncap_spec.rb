@@ -87,7 +87,9 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     payload1.rewind; payload2.rewind
 
-    first, second  = described_class.files_within_zip_at('http://fake.example.com')
+    readable = described_class.readable_io_for_url('http://fake.example.com')
+    reader = ZipTricks::FileReader.new
+    first, second  = reader.read_zip_structure(io: readable)
 
     expect(first.filename).to eq('first-file-zero-size.bin')
     expect(first.compressed_size).to be_zero

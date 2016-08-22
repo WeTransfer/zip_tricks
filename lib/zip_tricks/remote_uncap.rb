@@ -8,14 +8,20 @@
 class ZipTricks::RemoteUncap
 
   # @param uri[String] the HTTP(S) URL to read the ZIP footer from 
-  # @param reader_class[Class] which class to use for reading
-  # @param options_for_zip_reader[Hash] any additional options to give to {ZipTricks::FileReader} when reading
-  # @return [Array<ZipTricks::FileReader::ZipEntry>] metadata about the files within the remote archive
-  def self.files_within_zip_at(uri, reader_class: ZipTricks::FileReader, **options_for_zip_reader)
+  # @return [ZipTricks::RemoteIO] an IO-ish object that can be fed to {ZipTricks::FileReader} as the source
+  def self.readable_io_for_url(uri)
     fetcher = new(uri)
     fake_io = ZipTricks::RemoteIO.new(fetcher)
+  end
+
+  # @param uri[String] the HTTP(S) URL to read the ZIP footer from 
+  # @param reader_class[Class] which class to use for reading
+  # @param options_for_zip_reader[Hash] any additional options to give to {ZipTricks::FileReader} when reading
+  # @deprecated
+  # @return [Array<ZipTricks::FileReader::ZipEntry>] metadata about the files within the remote archive
+  def self.files_within_zip_at(uri, reader_class: ZipTricks::FileReader, **options_for_zip_reader)
     reader = reader_class.new
-    reader.read_zip_structure(io: fake_io, **options_for_zip_reader)
+    reader.read_zip_structure(io: readable_io_for_url(uri), **options_for_zip_reader)
   end
 
   def initialize(uri)

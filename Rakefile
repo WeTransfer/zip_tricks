@@ -18,8 +18,8 @@ Jeweler::Tasks.new do |gem|
   gem.homepage = "http://github.com/wetransfer/zip_tricks"
   gem.license = "MIT"
   gem.version = ZipTricks::VERSION
-  gem.summary = %Q{Makes rubyzip stream, for real}
-  gem.description = %Q{Makes rubyzip stream, for real}
+  gem.summary = 'Stream out ZIP files from Ruby'
+  gem.description = 'Stream out ZIP files from Ruby'
   gem.email = "me@julik.nl"
   gem.authors = ["Julik Tarkhanov"]
   gem.files.exclude "testing/**/*"

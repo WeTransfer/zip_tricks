@@ -1,6 +1,78 @@
 require 'spec_helper'
 describe ZipTricks::FileReader do
   
+  describe 'with a file without EOCD' do
+    it 'raises the MissingEOCD exception and refuses to read' do
+      f = StringIO.new
+      10.times { f << ('A' * 1024 ) }
+      f.rewind
+      
+      expect {
+        described_class.read_zip_structure(io: f)
+      }.to raise_error(described_class::MissingEOCD)
+    end
+  end
+  
+  describe 'read_zip_straight_ahead' do
+    it 'returns all the entries it can recover' do
+      zipfile = StringIO.new
+      war_and_peace = File.read(__dir__ + '/war-and-peace.txt')
+      ZipTricks::Streamer.open(zipfile) do |zip|
+        zip.add_stored_entry filename: 'text1.txt', crc32: Zlib.crc32(war_and_peace), size: war_and_peace.bytesize
+        zip << war_and_peace
+        zip.add_stored_entry filename: 'text2.txt', crc32: Zlib.crc32(war_and_peace), size: war_and_peace.bytesize
+        zip << war_and_peace
+        zip.add_stored_entry filename: 'text3.txt', crc32: Zlib.crc32(war_and_peace), size: war_and_peace.bytesize
+        zip << war_and_peace
+      end
+      zipfile.rewind
+
+      recovered_entries = described_class.read_zip_straight_ahead(io: zipfile)
+      expect(recovered_entries.length).to eq(3)
+      recovered_entries.each do |entry|
+        expect(entry.storage_mode).to eq(0)
+        expect(entry.compressed_size).to eq(496006)
+        expect(entry.uncompressed_size).to eq(496006)
+      end
+      
+      first, second, third = recovered_entries
+      expect(first.compressed_data_offset).to eq(39)
+      expect(second.compressed_data_offset).to eq(496084)
+      expect(third.compressed_data_offset).to eq(992129)
+      
+      recovered_entries.each do |entry|
+        zipfile.seek(entry.compressed_data_offset)
+        expect(zipfile.read(5)).to eq(war_and_peace[0...5])
+      end
+    end
+    
+    it 'recovers an entry that uses Zip64 extra fields' do
+      zipfile = StringIO.new
+      w = ZipTricks::ZipWriter.new
+      w.write_local_file_header(io: zipfile, filename: 'big.bin', compressed_size: 0xFFFFFFFFFF, uncompressed_size: 0xFFFFFFFFF,
+        crc32: 0, gp_flags: 0, mtime: Time.now, storage_mode: 0)
+      zipfile.rewind
+      recovered_entries = described_class.read_zip_straight_ahead(io: zipfile)
+      expect(recovered_entries.length).to eq(1)
+      entry = recovered_entries.shift
+      expect(entry.compressed_size).to eq(0xFFFFFFFFFF)
+    end
+    
+    it 'raises when an entry uses a data descriptor' do
+      zipfile = StringIO.new
+      ZipTricks::Streamer.open(zipfile) do |zip|
+        zip.write_deflated_file('war-and-peace.txt') do |sink|
+          sink << File.read(__dir__ + '/war-and-peace.txt')
+        end
+      end
+      zipfile.rewind
+      
+      expect {
+        described_class.read_zip_straight_ahead(io: zipfile)
+      }.to raise_error(described_class::UnsupportedFeature)
+    end
+  end
+  
   describe 'with an end-to-end ZIP file to read' do
     it 'reads and uncompresses the file written deflated with data descriptors' do
       zipfile = StringIO.new

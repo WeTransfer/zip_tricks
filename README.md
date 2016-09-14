@@ -74,7 +74,7 @@ to that socket using some accelerated writing technique, and only use the Stream
     ZipTricks::Streamer.open(io) do | zip |
       # raw_file is written "as is" (STORED mode).
       # Write the local file header first..
-      zip.add_stored_entry("first-file.bin", raw_file.size, raw_file_crc32)
+      zip.add_stored_entry(filename: "first-file.bin", size: raw_file.size, crc32: raw_file_crc32)
       
       # then send the actual file contents bypassing the Streamer interface
       io.sendfile(my_temp_file)

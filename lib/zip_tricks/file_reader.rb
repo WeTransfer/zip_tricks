@@ -41,11 +41,20 @@ require 'stringio'
 #
 # ## Mode of operation
 #
-# Basically, `FileReader` _ignores_ the data in local file headers (as it is often unreliable).
+# By default, `FileReader` _ignores_ the data in local file headers (as it is often unreliable).
 # It reads the ZIP file "from the tail", finds the end-of-central-directory signatures, then
 # reads the central directory entries, reconstitutes the entries with their filenames, attributes
 # and so on, and sets these entries up with the absolute _offsets_ into the source file/IO object.
 # These offsets can then be used to extract the actual compressed data of the files and to expand it.
+#
+# ## Recovering damaged or incomplete ZIP files
+#
+# If the ZIP file you are trying to read does not contain the central directory records `read_zip_structure`
+# will not work, since it starts the read process from the EOCD marker at the end of the central directory
+# and then crawls "back" in the IO to figure out the rest. You can explicitly apply a fallback for reading the
+# archive "straight ahead" instead using `read_zip_straight_ahead` - the method will instead scan your IO from
+# the very start, skipping over the actual entry data. This is less efficient than central directory parsing since
+# it involves a much larger number of reads (1 read from the IO per entry in the ZIP).
 class ZipTricks::FileReader
   require_relative 'file_reader/stored_reader'
   require_relative 'file_reader/inflating_reader'
@@ -56,6 +65,11 @@ class ZipTricks::FileReader
   LocalHeaderPending = Class.new(StandardError) do
     def message
       "The compressed data offset is not available (local header has not been read)" 
+    end
+  end
+  MissingEOCD = Class.new(StandardError) do
+    def message
+      "Could not find the EOCD signature in the buffer - maybe a malformed ZIP file"
     end
   end
   
@@ -139,6 +153,12 @@ class ZipTricks::FileReader
       !@compressed_data_offset.nil?
     end
     
+    # Tells whether the entry uses a data descriptor (this is defined
+    # by bit 3 in the GP flags).
+    def uses_data_descriptor?
+      (gp_flags & 0x0008) == 0x0008
+    end
+    
     # Sets the offset at which the compressed data for this file starts in the ZIP.
     # By default, the value will be set by the Reader for you. If you use delayed
     # reading, you need to set it by using the `get_compressed_data_offset` on the Reader:
@@ -165,7 +185,7 @@ class ZipTricks::FileReader
   #   (since the reads have not been performed yet). As a rule, this option can be left in it's
   #   default setting (`true`) unless you want to _only_ read the central directory, or you need
   #   to limit the number of HTTP requests.
-  # @return [Array<Entry>] an array of entries within the ZIP being parsed
+  # @return [Array<ZipEntry>] an array of entries within the ZIP being parsed
   def read_zip_structure(io:, read_local_headers: true)
     zip_file_size = io.size
     eocd_offset = get_eocd_offset(io, zip_file_size)
@@ -194,6 +214,97 @@ class ZipTricks::FileReader
     entries
   end
 
+  # Sometimes you might encounter truncated ZIP files, which do not contain any central directory
+  # whatsoever - or where the central directory is truncated. In that case, employing the technique
+  # of reading the ZIP "from the end" is impossible, and the only recourse is reading each local file header
+  # in sucession. If the entries in such a ZIP use data descriptors, you would need to scan after the entry until
+  # you encounter the data descriptor signature - and that might be unreliable at best. Therefore, this reading
+  # technique does not support data descriptors. It can however recover the entries you still can read if these
+  # entries contain all the necessary information about the contained file.
+  #
+  # @param io[#tell, #read, #seek] the IO-ish object to read the local file headers from
+  # @return [Array<ZipEntry>] an array of entries that could be recovered before hitting EOF
+  def read_zip_straight_ahead(io:)
+    entries = []
+    loop do
+      cur_offset = io.tell
+      entry = read_local_file_header(io: io)
+      if entry.uses_data_descriptor?
+        raise UnsupportedFeature, "The local file header at #{cur_offset} uses a data descriptor and the start of next entry cannot be found"
+      end
+      entries << entry
+      next_local_header_offset = entry.compressed_data_offset + entry.compressed_size
+      log { 'Recovered a local file file header at offset %d, seeking to the next at %d' % [cur_offset, next_local_header_offset] }
+      seek(io, next_local_header_offset) # Seek to the next entry, and raise if seek is impossible
+    end
+    entries
+  rescue ReadError
+    log { 'Got a read/seek error after reaching %d, no more entries can be recovered' % cur_offset }
+    entries
+  end
+  
+  # Parse the local header entry and get the offset in the IO at which the actual compressed data of the
+  # file starts within the ZIP.
+  # The method will eager-read the entire local header for the file (the maximum size the local header may use),
+  # starting at the given offset, and will then compute its size. That size plus the local header offset
+  # given will be the compressed data offset of the entry (read starting at this offset to get the data).
+  #
+  # @param io[#read] an IO-ish object the ZIP file can be read from
+  # @return [Array<ZipEntry, Fixnum>] the parsed local header entry and the compressed data offset
+  def read_local_file_header(io:)
+    local_file_header_offset = io.tell
+
+    # Reading in bulk is cheaper - grab the maximum length of the local header,
+    # including any headroom for extra fields etc.
+    local_file_header_str_plus_headroom = io.read(MAX_LOCAL_HEADER_SIZE)
+    raise ReadError if local_file_header_str_plus_headroom.nil? # reached EOF
+    
+    io_starting_at_local_header = StringIO.new(local_file_header_str_plus_headroom)
+
+    assert_signature(io_starting_at_local_header, 0x04034b50)
+    e = ZipEntry.new
+    e.version_needed_to_extract = read_2b(io_starting_at_local_header) # Version needed to extract
+    e.gp_flags = read_2b(io_starting_at_local_header) # gp flags
+    e.storage_mode = read_2b(io_starting_at_local_header) # storage mode
+    e.dos_time = read_2b(io_starting_at_local_header) # dos time
+    e.dos_date = read_2b(io_starting_at_local_header) # dos date
+    e.crc32 = read_4b(io_starting_at_local_header) # CRC32
+    e.compressed_size = read_4b(io_starting_at_local_header) # Comp size
+    e.uncompressed_size = read_4b(io_starting_at_local_header) # Uncomp size
+
+    filename_size = read_2b(io_starting_at_local_header)
+    extra_size = read_2b(io_starting_at_local_header)
+    e.filename = read_n(io_starting_at_local_header, filename_size)
+    extra_fields_str = read_n(io_starting_at_local_header, extra_size)
+    
+    # Parse out the extra fields
+    extra_table = parse_out_extra_fields(extra_fields_str)
+    
+    # ...of which we really only need the Zip64 extra
+    if zip64_extra_contents = extra_table[1]
+      # If the Zip64 extra is present, we let it override all
+      # the values fetched from the conventional header
+      zip64_extra = StringIO.new(zip64_extra_contents)
+      log { 'Will read Zip64 extra data from local header field for %s, %d bytes' % [e.filename, zip64_extra.size] }
+      # Now here be dragons. The APPNOTE specifies that
+      #
+      # > The order of the fields in the ZIP64 extended 
+      # > information record is fixed, but the fields will
+      # > only appear if the corresponding Local or Central
+      # > directory record field is set to 0xFFFF or 0xFFFFFFFF.
+      #
+      # It means that before we read this stuff we need to check if the previously-read
+      # values are at overflow, and only _then_ proceed to read them. Bah.
+      e.uncompressed_size = read_8b(zip64_extra) if e.uncompressed_size == 0xFFFFFFFF
+      e.compressed_size = read_8b(zip64_extra) if e.compressed_size == 0xFFFFFFFF
+    end
+
+    offset = local_file_header_offset + io_starting_at_local_header.tell
+    e.compressed_data_offset = offset
+
+    e
+  end
+
   # Get the offset in the IO at which the actual compressed data of the file starts within the ZIP.
   # The method will eager-read the entire local header for the file (the maximum size the local header may use),
   # starting at the given offset, and will then compute its size. That size plus the local header offset
@@ -204,41 +315,28 @@ class ZipTricks::FileReader
   # @return [Fixnum] absolute offset (0-based) of where the compressed data begins for this file within the ZIP
   def get_compressed_data_offset(io:, local_file_header_offset:)
     seek(io, local_file_header_offset)
-    
-    # Reading in bulk is cheaper - grab the maximum length of the local header,
-    # including any headroom
-    local_file_header_str_plus_headroom = io.read(MAX_LOCAL_HEADER_SIZE)
-    io_starting_at_local_header = StringIO.new(local_file_header_str_plus_headroom)
-
-    assert_signature(io_starting_at_local_header, 0x04034b50)
-
-    # The rest is unreliable, and we have that information from the central directory already.
-    # So just skip over it to get at the offset where the compressed data begins
-    skip_ahead_2(io_starting_at_local_header) # Version needed to extract
-    skip_ahead_2(io_starting_at_local_header) # gp flags
-    skip_ahead_2(io_starting_at_local_header) # storage mode
-    skip_ahead_2(io_starting_at_local_header) # dos time
-    skip_ahead_2(io_starting_at_local_header) # dos date
-    skip_ahead_4(io_starting_at_local_header) # CRC32
-
-    skip_ahead_4(io_starting_at_local_header) # Comp size
-    skip_ahead_4(io_starting_at_local_header) # Uncomp size
-
-    filename_size = read_2b(io_starting_at_local_header)
-    extra_size = read_2b(io_starting_at_local_header)
-
-    skip_ahead_n(io_starting_at_local_header, filename_size)
-    skip_ahead_n(io_starting_at_local_header, extra_size)
-
-    local_file_header_offset + io_starting_at_local_header.tell
+    entry_recovered_from_local_file_header = read_local_file_header(io: io)
+    entry_recovered_from_local_file_header.compressed_data_offset
   end
-  
-  # Parse an IO handle to a ZIP archive into an array of Entry objects.
+
+  # Parse an IO handle to a ZIP archive into an array of Entry objects, reading from the end
+  # of the IO object.
   #
+  # @see {#read_zip_structure}
   # @param options[Hash] any options the instance method of the same name accepts
-  # @return [Array<Entry>] an array of entries within the ZIP being parsed
+  # @return [Array<ZipEntry>] an array of entries within the ZIP being parsed
   def self.read_zip_structure(**options)
     new.read_zip_structure(**options)
+  end
+
+  # Parse an IO handle to a ZIP archive into an array of Entry objects, reading from the start of
+  # the file and parsing local file headers one-by-one
+  #
+  # @see {#read_zip_straight_ahead}
+  # @param options[Hash] any options the instance method of the same name accepts
+  # @return [Array<ZipEntry>] an array of entries within the ZIP being parsed
+  def self.read_zip_straight_ahead(**options)
+    new.read_zip_straight_ahead(**options)
   end
   
   private
@@ -334,14 +432,7 @@ class ZipTricks::FileReader
       e.comment = read_n(io, comment_len)
 
       # Parse out the extra fields
-      extra_table = {}
-      extras_buf = StringIO.new(extras)
-      until extras_buf.eof? do
-        extra_id = read_2b(extras_buf)
-        extra_size = read_2b(extras_buf)
-        extra_contents = read_n(extras_buf, extra_size)
-        extra_table[extra_id] = extra_contents
-      end
+      extra_table = parse_out_extra_fields(extras)
 
       # ...of which we really only need the Zip64 extra
       if zip64_extra_contents = extra_table[1]
@@ -378,7 +469,7 @@ class ZipTricks::FileReader
     str_containing_eocd_record = file_io.read(MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE)
     eocd_idx_in_buf = locate_eocd_signature(str_containing_eocd_record)
     
-    raise "Could not find the EOCD signature in the buffer - maybe a malformed ZIP file" unless eocd_idx_in_buf
+    raise MissingEOCD unless eocd_idx_in_buf
     
     eocd_offset = implied_position_of_eocd_record + eocd_idx_in_buf
     log { 'Found EOCD signature at offset %d' % eocd_offset }
@@ -545,5 +636,17 @@ class ZipTricks::FileReader
   def log
     # The most minimal implementation for the method is just this:
     # $stderr.puts(yield)
+  end
+  
+  def parse_out_extra_fields(extra_fields_str)
+    extra_table = {}
+    extras_buf = StringIO.new(extra_fields_str)
+    until extras_buf.eof? do
+      extra_id = read_2b(extras_buf)
+      extra_size = read_2b(extras_buf)
+      extra_contents = read_n(extras_buf, extra_size)
+      extra_table[extra_id] = extra_contents
+    end
+    extra_table
   end
 end

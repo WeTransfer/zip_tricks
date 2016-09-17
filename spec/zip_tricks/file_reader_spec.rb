@@ -1,7 +1,7 @@
 require 'spec_helper'
 describe ZipTricks::FileReader do
   
-  describe 'with a file without EOCD' do
+  context 'with a file without EOCD' do
     it 'raises the MissingEOCD exception and refuses to read' do
       f = StringIO.new
       10.times { f << ('A' * 1024 ) }
@@ -72,8 +72,47 @@ describe ZipTricks::FileReader do
       }.to raise_error(described_class::UnsupportedFeature)
     end
   end
-  
-  describe 'with an end-to-end ZIP file to read' do
+
+  context 'with a ZIP file where the size of the central directory is recorded incorrectly, and has a wrong value' do
+    it 'is still able to read the entries' do
+      # Purposefully create a ZIP that we will damage after
+      zipfile = StringIO.new
+      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
+      tolstoy.force_encoding(Encoding::BINARY)
+      
+      # Make a one-off Writer that corrupts the size of the central directory and says there is more data
+      # in it than there actually is
+      class EvilWriter < ZipTricks::ZipWriter
+        def write_end_of_central_directory(**kwargs)
+          kwargs[:central_directory_size] = kwargs[:central_directory_size] + 64 # Pretend there has to be more data
+          super(**kwargs)
+        end
+      end
+        
+      ZipTricks::Streamer.open(zipfile, writer: EvilWriter.new) do |zip|
+        zip.write_deflated_file('text-1.txt') { |sink| sink << tolstoy }
+        zip.write_deflated_file('text-2.txt') { |sink| sink << tolstoy }
+      end
+      
+      # Find the start of the EOCD record (signature, then the information about disk numbers and the information
+      # about the file counts
+      eocd_start_marker = [0x06054b50, 0, 0, 2, 2].pack('Vvvvv')
+      eocd_offset = zipfile.string.index(eocd_start_marker)
+      expect(eocd_offset).not_to be_nil
+      
+      # Seek to the offset where the central directory size is going to be (just after the string we looked for)
+      zipfile.seek(eocd_offset + eocd_start_marker.bytesize)
+      # and overwrite it.
+      zipfile.write([118].pack('V'))
+      zipfile.rewind
+      
+      entries = ZipTricks::FileReader.read_zip_structure(io: zipfile)
+      
+      expect(entries.length).to eq(2)
+    end
+  end
+
+  context 'with an end-to-end ZIP file to read' do
     it 'reads and uncompresses the file written deflated with data descriptors' do
       zipfile = StringIO.new
       tolstoy = File.read(__dir__ + '/war-and-peace.txt')

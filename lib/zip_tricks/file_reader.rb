@@ -199,10 +199,22 @@ class ZipTricks::FileReader
     log { 'Located the central directory start at %d' % cdir_location }
     seek(io, cdir_location)
 
-    # Read the entire central directory in one fell swoop
-    central_directory_str = read_n(io, cdir_size)
+    # Read the entire central directory AND anything behind it, in one fell swoop.
+    # Strictly speaking, we should be able to read `cdir_size` bytes and not a byte more.
+    # However, we know for a fact that in some of our files the central directory size
+    # is in fact misreported. `zipinfo` then says:
+    #
+    #    warning [ktsglobal-2b03bc.zip]:  1 extra byte at beginning or within zipfile
+    #      (attempting to process anyway)
+    #    error [ktsglobal-2b03bc.zip]:  reported length of central directory is
+    #      -1 bytes too long (Atari STZip zipfile?  J.H.Holm ZIPSPLIT 1.1
+    #      zipfile?).  Compensating...
+    #
+    # Since the EOCD is not that big anyway, we just read the entire "tail" of the ZIP ignoring
+    # the central directory size alltogether.
+    central_directory_str = io.read # and not read_n(io, cdir_size), see above
     central_directory_io = StringIO.new(central_directory_str)
-    log { 'Read %d bytes with central directory entries' % cdir_size }
+    log { 'Read %d bytes with central directory + EOCD record and locator' % central_directory_str.bytesize }
 
     entries = (0...num_files).map do |entry_n|
       log { 'Reading the central directory entry %d starting at offset %d' % [entry_n, cdir_location + central_directory_io.tell] }

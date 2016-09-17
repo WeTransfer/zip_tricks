@@ -37,15 +37,21 @@
 #
 #     ZipTricks::Streamer.open(socket) do | zip |
 #       zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
-#       zip.simulate_write(tempfile1.size)
 #       socket.sendfile(tempfile1)
+#       zip.simulate_write(tempfile1.size)
+#
 #       zip.add_stored_entry(filename: "myfile2.bin", size: 458678, crc32: 89568)
-#       zip.simulate_write(tempfile2.size)
 #       socket.sendfile(tempfile2)
+#       zip.simulate_write(tempfile2.size)
 #     end
 #
-# Note that you need to use `simulate_write` to let the 
-# The central directory will be written automatically at the end of the block.
+# Note that you need to use `simulate_write` in this case. This needs to happen since Streamer
+# writes absolute offsets into the ZIP (local file header offsets and the like),
+# and it relies on the output object to tell it how many bytes have been written
+# so far. When using `sendfile` the Ruby write methods get bypassed entirely, and the
+# offsets in the IO will not be updated - which will result in an invalid ZIP.
+#
+# The central directory will be written automatically at the end of the `open` block.
 class ZipTricks::Streamer
   require_relative 'streamer/deflated_writer'
   require_relative 'streamer/writable'

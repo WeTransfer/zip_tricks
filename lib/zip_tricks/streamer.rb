@@ -70,16 +70,18 @@ class ZipTricks::Streamer
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   # @yield [Streamer] the streamer that can be written to
-  def self.open(stream)
-    archive = new(stream)
+  def self.open(stream, **kwargs_for_new)
+    archive = new(stream, **kwargs_for_new)
     yield(archive)
     archive.close
   end
 
   # Creates a new Streamer on top of the given IO-ish object.
   #
-  # @param stream [IO] the destination IO for the ZIP (should respond to `<<`)
-  def initialize(stream)
+  # @param stream[IO] the destination IO for the ZIP (should respond to `<<`)
+  # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
+  #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
+  def initialize(stream, writer: create_writer)
     raise InvalidOutput, "The stream must respond to #<<" unless stream.respond_to?(:<<)
     unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
       stream = ZipTricks::WriteAndTell.new(stream) 
@@ -88,7 +90,7 @@ class ZipTricks::Streamer
     @out = stream
     @files = []
     @local_header_offsets = []
-    @writer = create_writer
+    @writer = writer
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.

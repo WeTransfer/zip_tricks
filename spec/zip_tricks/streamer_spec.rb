@@ -24,7 +24,21 @@ describe ZipTricks::Streamer do
       described_class.new(nil)
     }.to raise_error(ZipTricks::Streamer::InvalidOutput)
   end
-
+  
+  it 'allows the writer to be injectable' do
+    fake_writer = double('ZipWriter')
+    expect(fake_writer).to receive(:write_local_file_header)
+    expect(fake_writer).to receive(:write_data_descriptor)
+    expect(fake_writer).to receive(:write_central_directory_file_header)
+    expect(fake_writer).to receive(:write_end_of_central_directory)
+    
+    described_class.open('', writer: fake_writer) do |zip|
+      zip.write_deflated_file('stored.txt') do |sink|
+        sink << File.read(__dir__ + '/war-and-peace.txt')
+      end
+    end
+  end
+  
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)

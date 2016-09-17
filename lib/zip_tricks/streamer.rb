@@ -248,10 +248,6 @@ class ZipTricks::Streamer
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
     raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
 
-    @check_compressed_size_after_leaving_body = !use_data_descriptor
-    @bytes_written_for_entry = 0
-    @expected_bytes_for_entry = compressed_size
-
     e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
     @files << e
     @local_header_offsets << @out.tell

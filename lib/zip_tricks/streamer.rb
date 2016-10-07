@@ -92,7 +92,7 @@ class ZipTricks::Streamer
     unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
       stream = ZipTricks::WriteAndTell.new(stream) 
     end
-    
+
     @out = stream
     @files = []
     @local_header_offsets = []
@@ -214,7 +214,7 @@ class ZipTricks::Streamer
   def close
     # Record the central directory offset, so that it can be written into the EOCD record
     cdir_starts_at = @out.tell
-    
+
     # Write out the central directory entries, one for each file
     @files.each_with_index do |entry, i|
       header_loc = @local_header_offsets.fetch(i)
@@ -223,7 +223,7 @@ class ZipTricks::Streamer
         compressed_size: entry.compressed_size, uncompressed_size: entry.uncompressed_size,
         mtime: entry.mtime, crc32: entry.crc32, filename: entry.filename) #, external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
-    
+
     # Record the central directory size, for the EOCDR
     cdir_size = @out.tell - cdir_starts_at
 
@@ -232,7 +232,7 @@ class ZipTricks::Streamer
        central_directory_size: cdir_size, num_files_in_archive: @files.length)
     @out.tell
   end
-  
+
   # Sets up the ZipWriter with wrappers if necessary. The method is called once, when the Streamer
   # gets instantiated - the Writer then gets reused. This method is primarily there so that you
   # can override it.
@@ -241,15 +241,15 @@ class ZipTricks::Streamer
   def create_writer
     ZipTricks::ZipWriter.new
   end
-  
+
   private
-  
+
   def add_file_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:,
       uncompressed_size:, use_data_descriptor: false)
     if @files.any?{|e| e.filename == filename }
       raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
     end
-    
+
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
     raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
@@ -260,7 +260,7 @@ class ZipTricks::Streamer
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
-  
+
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)

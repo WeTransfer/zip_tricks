@@ -1,7 +1,7 @@
 source "http://rubygems.org"
 
 group :development do
-  gem 'rubyzip', '~> 1.1', '>= 1.1.7'
+  gem 'rubyzip', '~> 1.1'
   gem 'terminal-table'
   gem 'range_utils'
   gem 'rack', '~> 1.6' # For Jeweler

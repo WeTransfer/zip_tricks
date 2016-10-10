@@ -245,7 +245,7 @@ describe ZipTricks::Streamer do
       # Make sure it is tagged as UNIX
       expect(entry.fstype).to eq(3)
 
-       # The CRC
+      # The CRC
       expect(entry.crc).to eq(Zlib.crc32(File.read(__dir__ + '/war-and-peace.txt')))
 
       # Check the name
@@ -275,5 +275,15 @@ describe ZipTricks::Streamer do
     expect { |b|
       Zip::File.foreach(tf.path, &b)
     }.not_to yield_control
+  end
+
+  it 'prevents duplicates in the stored files' do
+    files = ["file.one\\two.jpg", "file_one.jpg", "file_one (1).jpg", "file\\one.jpg"]
+    zip_streamer = described_class.new(StringIO.new)
+    files.each do |fn|
+      zip_streamer.add_stored_entry(filename: fn, size: 1024, crc32: 0xCC)
+    end
+    zip_streamer_file = zip_streamer.instance_variable_get("@files")
+    expect(zip_streamer_file.map(&:filename)).to eq(["file.one_two.jpg", "file_one.jpg", "file_one (1).jpg", "file_one (2).jpg"])
   end
 end

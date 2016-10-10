@@ -64,8 +64,6 @@ class ZipTricks::Streamer
   EntryBodySizeMismatch = Class.new(StandardError)
   InvalidOutput = Class.new(ArgumentError)
   Overflow = Class.new(StandardError)
-  PathError = Class.new(StandardError)
-  DuplicateFilenames = Class.new(StandardError)
   UnknownMode = Class.new(StandardError)
 
   private_constant :DeflatedWriter, :StoredWriter, :STORED, :DEFLATED
@@ -246,13 +244,13 @@ class ZipTricks::Streamer
 
   def add_file_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:,
       uncompressed_size:, use_data_descriptor: false)
-    if @files.any?{|e| e.filename == filename }
-      raise DuplicateFilenames, "Filename #{filename.inspect} already used in the archive"
-    end
+
+    # Clean backslashes and uniqify filenames if there are duplicates
+    filename = remove_backslash(filename)
+    filename = uniqify_name(filename) if @files.any? { |e| e.filename == filename }
 
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
-    raise PathError, "Paths in ZIP may only contain forward slashes (UNIX separators)" if filename.include?('\\')
 
     e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
     @files << e
@@ -264,5 +262,25 @@ class ZipTricks::Streamer
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)
+  end
+
+  def remove_backslash(filename)
+    filename.tr('\\', '_')
+  end
+
+  def uniqify_name(filename)
+    copy_pattern = /\((\d+)\)$/ # we add (1), (2), (n) at the end of a filename if there is a duplicate
+    parts = filename.split(".")
+    ext = parts.pop if parts.size > 1
+    filename_end = parts.pop
+    if filename_end =~ copy_pattern
+      filename_end.sub!(copy_pattern, "(#{$1.to_i + 1})")
+    else
+      filename_end = "#{filename_end} (1)"
+    end
+    new_filename = (parts + [filename_end, ext]).join(".")
+    # prevent a duplicate with the new created filename
+    new_filename = uniqify_name(new_filename) if @files.any? { |e| e.filename == new_filename }
+    new_filename
   end
 end

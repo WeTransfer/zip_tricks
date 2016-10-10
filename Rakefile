@@ -30,61 +30,6 @@ Jeweler::Tasks.new do |gem|
 end
 Jeweler::RubygemsDotOrgTasks.new
 
-class Jeweler
-  module Specification
-    def set_jeweler_defaults(base_dir, git_base_dir = nil)
-      base_dir = File.expand_path(base_dir)
-      git_base_dir = if git_base_dir
-                       File.expand_path(git_base_dir)
-                     else
-                       base_dir
-                     end
-      can_git = git_base_dir && base_dir.include?(git_base_dir) && File.directory?(File.join(git_base_dir, '.git'))
-
-      Dir.chdir(git_base_dir) do
-        repo = if can_git
-                 require 'git'
-                 Git.open(git_base_dir)
-               end
-
-        if blank?(files) && repo
-          base_dir_with_trailing_separator = File.join(base_dir, '')
-
-          ignored_files = repo.lib.ignored_files + ['.gitignore']
-          self.files = (repo.ls_files(base_dir).keys - ignored_files).compact.map do |file|
-            File.expand_path(file).sub(base_dir_with_trailing_separator, '')
-          end
-        end
-
-        if blank?(executables) && repo
-          self.executables = (repo.ls_files(File.join(base_dir, 'bin')).keys - repo.lib.ignored_files).map do |file|
-            File.basename(file)
-          end
-        end
-
-        if blank?(extensions)
-          self.extensions = FileList['ext/**/{extconf,mkrf_conf}.rb']
-        end
-
-        if blank?(extra_rdoc_files)
-          self.extra_rdoc_files = FileList['README*', 'ChangeLog*', 'LICENSE*', 'TODO']
-        end
-
-        if File.exist?('Gemfile')
-          require 'bundler'
-          bundler = Bundler.load
-          bundler.require(:default, :runtime).each do |dependency|
-            add_dependency dependency.name, *dependency.requirement.as_list
-          end
-          bundler.require(:development).each do |dependency|
-            add_development_dependency dependency.name, *dependency.requirement.as_list
-          end
-        end
-      end
-    end
-  end
-end
-
 require 'rspec/core'
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec) do |spec|

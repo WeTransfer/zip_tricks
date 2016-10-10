@@ -278,7 +278,7 @@ class ZipTricks::Streamer
     else
       filename_end = "#{filename_end} (1)"
     end
-    new_filename = (parts + [filename_end, ext]).join(".")
+    new_filename = (parts + [filename_end, ext]).compact.join(".")
     # prevent a duplicate with the new created filename
     new_filename = uniqify_name(new_filename) if @files.any? { |e| e.filename == new_filename }
     new_filename

@@ -24,21 +24,21 @@ describe ZipTricks::Streamer do
       described_class.new(nil)
     }.to raise_error(ZipTricks::Streamer::InvalidOutput)
   end
-  
+
   it 'allows the writer to be injectable' do
     fake_writer = double('ZipWriter')
     expect(fake_writer).to receive(:write_local_file_header)
     expect(fake_writer).to receive(:write_data_descriptor)
     expect(fake_writer).to receive(:write_central_directory_file_header)
     expect(fake_writer).to receive(:write_end_of_central_directory)
-    
+
     described_class.open('', writer: fake_writer) do |zip|
       zip.write_deflated_file('stored.txt') do |sink|
         sink << File.read(__dir__ + '/war-and-peace.txt')
       end
     end
   end
-  
+
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)
@@ -135,7 +135,7 @@ describe ZipTricks::Streamer do
       outbuf.flush
       File.unlink('test.zip') rescue nil
       File.rename(outbuf.path, 'osx-archive-test.zip')
-      
+
       # Mark this test as skipped if the system does not have the binary
       open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
     end
@@ -226,7 +226,7 @@ describe ZipTricks::Streamer do
       expect(second_entry.name).to eq("второй-файл.bin".force_encoding(Encoding::BINARY))
     end
   end
-  
+
   it 'creates an archive with data descriptors that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     z = described_class.open(tf) do |zip|
@@ -238,14 +238,14 @@ describe ZipTricks::Streamer do
       end
     end
     tf.flush
-    
+
     pending 'https://github.com/rubyzip/rubyzip/issues/295'
-    
+
     Zip::File.foreach(tf.path) do |entry|
       # Make sure it is tagged as UNIX
       expect(entry.fstype).to eq(3)
 
-       # The CRC
+      # The CRC
       expect(entry.crc).to eq(Zlib.crc32(File.read(__dir__ + '/war-and-peace.txt')))
 
       # Check the name
@@ -253,7 +253,7 @@ describe ZipTricks::Streamer do
 
       # Check the right external attributes (non-executable on UNIX)
       expect(entry.external_file_attributes).to eq(2175008768)
-      
+
       # Check the file contents
       readback = entry.get_input_stream.read
       readback.force_encoding(Encoding::BINARY)
@@ -265,7 +265,7 @@ describe ZipTricks::Streamer do
 
   it 'can create a valid ZIP archive without any files' do
     tf = ManagedTempfile.new('zip')
-    
+
     described_class.open(tf) do |zip|
     end
 
@@ -275,5 +275,22 @@ describe ZipTricks::Streamer do
     expect { |b|
       Zip::File.foreach(tf.path, &b)
     }.not_to yield_control
+  end
+
+  it 'prevents duplicates in the stored files' do
+    files = ["README", "README", "file.one\\two.jpg", "file_one.jpg", "file_one (1).jpg",
+             "file\\one.jpg", "My.Super.file.txt.zip", "My.Super.file.txt.zip"]
+    fake_writer = double('Writer').as_null_object
+    seen_filenames = []
+    allow(fake_writer).to receive(:write_local_file_header) {|filename:, **others|
+      seen_filenames << filename
+    }
+    zip_streamer = described_class.new(StringIO.new, writer: fake_writer)
+    files.each do |fn|
+      zip_streamer.add_stored_entry(filename: fn, size: 1024, crc32: 0xCC)
+    end
+    expect(seen_filenames).to eq(["README", "README (1)", "file.one_two.jpg", "file_one.jpg",
+                                  "file_one (1).jpg", "file_one (2).jpg", "My.Super.file.txt.zip",
+                                  "My.Super.file (1).txt.zip"])
   end
 end

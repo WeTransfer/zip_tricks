@@ -11,8 +11,8 @@ rescue Bundler::BundlerError => e
 end
 require 'rake'
 require_relative 'lib/zip_tricks'
-require 'jeweler'
-Jeweler::Tasks.new do |gem|
+require 'juwelier'
+Juwelier::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
   gem.name = "zip_tricks"
   gem.homepage = "http://github.com/wetransfer/zip_tricks"
@@ -25,7 +25,7 @@ Jeweler::Tasks.new do |gem|
   gem.files.exclude "testing/**/*"
   # dependencies defined in Gemfile
 end
-Jeweler::RubygemsDotOrgTasks.new
+Juwelier::RubygemsDotOrgTasks.new
 
 require 'rspec/core'
 require 'rspec/core/rake_task'

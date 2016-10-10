@@ -247,7 +247,7 @@ class ZipTricks::Streamer
 
     # Clean backslashes and uniqify filenames if there are duplicates
     filename = remove_backslash(filename)
-    filename = uniqify_name(filename) if @files.any? { |e| e.filename == filename }
+    filename = uniquify_name(filename) if @files.any? { |e| e.filename == filename }
 
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
@@ -268,19 +268,23 @@ class ZipTricks::Streamer
     filename.tr('\\', '_')
   end
 
-  def uniqify_name(filename)
+  def uniquify_name(filename)
+    files = Set.new(@files.map(&:filename))
     copy_pattern = /\((\d+)\)$/ # we add (1), (2), (n) at the end of a filename if there is a duplicate
     parts = filename.split(".")
     ext = parts.pop if parts.size > 1
-    filename_end = parts.pop
-    if filename_end =~ copy_pattern
-      filename_end.sub!(copy_pattern, "(#{$1.to_i + 1})")
-    else
-      filename_end = "#{filename_end} (1)"
+    fn_last_part = parts.pop
+
+    duplicate_counter = 1
+    loop do
+      if fn_last_part =~ copy_pattern
+        fn_last_part.sub!(copy_pattern, "(#{duplicate_counter})")
+      else
+        fn_last_part = "#{fn_last_part} (#{duplicate_counter})"
+      end
+      new_filename = (parts + [fn_last_part, ext]).compact.join(".")
+      return new_filename unless files.include?(new_filename)
+      duplicate_counter += 1
     end
-    new_filename = (parts + [filename_end, ext]).compact.join(".")
-    # prevent a duplicate with the new created filename
-    new_filename = uniqify_name(new_filename) if @files.any? { |e| e.filename == new_filename }
-    new_filename
   end
 end

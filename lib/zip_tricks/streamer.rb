@@ -272,7 +272,11 @@ class ZipTricks::Streamer
     files = Set.new(@files.map(&:filename))
     copy_pattern = /\((\d+)\)$/ # we add (1), (2), (n) at the end of a filename if there is a duplicate
     parts = filename.split(".")
-    ext = parts.pop if parts.size > 1
+    ext = if parts.last =~ /gz|zip/ && parts.size > 2
+            parts.pop(2)
+          elsif parts.size > 1
+            parts.pop
+          end
     fn_last_part = parts.pop
 
     duplicate_counter = 1

@@ -278,12 +278,15 @@ describe ZipTricks::Streamer do
   end
 
   it 'prevents duplicates in the stored files' do
-    files = ["README", "README", "file.one\\two.jpg", "file_one.jpg", "file_one (1).jpg", "file\\one.jpg"]
+    files = ["README", "README", "file.one\\two.jpg", "file_one.jpg", "file_one (1).jpg",
+             "file\\one.jpg", "My.Super.file.txt.zip", "My.Super.file.txt.zip"]
     zip_streamer = described_class.new(StringIO.new)
     files.each do |fn|
       zip_streamer.add_stored_entry(filename: fn, size: 1024, crc32: 0xCC)
     end
     zip_streamer_file = zip_streamer.instance_variable_get("@files")
-    expect(zip_streamer_file.map(&:filename)).to eq(["README", "README (1)", "file.one_two.jpg", "file_one.jpg", "file_one (1).jpg", "file_one (2).jpg"])
+    expect(zip_streamer_file.map(&:filename)).to eq(["README", "README (1)", "file.one_two.jpg", "file_one.jpg",
+                                                     "file_one (1).jpg", "file_one (2).jpg", "My.Super.file.txt.zip",
+                                                     "My.Super.file (1).txt.zip"])
   end
 end

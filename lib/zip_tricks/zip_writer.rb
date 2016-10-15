@@ -92,21 +92,23 @@ class ZipTricks::ZipWriter
     # Filename should not be longer than 0xFFFF otherwise this wont fit here
     io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
 
-    extra_size = 0
-    if requires_zip64
-      extra_size += bytesize_of {|buf| write_zip_64_extra_for_local_file_header(io: buf, compressed_size: 0, uncompressed_size: 0) }
+    extra_fields = if requires_zip64
+      ''.tap {|buf|
+        write_zip_64_extra_for_local_file_header(io: buf, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
+      }
+    else
+      ''
     end
-    io << [extra_size].pack(C_v)                      # extra field length              2 bytes
 
-    io << filename                                    # file name (variable size)
+    io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
+
+    io << filename                                     # file name (variable size)
 
     # Interesting tidbit:
     # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
     # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
     # Zip64 extra field as _the first_ extra field. If we decide to add the Info-ZIP UTF-8 field...
-    if requires_zip64
-      write_zip_64_extra_for_local_file_header(io: io, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    end
+    io << extra_fields if requires_zip64
   end
 
   # Writes the file header for the central directory, for a particular file in the archive. When writing out this data,

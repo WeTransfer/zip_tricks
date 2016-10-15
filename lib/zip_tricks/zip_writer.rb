@@ -48,11 +48,12 @@ class ZipTricks::ZipWriter
   C_V = 'V'.freeze    # Encode a 4-byte little-endian uint
   C_v = 'v'.freeze    # Encode a 2-byte little-endian uint
   C_Qe = 'Q<'.freeze  # Encode an 8-byte little-endian uint
-
+  C_es = ''.freeze
+  
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
     :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
     :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
-    :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
+    :C_V, :C_v, :C_Qe, :C_es, :ZIP_TRICKS_COMMENT
 
   # Writes the local file header, that precedes the actual file _data_. 
   # 
@@ -97,7 +98,7 @@ class ZipTricks::ZipWriter
         write_zip_64_extra_for_local_file_header(io: buf, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
       }
     else
-      ''
+      C_es
     end
 
     io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
@@ -155,14 +156,16 @@ class ZipTricks::ZipWriter
     # Filename should not be longer than 0xFFFF otherwise this wont fit here
     io << [filename.bytesize].pack(C_v)                 # file name length                2 bytes
 
-    extra_size = 0
-    if add_zip64
-      extra_size += bytesize_of {|buf|
-        # Supply zeroes for most values as we obnly care about the size of the data written
-        write_zip_64_extra_for_central_directory_file_header(io: buf, compressed_size: 0, uncompressed_size: 0, local_file_header_location: 0)
+    extra_fields = if add_zip64
+      ''.tap {|buf|
+        write_zip_64_extra_for_central_directory_file_header(io: buf, local_file_header_location: local_file_header_location,
+          compressed_size: compressed_size, uncompressed_size: uncompressed_size)
       }
+    else
+      C_es
     end
-    io << [extra_size].pack(C_v)                        # extra field length              2 bytes
+    
+    io << [extra_fields.bytesize].pack(C_v)             # extra field length              2 bytes
 
     io << [0].pack(C_v)                                 # file comment length             2 bytes
 
@@ -183,11 +186,7 @@ class ZipTricks::ZipWriter
       io << [local_file_header_location].pack(C_V)
     end
     io << filename                                     # file name (variable size)
-
-    if add_zip64                                       # extra field (variable size)
-      write_zip_64_extra_for_central_directory_file_header(io: io, local_file_header_location: local_file_header_location,
-        compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    end
+    io << extra_fields                                 # extra field (variable size)
     #(empty)                                           # file comment (variable size)
   end
 
@@ -335,10 +334,6 @@ class ZipTricks::ZipWriter
     io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
   end
   
-  def bytesize_of
-    ''.force_encoding(Encoding::BINARY).tap {|b| yield(b) }.bytesize
-  end
-
   def to_binary_dos_time(t)
     (t.sec/2) + (t.min << 5) + (t.hour << 11)
   end

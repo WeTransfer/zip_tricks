@@ -341,8 +341,16 @@ class ZipTricks::ZipWriter
     (t.day) + (t.month << 5) + ((t.year - 1980) << 9)
   end
   
-  def pack_array(array_of_values_interspersed_with_pack_specifiers)
-    values, packspecs = array_of_values_interspersed_with_pack_specifiers.partition.each_with_index { |_, i| i.even? }
+  # Unzips a given array of tuples of "numeric value, pack specifier" and then packs all the odd
+  # values using specifiers from all the even values. It is harder to explain than to show:
+  #
+  #   pack_array([1, 'V', 2, 'v', 148, 'v]) #=> "\x01\x00\x00\x00\x02\x00\x94\x00"
+  #
+  # will do the following two transforms:
+  #
+  #  [1, 'V', 2, 'v', 148, 'v] -> [1,2,148], ['V','v','v'] -> [1,2,148].pack('Vvv') -> "\x01\x00\x00\x00\x02\x00\x94\x00"
+  def pack_array(values_to_packspecs)
+    values, packspecs = values_to_packspecs.partition.each_with_index { |_, i| i.even? }
     values.pack(packspecs.join)
   end
 end

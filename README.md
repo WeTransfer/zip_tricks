@@ -4,8 +4,11 @@
 
 Allows streaming, non-rewinding ZIP file output from Ruby.
 Spiritual successor to [zipline](https://github.com/fringd/zipline)
-
 Requires Ruby 2.1+ syntax support and a working zlib (all available to jRuby as well).
+
+Allows you to write a ZIP archive out to a File, Socket, String or Array without having to rewind it at any
+point. Usable for creating very large ZIP archives for immediate sending out to clients, or for writing
+large ZIP archives without memory inflation.
 
 ## Create a ZIP file without size estimation, compress on-the-fly)
 

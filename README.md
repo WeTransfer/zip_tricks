@@ -93,8 +93,8 @@ end
 
 ## Computing the CRC32 value of a large file
 
-`BlockCRC32` computes the CRC32 checksum of an IO in a streaming fashion. It is slightly more convenient for the purpose
-than using the raw Zlib library functions.
+`BlockCRC32` computes the CRC32 checksum of an IO in a streaming fashion.
+It is slightly more convenient for the purpose than using the raw Zlib library functions.
 
 ```ruby
 crc = ZipTricks::StreamCRC32.new

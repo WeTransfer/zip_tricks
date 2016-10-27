@@ -94,9 +94,7 @@ class ZipTricks::ZipWriter
     io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
 
     extra_fields = if requires_zip64
-      ''.tap {|buf|
-        write_zip_64_extra_for_local_file_header(io: buf, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-      }
+      zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     else
       C_es
     end
@@ -157,14 +155,11 @@ class ZipTricks::ZipWriter
     io << [filename.bytesize].pack(C_v)                 # file name length                2 bytes
 
     extra_fields = if add_zip64
-      ''.tap {|buf|
-        write_zip_64_extra_for_central_directory_file_header(io: buf, local_file_header_location: local_file_header_location,
+      zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location,
           compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-      }
     else
       C_es
     end
-    
     io << [extra_fields.bytesize].pack(C_v)             # extra field length              2 bytes
 
     io << [0].pack(C_v)                                 # file comment length             2 bytes
@@ -306,32 +301,36 @@ class ZipTricks::ZipWriter
 
   # Writes the Zip64 extra field for the local file header. Will be used by `write_local_file_header` when any sizes given to it warrant that.
   #
-  # @param io[#<<] the buffer to write the local file header to
   # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
   # @param uncompressed_size[Fixnum]  The size of the file once extracted
-  # @return [void]
-  def write_zip_64_extra_for_local_file_header(io:, compressed_size:, uncompressed_size:)
-    io << [0x0001].pack(C_v)                        # 2 bytes    Tag for this "extra" block type
-    io << [16].pack(C_v)                            # 2 bytes    Size of this "extra" block. For us it will always be 16 (2x8)
-    io << [uncompressed_size].pack(C_Qe)            # 8 bytes    Original uncompressed file size
-    io << [compressed_size].pack(C_Qe)              # 8 bytes    Size of compressed data
+  # @return [String]
+  def zip_64_extra_for_local_file_header(compressed_size:, uncompressed_size:)
+    data_and_packspecs = [
+      0x0001, C_v,                       # 2 bytes    Tag for this "extra" block type
+      16, C_v,                           # 2 bytes    Size of this "extra" block. For us it will always be 16 (2x8)
+      uncompressed_size, C_Qe,           # 8 bytes    Original uncompressed file size
+      compressed_size, C_Qe,             # 8 bytes    Size of compressed data
+    ]
+    pack_array(data_and_packspecs)
   end
   
   # Writes the Zip64 extra field for the central directory header.It differs from the extra used in the local file header because it
   # also contains the location of the local file header in the ZIP as an 8-byte int.
   #
-  # @param io[#<<] the buffer to write the local file header to
   # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
   # @param uncompressed_size[Fixnum]  The size of the file once extracted
   # @param local_file_header_location[Fixnum] Byte offset of the start of the local file header from the beginning of the ZIP archive
-  # @return [void]
-  def write_zip_64_extra_for_central_directory_file_header(io:, compressed_size:, uncompressed_size:, local_file_header_location:)
-    io << [0x0001].pack(C_v)                        # 2 bytes    Tag for this "extra" block type
-    io << [28].pack(C_v)                            # 2 bytes    Size of this "extra" block. For us it will always be 28
-    io << [uncompressed_size].pack(C_Qe)            # 8 bytes    Original uncompressed file size
-    io << [compressed_size].pack(C_Qe)              # 8 bytes    Size of compressed data
-    io << [local_file_header_location].pack(C_Qe)   # 8 bytes    Offset of local header record
-    io << [0].pack(C_V)                             # 4 bytes    Number of the disk on which this file starts
+  # @return [String]
+  def zip_64_extra_for_central_directory_file_header(compressed_size:, uncompressed_size:, local_file_header_location:)
+    data_and_packspecs = [
+      0x0001, C_v,                        # 2 bytes    Tag for this "extra" block type
+      28,     C_v,                        # 2 bytes    Size of this "extra" block. For us it will always be 28
+      uncompressed_size, C_Qe,            # 8 bytes    Original uncompressed file size
+      compressed_size,   C_Qe,            # 8 bytes    Size of compressed data
+      local_file_header_location, C_Qe,   # 8 bytes    Offset of local header record
+      0, C_V,                             # 4 bytes    Number of the disk on which this file starts
+    ]
+    pack_array(data_and_packspecs)
   end
   
   def to_binary_dos_time(t)
@@ -340,5 +339,18 @@ class ZipTricks::ZipWriter
 
   def to_binary_dos_date(t)
     (t.day) + (t.month << 5) + ((t.year - 1980) << 9)
+  end
+  
+  # Unzips a given array of tuples of "numeric value, pack specifier" and then packs all the odd
+  # values using specifiers from all the even values. It is harder to explain than to show:
+  #
+  #   pack_array([1, 'V', 2, 'v', 148, 'v]) #=> "\x01\x00\x00\x00\x02\x00\x94\x00"
+  #
+  # will do the following two transforms:
+  #
+  #  [1, 'V', 2, 'v', 148, 'v] -> [1,2,148], ['V','v','v'] -> [1,2,148].pack('Vvv') -> "\x01\x00\x00\x00\x02\x00\x94\x00"
+  def pack_array(values_to_packspecs)
+    values, packspecs = values_to_packspecs.partition.each_with_index { |_, i| i.even? }
+    values.pack(packspecs.join)
   end
 end

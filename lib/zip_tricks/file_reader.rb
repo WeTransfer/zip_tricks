@@ -237,18 +237,24 @@ class ZipTricks::FileReader
   # @param io[#tell, #read, #seek] the IO-ish object to read the local file headers from
   # @return [Array<ZipEntry>] an array of entries that could be recovered before hitting EOF
   def read_zip_straight_ahead(io:)
-    entries = []
-    loop do
-      cur_offset = io.tell
-      entry = read_local_file_header(io: io)
-      if entry.uses_data_descriptor?
-        raise UnsupportedFeature, "The local file header at #{cur_offset} uses a data descriptor and the start of next entry cannot be found"
+    # Find all the offsets where the local header signature is present
+    entry_locations = locations_of_local_header_signatures_in(io)
+
+    # Parse out local headers at these offsets
+    entries = entry_locations.map do |byte_offset|
+      io.seek(byte_offset)
+      begin
+        read_local_file_header(io: io)
+      rescue ReadError => e
+        info { "Entry at #{byte_offset} could not be recovered - probably no local header at this offset" }
+        nil
       end
-      entries << entry
-      next_local_header_offset = entry.compressed_data_offset + entry.compressed_size
-      log { 'Recovered a local file file header at offset %d, seeking to the next at %d' % [cur_offset, next_local_header_offset] }
-      seek(io, next_local_header_offset) # Seek to the next entry, and raise if seek is impossible
+    end.compact
+
+    entries.each_with_index do |entry, i|
+      raise UnsupportedFeature, "Entry #{i+1} uses a data descriptor" if entry.uses_data_descriptor?
     end
+
     entries
   rescue ReadError
     log { 'Got a read/seek error after reaching %d, no more entries can be recovered' % cur_offset }
@@ -352,6 +358,24 @@ class ZipTricks::FileReader
   end
   
   private
+
+  def locations_of_local_header_signatures_in(io)
+    sig = [0x04034b50].pack('V')
+    detected_signature_offsets = []
+    while data = io.read(1024 * 1024)
+      if data.bytesize < sig.bytesize
+        break
+      elsif signature_location = data.index(sig)
+        absolute_offset = io.pos - data.bytesize + signature_location
+        detected_signature_offsets << absolute_offset
+        # Move the pointer just past the just detected
+        io.seek(io.pos - data.length + signature_location + sig.bytesize)
+      else
+        io.seek(io.pos - (sig.length - 1)) # for the next search
+      end
+    end
+    detected_signature_offsets
+  end
 
   def read_local_headers(entries, io)
     entries.each_with_index do |entry, i|

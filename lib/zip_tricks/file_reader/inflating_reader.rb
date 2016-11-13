@@ -20,6 +20,9 @@ class ZipTricks::FileReader::InflatingReader
     return '' if n_bytes.zero?
 
     compressed_chunk = @io.read(n_bytes)
+
+    return if compressed_chunk.nil?
+
     @already_read += compressed_chunk.bytesize
     @zlib_inflater.inflate(compressed_chunk)
   end

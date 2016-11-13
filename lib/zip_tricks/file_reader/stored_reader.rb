@@ -19,6 +19,9 @@ class ZipTricks::FileReader::StoredReader
     return '' if n_bytes.zero?
 
     compressed_chunk = @io.read(n_bytes)
+
+    return if compressed_chunk.nil?
+
     @already_read += compressed_chunk.bytesize
     compressed_chunk
   end

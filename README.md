@@ -3,17 +3,28 @@
 [![Build Status](https://travis-ci.org/WeTransfer/zip_tricks.svg?branch=master)](https://travis-ci.org/WeTransfer/zip_tricks)
 
 Allows streaming, non-rewinding ZIP file output from Ruby.
-Spiritual successor to [zipline](https://github.com/fringd/zipline)
-Requires Ruby 2.1+ syntax support and a working zlib (all available to jRuby as well).
+
+Initially written and as a spiritual successor to [zipline](https://github.com/fringd/zipline)
+and now proudly powering it under the hood.
 
 Allows you to write a ZIP archive out to a File, Socket, String or Array without having to rewind it at any
 point. Usable for creating very large ZIP archives for immediate sending out to clients, or for writing
 large ZIP archives without memory inflation.
 
-## Create a ZIP file without size estimation, compress on-the-fly)
+zip_tricks currently handles all our zipping needs (millions of ZIP files generated per day), so we are
+pretty confident it is widely compatible with a large number of unarchiving end-user applications.
 
-When you compress on the fly and use data descriptors it is not really possible to compute the file size upfront.
-But it is very likely to yield good compression - especially if you send things like CSV files.
+## Requirements
+
+Ruby 2.1+ syntax support (keyword arguments with defaults) and a working zlib (all available to jRuby as well).
+jRuby might experience problems when using the reader methods due to the argument of `IO#seek` being limited
+to [32 bit sizes.](https://github.com/jruby/jruby/issues/3817)
+
+## Create a ZIP file without size estimation, compress on-the-fly during writes
+
+Basic use case is compressing on the fly. Some data will be buffered by the Zlib deflater, but
+memory inflation is going to be very constrained. Data will be written to destination at fairly regular
+intervals. Deflate compression will work best for things like text files.
 
 ```ruby
 out = my_tempfile # can also be a socket
@@ -26,8 +37,10 @@ ZipTricks::Streamer.open(out) do |zip|
   end
 end
 ```
+Unfortunately with this approach it is impossible to compute the size of the ZIP file being output,
+since you do not know how large the compressed data segments are going to be.
 
-## Send the same ZIP file from a Rack response
+## Send a ZIP from a Rack response
 
 Create a `RackBody` object and give it's constructor a block that adds files.
 The block will only be called when actually sending the response to the client
@@ -50,6 +63,12 @@ end
 Use the `SizeEstimator` to compute the correct size of the resulting archive.
 
 ```ruby
+# Precompute the Content-Length ahead of time
+bytesize = ZipTricks::SizeEstimator.estimate do |z|
+ z.add_stored_entry(filename: 'myfile1.bin', size: 9090821)
+ z.add_stored_entry(filename: 'myfile2.bin', size: 458678)
+end
+
 # Prepare the response body. The block will only be called when the response starts to be written.
 zip_body = ZipTricks::RackBody.new do | zip |
   zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
@@ -58,19 +77,8 @@ zip_body = ZipTricks::RackBody.new do | zip |
   zip << read_file('myfile2.bin')
 end
 
-# Precompute the Content-Length ahead of time
-bytesize = ZipTricks::SizeEstimator.estimate do |z|
- z.add_stored_entry(filename: 'myfile1.bin', size: 9090821)
- z.add_stored_entry(filename: 'myfile2.bin', size: 458678)
-end
-
 [200, {'Content-Length' => bytesize.to_s}, zip_body]
 ```
-
-## Other usage examples
-
-Check out the `examples/` directory at the root of the project. This will give you a good idea
-of various use cases the library supports.
 
 ## Writing ZIP files using the Streamer bypass
 
@@ -94,6 +102,11 @@ ZipTricks::Streamer.open(io) do | zip |
 end
 ```
 
+## Other usage examples
+
+Check out the `examples/` directory at the root of the project. This will give you a good idea
+of various use cases the library supports.
+
 ## Computing the CRC32 value of a large file
 
 `BlockCRC32` computes the CRC32 checksum of an IO in a streaming fashion.
@@ -110,6 +123,13 @@ crc.to_i # Returns the actual CRC32 value computed so far
 crc.append(precomputed_crc32, size_of_the_blob_computed_from)
 ```
 
+## Reading ZIP files
+
+The library contains a reader module, play with it to see what is possible. It is not a complete ZIP reader
+but it was designed for a specific purpose (highly-parallel unpacking of remotely stored ZIP files), and
+as such it performs it's function quite well. Please beware of the security implications of using ZIP readers
+that have not been formally verified (ours hasn't been).
+
 ## Contributing to zip_tricks
  
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
@@ -119,6 +139,7 @@ crc.append(precomputed_crc32, size_of_the_blob_computed_from)
 * Commit and push until you are happy with your contribution.
 * Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
 * Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
+* If you alter the `ZipWriter`, please take the time to run the test in the `testing/` directory and verify the generated files do open. You will need fast storage to run those tests.
 
 ## Copyright
 

@@ -20,6 +20,42 @@ Ruby 2.1+ syntax support (keyword arguments with defaults) and a working zlib (a
 jRuby might experience problems when using the reader methods due to the argument of `IO#seek` being limited
 to [32 bit sizes.](https://github.com/jruby/jruby/issues/3817)
 
+
+## Diving in: send some large CSV reports from Rails
+
+The easiest is to use the Rails' built-in streaming feature:
+
+```ruby
+class ZipsController < ActionController::Base
+  include ActionController::Live
+
+  def download
+    response.headers['Content-Type'] = 'application/zip'
+    
+    # Create a wrapper for the write call that quacks like something you
+    # can << to, used by ZipTricks
+    w = ZipTricks::BlockWrite.new { |chunk| response.stream.write(chunk) }
+    
+    # Send out the archive of some Substantially Large CSV Files (tm)
+    ZipTricks::Streamer.open(w) do |zip|
+      zip.write_deflated_file('report1.csv') do |sink|
+        CSV(sink) do |csv_write|
+          csv << Person.column_names
+          Person.all.fidn_each do |person|
+            csv << person.attributes.values
+          end
+        end
+      end
+      zip.write_deflated_file('report2.csv') do |sink|
+        ...
+      end
+    end
+  ensure
+    response.stream.close
+  end
+end
+```
+
 ## Create a ZIP file without size estimation, compress on-the-fly during writes
 
 Basic use case is compressing on the fly. Some data will be buffered by the Zlib deflater, but

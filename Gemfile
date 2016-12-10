@@ -10,5 +10,7 @@ group :development do
   gem 'coderay'
   gem "yard", "~> 0.8"
   gem "bundler", "~> 1.0"
-  gem "jeweler", "~> 2", '>= 2.1.2'
+  if RUBY_VERSION > '2.2.1' # https://github.com/technicalpickles/jeweler/issues/299
+    gem "jeweler", "~> 2", '>= 2.1.2'
+  end
 end

@@ -45,15 +45,16 @@ class ZipTricks::ZipWriter
     [VERSION_MADE_BY, os_type].pack('CC')
   end
 
-  C_V = 'V'.freeze    # Encode a 4-byte little-endian uint
-  C_v = 'v'.freeze    # Encode a 2-byte little-endian uint
-  C_Qe = 'Q<'.freeze  # Encode an 8-byte little-endian uint
-  C_es = ''.freeze
+  C_V = 'V'.freeze    # Encode a 4-byte unsigned little-endian uint
+  C_v = 'v'.freeze    # Encode a 2-byte unsigned little-endian uint
+  C_Qe = 'Q<'.freeze  # Encode an 8-byte unsigned little-endian uint
+  C_C = 'C'.freeze # For bit-encoded strings
+  C_N = 'N'.freeze # Encode a 4-byte signed little-endian int
   
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
     :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
     :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
-    :C_V, :C_v, :C_Qe, :C_es, :ZIP_TRICKS_COMMENT
+    :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
 
   # Writes the local file header, that precedes the actual file _data_. 
   # 
@@ -93,21 +94,21 @@ class ZipTricks::ZipWriter
     # Filename should not be longer than 0xFFFF otherwise this wont fit here
     io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
 
+    # Interesting tidbit:
+    # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
+    # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
+    # Zip64 extra field as _the first_ extra field.
     extra_fields = if requires_zip64
       zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     else
-      C_es
+      ''
     end
+    extra_fields << timestamp_extra(mtime)
 
     io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
 
     io << filename                                     # file name (variable size)
-
-    # Interesting tidbit:
-    # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
-    # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
-    # Zip64 extra field as _the first_ extra field. If we decide to add the Info-ZIP UTF-8 field...
-    io << extra_fields if requires_zip64
+    io << extra_fields
   end
 
   # Writes the file header for the central directory, for a particular file in the archive. When writing out this data,
@@ -158,8 +159,10 @@ class ZipTricks::ZipWriter
       zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location,
           compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     else
-      C_es
+      ''
     end
+    extra_fields << timestamp_extra(mtime)
+    
     io << [extra_fields.bytesize].pack(C_v)             # extra field length              2 bytes
 
     io << [0].pack(C_v)                                 # file comment length             2 bytes
@@ -310,6 +313,49 @@ class ZipTricks::ZipWriter
       16, C_v,                           # 2 bytes    Size of this "extra" block. For us it will always be 16 (2x8)
       uncompressed_size, C_Qe,           # 8 bytes    Original uncompressed file size
       compressed_size, C_Qe,             # 8 bytes    Size of compressed data
+    ]
+    pack_array(data_and_packspecs)
+  end
+
+  # Writes the extended timestamp information field. The spec defines 2
+  # different formats - the one for the local file header can also accomodate the
+  # atime and ctime, whereas the one for the central directory can only take
+  # the mtime - and refers the reader to the local header extra to obtain the
+  # remaining times
+  def timestamp_extra(mtime)
+    #         Local-header version:
+    # 
+    #         Value         Size        Description
+    #         -----         ----        -----------
+    # (time)  0x5455        Short       tag for this extra block type ("UT")
+    #         TSize         Short       total data size for this block
+    #         Flags         Byte        info bits
+    #         (ModTime)     Long        time of last modification (UTC/GMT)
+    #         (AcTime)      Long        time of last access (UTC/GMT)
+    #         (CrTime)      Long        time of original creation (UTC/GMT)
+    # 
+    #         Central-header version:
+    # 
+    #         Value         Size        Description
+    #         -----         ----        -----------
+    # (time)  0x5455        Short       tag for this extra block type ("UT")
+    #         TSize         Short       total data size for this block
+    #         Flags         Byte        info bits (refers to local header!)
+    #         (ModTime)     Long        time of last modification (UTC/GMT)
+    #
+    # The lower three bits of Flags in both headers indicate which time-
+    #       stamps are present in the LOCAL extra field:
+    # 
+    #       bit 0           if set, modification time is present
+    #       bit 1           if set, access time is present
+    #       bit 2           if set, creation time is present
+    #       bits 3-7        reserved for additional timestamps; not set
+    flags = 0b10000000 # Set bit 1 only to indicate only mtime is present
+    data_and_packspecs = [
+      0x5455, C_v,  # tag for this extra block type ("UT")
+      (1 + 4), C_v, # the size of this block (1 byte used for the Flag + 1 long used for the timestamp)
+      flags, C_C,   # encode a single byte
+      mtime.utc.to_i, C_N, # Use a signed long, not the unsigned one used by the rest of the ZIP spec.
     ]
     pack_array(data_and_packspecs)
   end

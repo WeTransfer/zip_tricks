@@ -44,20 +44,20 @@ describe ZipTricks::Streamer do
     zip = described_class.new(io)
     pos = zip.add_compressed_entry(filename: 'file.jpg', uncompressed_size: 182919, compressed_size: 8912, crc32: 8912)
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(38)
+    expect(pos).to eq(47)
 
     retval = zip << SecureRandom.random_bytes(8912)
     expect(retval).to eq(zip)
-    expect(io.tell).to eq(8950)
+    expect(io.tell).to eq(8959)
 
     pos = zip.add_stored_entry(filename: 'filf.jpg', size: 8921, crc32: 182919)
-    expect(pos).to eq(8988)
+    expect(pos).to eq(9006)
     zip << SecureRandom.random_bytes(8921)
-    expect(io.tell).to eq(17909)
+    expect(io.tell).to eq(17927)
 
     pos = zip.close
     expect(pos).to eq(io.tell)
-    expect(pos).to eq(18068)
+    expect(pos).to eq(18104)
   end
 
   it 'can write and then read the block-deflated files' do

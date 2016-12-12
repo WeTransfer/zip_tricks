@@ -7,6 +7,10 @@ describe ZipTricks::ZipWriter do
       super(io).tap { io.rewind }
     end
     
+    def read_1b
+      read_n(1).unpack('C').first
+    end
+    
     def read_2b
       read_n(2).unpack('v').first
     end
@@ -17,6 +21,10 @@ describe ZipTricks::ZipWriter do
 
     def read_4b
       read_n(4).unpack('V').first
+    end
+
+    def read_4b_signed
+      read_n(4).unpack('N').first
     end
 
     def read_8b
@@ -59,9 +67,19 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(768)          # compressed size
       expect(br.read_4b).to eq(901)          # uncompressed size
       expect(br.read_2b).to eq(7)            # filename size
-      expect(br.read_2b).to eq(0)            # extra fields size
+      expect(br.read_2b).to eq(9)            # extra fields size
+
       expect(br.read_n(7)).to eq('foo.bin')  # extra fields size
-      expect(buf).to be_eof
+
+      expect(br.read_2b).to eq(0x5455)       # Extended timestamp extra tag
+      expect(br.read_2b).to eq(5)            # Size of the timestamp extra
+      expect(br.read_1b).to eq(128)          # The timestamp flag
+
+      ext_mtime = br.read_4b_signed
+      expect(ext_mtime).to eq(1468763280)    # The mtime encoded as a 4byte uint
+
+      parsed_time = Time.at(ext_mtime)
+      expect(parsed_time.year).to eq(2016)
     end
     
     it 'writes the local file header for an entry that does require Zip64 based on uncompressed size (with the Zip64 extra)' do
@@ -82,7 +100,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0xFFFFFFFF)   # compressed size
       expect(br.read_4b).to eq(0xFFFFFFFF)   # uncompressed size
       expect(br.read_2b).to eq(7)            # filename size
-      expect(br.read_2b).to eq(20)           # extra fields size
+      expect(br.read_2b).to eq(29)           # extra fields size (Zip64 + extended timestamp)
       expect(br.read_n(7)).to eq('foo.bin')  # extra fields size
       
       expect(buf).not_to be_eof
@@ -111,7 +129,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0xFFFFFFFF)   # compressed size
       expect(br.read_4b).to eq(0xFFFFFFFF)   # uncompressed size
       expect(br.read_2b).to eq(7)            # filename size
-      expect(br.read_2b).to eq(20)           # extra fields size
+      expect(br.read_2b).to eq(29)           # extra fields size
       expect(br.read_n(7)).to eq('foo.bin')  # extra fields size
       
       expect(buf).not_to be_eof
@@ -186,7 +204,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(901)        # compressed size
       expect(br.read_4b).to eq(909102)     # uncompressed size
       expect(br.read_2b).to eq(10)         # filename length
-      expect(br.read_2b).to eq(0)          # extra field length
+      expect(br.read_2b).to eq(9)          # extra field length
       expect(br.read_2b).to eq(0)          # file comment
       expect(br.read_2b).to eq(0)          # disk number, must be blanked to the maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)          # internal file attributes
@@ -216,7 +234,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0xFFFFFFFF) # compressed size
       expect(br.read_4b).to eq(0xFFFFFFFF) # uncompressed size
       expect(br.read_2b).to eq(10)         # filename length
-      expect(br.read_2b).to eq(32)         # extra field length
+      expect(br.read_2b).to eq(41)         # extra field length
       expect(br.read_2b).to eq(0)          # file comment
       expect(br.read_2b).to eq(0xFFFF)     # disk number, must be blanked to the maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)          # internal file attributes
@@ -253,7 +271,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0xFFFFFFFF) # compressed size
       expect(br.read_4b).to eq(0xFFFFFFFF) # uncompressed size
       expect(br.read_2b).to eq(10)         # filename length
-      expect(br.read_2b).to eq(32)         # extra field length
+      expect(br.read_2b).to eq(41)         # extra field length
       expect(br.read_2b).to eq(0)          # file comment
       expect(br.read_2b).to eq(0xFFFF)     # disk number, must be blanked to the maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)          # internal file attributes
@@ -290,7 +308,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0xFFFFFFFF) # compressed size
       expect(br.read_4b).to eq(0xFFFFFFFF) # uncompressed size
       expect(br.read_2b).to eq(10)         # filename length
-      expect(br.read_2b).to eq(32)         # extra field length
+      expect(br.read_2b).to eq(41)         # extra field length
       expect(br.read_2b).to eq(0)          # file comment
       expect(br.read_2b).to eq(0xFFFF)     # disk number, must be blanked to the maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)          # internal file attributes

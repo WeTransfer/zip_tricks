@@ -36,9 +36,9 @@ describe ZipTricks::FileReader do
       end
       
       first, second, third = recovered_entries
-      expect(first.compressed_data_offset).to eq(39)
-      expect(second.compressed_data_offset).to eq(496084)
-      expect(third.compressed_data_offset).to eq(992129)
+      expect(first.compressed_data_offset).to eq(48)
+      expect(second.compressed_data_offset).to eq(496102)
+      expect(third.compressed_data_offset).to eq(992156)
       
       recovered_entries.each do |entry|
         zipfile.seek(entry.compressed_data_offset)
@@ -232,7 +232,7 @@ describe ZipTricks::FileReader do
       out.rewind
       
       compressed_data_offset = subject.get_compressed_data_offset(io: out, local_file_header_offset: 7656177)
-      expect(compressed_data_offset).to eq(7656236)
+      expect(compressed_data_offset).to eq(7656245)
     end
     
     it 'reads the offset for an entry having a long name' do
@@ -246,7 +246,7 @@ describe ZipTricks::FileReader do
       out.rewind
       
       compressed_data_offset = subject.get_compressed_data_offset(io: out, local_file_header_offset: 7)
-      expect(compressed_data_offset).to eq(85)
+      expect(compressed_data_offset).to eq(94)
     end
   end
   

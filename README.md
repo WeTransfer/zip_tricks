@@ -41,7 +41,7 @@ class ZipsController < ActionController::Base
       zip.write_deflated_file('report1.csv') do |sink|
         CSV(sink) do |csv_write|
           csv << Person.column_names
-          Person.all.fidn_each do |person|
+          Person.all.find_each do |person|
             csv << person.attributes.values
           end
         end

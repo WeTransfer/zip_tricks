@@ -4,7 +4,7 @@ describe ZipTricks::RackBody do
   it 'is usable as a Rack response body, supports each() and close()' do
     output_buf = Tempfile.new('output')
 
-    file_body = SecureRandom.random_bytes(1024 * 1024 + 8981)
+    file_body = Random.new.bytes(1024 * 1024 + 8981)
 
     body = described_class.new do | zip |
       zip.add_stored_entry(filename: "A file", size: file_body.bytesize, crc32: Zlib.crc32(file_body))

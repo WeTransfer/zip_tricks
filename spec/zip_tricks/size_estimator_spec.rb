@@ -3,9 +3,9 @@ require_relative '../spec_helper'
 describe ZipTricks::SizeEstimator do
   it 'accurately predicts the output zip size' do
     # Generate a couple of random files
-    raw_file_1 = SecureRandom.random_bytes(1024 * 20)
-    raw_file_2 = SecureRandom.random_bytes(1024 * 128)
-    raw_file_3 = SecureRandom.random_bytes(1258695)
+    raw_file_1 = Random.new.bytes(1024 * 20)
+    raw_file_2 = Random.new.bytes(1024 * 128)
+    raw_file_3 = Random.new.bytes(1258695)
 
     predicted_size = described_class.estimate do | estimator |
       r = estimator.add_stored_entry(filename: "first-file.bin", size: raw_file_1.size)

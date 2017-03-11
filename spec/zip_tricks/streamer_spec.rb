@@ -46,13 +46,13 @@ describe ZipTricks::Streamer do
     expect(pos).to eq(io.tell)
     expect(pos).to eq(47)
 
-    retval = zip << SecureRandom.random_bytes(8912)
+    retval = zip << Random.new.bytes(8912)
     expect(retval).to eq(zip)
     expect(io.tell).to eq(8959)
 
     pos = zip.add_stored_entry(filename: 'filf.jpg', size: 8921, crc32: 182919)
     expect(pos).to eq(9006)
-    zip << SecureRandom.random_bytes(8921)
+    zip << Random.new.bytes(8921)
     expect(io.tell).to eq(17927)
 
     pos = zip.close
@@ -66,7 +66,7 @@ describe ZipTricks::Streamer do
 
     rewind_after(f) do
       f << ('A' * 1024 * 1024)
-      f << SecureRandom.random_bytes(1248)
+      f << Random.new.bytes(1248)
       f << ('B' * 1024 * 1024)
     end
 
@@ -160,8 +160,8 @@ describe ZipTricks::Streamer do
     allow(output_io).to receive(:close)
 
     # Generate a couple of random files
-    raw_file_1 = SecureRandom.random_bytes(1024 * 20)
-    raw_file_2 = SecureRandom.random_bytes(1024 * 128)
+    raw_file_1 = Random.new.bytes(1024 * 20)
+    raw_file_2 = Random.new.bytes(1024 * 128)
 
     # Perform the zipping
     zip = described_class.new(output_io)
@@ -199,8 +199,8 @@ describe ZipTricks::Streamer do
     zip_buf.binmode
 
     # Generate a couple of random files
-    raw_file_1 = SecureRandom.random_bytes(1024 * 20)
-    raw_file_2 = SecureRandom.random_bytes(1024 * 128)
+    raw_file_1 = Random.new.bytes(1024 * 20)
+    raw_file_2 = Random.new.bytes(1024 * 128)
 
     # Perform the zipping
     zip = described_class.new(zip_buf)

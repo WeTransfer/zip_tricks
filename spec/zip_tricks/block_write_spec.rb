@@ -35,7 +35,7 @@ describe ZipTricks::BlockWrite do
     adapter << 'привет'
     adapter << 'привет'.freeze
     adapter << '!'
-    adapter << SecureRandom.random_bytes(1024)
+    adapter << Random.new.bytes(1024)
 
     expect(accum_string.bytesize).to eq(1054)
   end

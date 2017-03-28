@@ -27,17 +27,11 @@ The easiest is to use the Rails' built-in streaming feature:
 
 ```ruby
 class ZipsController < ActionController::Base
-  include ActionController::Live
-
+  include ActionController::Live # required for streaming
+  include ZipTricks::RailsStreaming
+  
   def download
-    response.headers['Content-Type'] = 'application/zip'
-    
-    # Create a wrapper for the write call that quacks like something you
-    # can << to, used by ZipTricks
-    w = ZipTricks::BlockWrite.new { |chunk| response.stream.write(chunk) }
-    
-    # Send out the archive of some Substantially Large CSV Files (tm)
-    ZipTricks::Streamer.open(w) do |zip|
+    zip_tricks_stream do |zip|
       zip.write_deflated_file('report1.csv') do |sink|
         CSV(sink) do |csv_write|
           csv << Person.column_names
@@ -50,8 +44,6 @@ class ZipsController < ActionController::Base
         ...
       end
     end
-  ensure
-    response.stream.close
   end
 end
 ```

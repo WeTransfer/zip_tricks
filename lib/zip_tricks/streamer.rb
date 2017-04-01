@@ -203,7 +203,7 @@ class ZipTricks::Streamer
     write_data_descriptor_for_last_entry
   end
   
-  def write_empty_directory(filename:, size: 0, crc32: crc32)
+  def write_empty_directory(filename:, size: 0, crc32: 0)
     add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: STORED,
       compressed_size: size, uncompressed_size: size)
     @out.tell

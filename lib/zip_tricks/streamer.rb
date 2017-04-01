@@ -188,7 +188,7 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
-    add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
+    add_file_and_write_local_header(filename: filename, storage_mode: STORED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
     w = DeflatedWriter.new(@out)
@@ -201,6 +201,22 @@ class ZipTricks::Streamer
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
     write_data_descriptor_for_last_entry
+  end
+
+  def add_empty_directory(filename)
+    add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
+      use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
+      
+      w = DeflatedWriter.new(@out)
+      yield(Writable.new(w))
+      crc, comp, uncomp = w.finish
+
+      # Save the information into the entry for when the time comes to write out the central directory
+      last_entry = @files[-1]
+      last_entry.crc32 = crc
+      last_entry.compressed_size = comp
+      last_entry.uncompressed_size = uncomp
+      write_data_descriptor_for_last_entry
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into

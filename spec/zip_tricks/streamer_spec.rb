@@ -142,6 +142,49 @@ describe ZipTricks::Streamer do
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')
   end
+  
+  it 'can make an empty directory' do
+    outbuf = Tempfile.new('zip')
+    outbuf.binmode
+
+    zip = ZipTricks::Streamer.new(outbuf)
+
+    File.open(test_text_file_path, 'rb') do | source_f |
+      crc32 = rewind_after(source_f) { Zlib.crc32(source_f.read) }
+
+      compressed_buffer = StringIO.new
+
+      expect(ZipTricks::BlockDeflate).to receive(:deflate_chunk).at_least(:twice).and_call_original
+
+      # Compress in blocks of 4 Kb
+      rewind_after(source_f, compressed_buffer) do
+        ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_f, compressed_buffer, block_size: 1024 * 4)
+      end
+
+      # Add this file compressed...
+      zip.add_compressed_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
+        crc32: crc32, compressed_size: compressed_buffer.size)
+      zip << compressed_buffer.string
+
+      # ...and stored.
+      zip.add_stored_entry(filename: 'war-and-peace-raw.txt', size: source_f.size, crc32: crc32)
+      zip << source_f.read
+      
+      # add an empty file
+      zip.add_empty_directory("test-empty")
+
+      zip.close
+
+      outbuf.flush
+      File.unlink('test.zip') rescue nil
+      File.rename(outbuf.path, 'osx-empty-test.zip')
+
+      # Mark this test as skipped if the system does not have the binary
+      # open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
+    end
+    # FileUtils.rm_rf('osx-archive--test')
+    # FileUtils.rm_rf('osx-archive-test.zip')
+  end
 
   it 'archives files which can then be read using the usual means with Rubyzip' do
     zip_buf = Tempfile.new('zipp')

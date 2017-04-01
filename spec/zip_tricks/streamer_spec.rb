@@ -171,7 +171,8 @@ describe ZipTricks::Streamer do
       zip << source_f.read
       
       # add an empty directory
-      zip.add_empty_directory("test-empty")
+      zip.write_empty_directory('test-empty')
+      zip << source_f.read
 
       zip.close
 
@@ -180,7 +181,7 @@ describe ZipTricks::Streamer do
       File.rename(outbuf.path, 'osx-empty-test.zip')
 
       # Mark this test as skipped if the system does not have the binary
-      open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
+      open_zip_with_archive_utility('osx-empty-test.zip', skip_if_missing: true)
     end
     # FileUtils.rm_rf('osx-archive--test')
     # FileUtils.rm_rf('osx-archive-test.zip')

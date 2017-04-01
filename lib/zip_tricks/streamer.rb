@@ -204,19 +204,19 @@ class ZipTricks::Streamer
   end
 
   def add_empty_directory(filename)
-    add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
+    write_empty_directory(filename: filename, storage_mode: STORED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
       
-      w = DeflatedWriter.new(@out)
-      yield(Writable.new(w))
-      crc, comp, uncomp = w.finish
+    w = DeflatedWriter.new(@out)
+    # yield(Writable.new(w))
+    crc, comp, uncomp = w.finish
 
-      # Save the information into the entry for when the time comes to write out the central directory
-      last_entry = @files[-1]
-      last_entry.crc32 = crc
-      last_entry.compressed_size = comp
-      last_entry.uncompressed_size = uncomp
-      write_data_descriptor_for_last_entry
+    # Save the information into the entry for when the time comes to write out the central directory
+    last_entry = @files[-1]
+    last_entry.crc32 = crc
+    last_entry.compressed_size = comp
+    last_entry.uncompressed_size = uncomp
+    write_data_descriptor_for_last_entry
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into
@@ -274,7 +274,24 @@ class ZipTricks::Streamer
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
+  
+  def write_empty_directory(filename:,crc32:, storage_mode:, compressed_size:,
+      uncompressed_size:, use_data_descriptor: false)
+    filename = remove_backslash(filename)
+    filename = uniquify_name(filename) if @files.any? { |e| e.filename == filename }
 
+    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
+    raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
+    
+    current_directory = Dir.pwd
+    empty_directory = Dir.mkdir(File.join("#{current_directory}", "#{filename}"), 0700)
+    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
+    @files << e
+    @local_header_offsets << @out.tell
+    @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
+      uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
+  end
+  
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)

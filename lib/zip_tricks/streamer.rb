@@ -203,9 +203,9 @@ class ZipTricks::Streamer
     write_data_descriptor_for_last_entry
   end
   
-  def add_empty_directory(filename:, size: 0, crc32: 0)
-    Zip::File.open(filename, Zip::File::CREATE) { |zipfile| zipfile.mkdir("#{filename}")}
-    # write_empty_directory(filename, size, crc32)
+  def add_empty_directory(filename:, size:0, crc32:0)
+    add_file_and_write_local_header(filename: "#{filename}" + "/", crc32: crc32, storage_mode: STORED,
+      compressed_size: size, uncompressed_size: size)
   end
   
   def write_empty_directory(filename, size, crc32)
@@ -268,7 +268,7 @@ class ZipTricks::Streamer
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
-    
+      
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)

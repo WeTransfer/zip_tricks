@@ -18,4 +18,9 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
     flag |= 0x0008 if use_data_descriptor        # bit 3
     flag
   end
+  
+  def set_empty_directory_permissons(filename)
+    FileUtils.chmod 0644, Dir.pwd + "/" + "#{filename}"
+  end
+  
 end

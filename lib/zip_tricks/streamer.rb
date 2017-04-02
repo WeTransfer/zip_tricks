@@ -203,16 +203,12 @@ class ZipTricks::Streamer
     write_data_descriptor_for_last_entry
   end
   
+  # Adds an empty directory to the archive.
   def add_empty_directory(filename:, size:0, crc32:0)
-    add_file_and_write_local_header(filename: "#{filename}" + "/", crc32: crc32, storage_mode: STORED,
+    add_empty_directory_and_write_local_header(filename: "#{filename}" + "/", crc32: crc32, storage_mode: STORED,
       compressed_size: size, uncompressed_size: size)
   end
   
-  def write_empty_directory(filename, size, crc32)
-    add_file_and_write_local_header(filename: filename, crc32: crc32, storage_mode: STORED,
-      compressed_size: size, uncompressed_size: size)
-  end
-
   # Closes the archive. Writes the central directory, and switches the writer into
   # a state where it can no longer be written to.
   #
@@ -267,6 +263,24 @@ class ZipTricks::Streamer
     @local_header_offsets << @out.tell
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
+  end
+
+  def add_empty_directory_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:,
+      uncompressed_size:, use_data_descriptor: false)
+
+    # Clean backslashes and uniqify filenames if there are duplicates
+    filename = remove_backslash(filename)
+    filename = uniquify_name(filename) if @files.any? { |e| e.filename == filename }
+
+    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
+    raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
+
+    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
+    @files << e
+    @local_header_offsets << @out.tell
+    @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
+      uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
+    e.set_empty_directory_permissons
   end
       
   def write_data_descriptor_for_last_entry

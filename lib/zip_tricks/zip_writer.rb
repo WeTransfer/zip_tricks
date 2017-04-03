@@ -126,7 +126,6 @@ class ZipTricks::ZipWriter
   # @param uncompressed_size[Fixnum]  The size of the file once extracted
   # @param crc32[Fixnum] The CRC32 checksum of the file
   # @param mtime[Time]  the modification time to be recorded in the ZIP
-  # @param external_attrs[Fixnum] bit-packed external attributes (defaults to UNIX file with 0644 permissions set)
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
   def write_central_directory_file_header(io:, local_file_header_location:, gp_flags:, storage_mode:, compressed_size:, uncompressed_size:, mtime:, crc32:, 

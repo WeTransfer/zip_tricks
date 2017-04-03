@@ -185,7 +185,7 @@ class ZipTricks::ZipWriter
     
     # Because the add_empty_directory method will create a directory with a trailing "/",
     # this check can be used to assign proper permissions to the created directory.
-    if filename[-1] == "/"
+    if filename.end_with?("/")
       io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)
     else
       io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes

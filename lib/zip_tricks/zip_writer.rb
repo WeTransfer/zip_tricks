@@ -40,7 +40,7 @@ class ZipTricks::ZipWriter
     external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
   end
   EMPTY_DIRECTORY_EXTERNAL_ATTRS = begin
-    # Applies the same security as above but creates an empty directory.
+    # Applies permissions to an empty directory.
     unix_perms = 0755
     file_type_dir = 004
     external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
@@ -118,50 +118,6 @@ class ZipTricks::ZipWriter
     io << extra_fields
   end
 
-  def write_local_file_header_for_empty_dir(io:, filename:, compressed_size:, uncompressed_size:, crc32:, gp_flags:, mtime:, storage_mode:)
-    requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
-
-    io << [0x04034b50].pack(C_V)                        # local file header signature     4 bytes  (0x04034b50)
-    if requires_zip64                                   # version needed to extract       2 bytes
-      io << [VERSION_NEEDED_TO_EXTRACT_ZIP64].pack(C_v)
-    else
-      io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)
-    end
-
-    io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
-    io << [storage_mode].pack(C_v)                      # compression method              2 bytes
-    io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
-    io << [to_binary_dos_date(mtime)].pack(C_v)         # last mod file date              2 bytes
-    io << [crc32].pack(C_V)                             # crc-32                          4 bytes
-
-    if requires_zip64
-      io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # compressed size              4 bytes
-      io << [FOUR_BYTE_MAX_UINT].pack(C_V)              # uncompressed size            4 bytes
-    else
-      io << [compressed_size].pack(C_V)                 # compressed size              4 bytes
-      io << [uncompressed_size].pack(C_V)               # uncompressed size            4 bytes
-    end
-
-    # Filename should not be longer than 0xFFFF otherwise this wont fit here
-    io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
-
-    # Interesting tidbit:
-    # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
-    # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
-    # Zip64 extra field as _the first_ extra field.
-    extra_fields = if requires_zip64
-      zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    else
-      ''
-    end
-    extra_fields << timestamp_extra(mtime)
-    
-    io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
-
-    io << filename                                     # file name (variable size)
-    io << extra_fields
-  end
-
   # Writes the file header for the central directory, for a particular file in the archive. When writing out this data,
   # ensure that the CRC32 and both sizes (compressed/uncompressed) are correct for the entry in question.
   #
@@ -228,7 +184,9 @@ class ZipTricks::ZipWriter
       io << [0].pack(C_v)
     end
     io << [0].pack(C_v)                                # internal file attributes        2 bytes
-    puts filename
+    
+    # Because the add_empty_directory method will create a directory with a trailing "/",
+    # this check can be used to assign proper permissions to the created directory.
     if filename[-1] == "/"
       io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)
     else

@@ -172,6 +172,7 @@ describe ZipTricks::Streamer do
       
       # add an empty directory
       zip.add_empty_directory(filename: 'Beatles')
+      zip << source_f.read
 
       zip.close
 
@@ -182,8 +183,8 @@ describe ZipTricks::Streamer do
       # Mark this test as skipped if the system does not have the binary
       open_zip_with_archive_utility('osx-empty-test.zip', skip_if_missing: true)
     end
-    # FileUtils.rm_rf('osx-archive--test')
-    # FileUtils.rm_rf('osx-archive-test.zip')
+    FileUtils.rm_rf('osx-empty-test')
+    FileUtils.rm_rf('osx-empty-test.zip')
   end
 
   it 'archives files which can then be read using the usual means with Rubyzip' do

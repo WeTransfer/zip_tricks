@@ -91,7 +91,7 @@
 | 01-two_small_stored_files.zip                                                  |   Pending                                                               |
 | Two small stored files                                                         |                                                                  |
 +--------------------------------------------------------------------------------+------------------------------------------------------------------+
-| 02-two_small_stored_files_and_an_empty_directory.zip                           |                                                                  |
+| 02-two_small_stored_files_and_an_empty_directory.zip                           |   Works                                                               |
 | Two small stored files and an empty directory                                  |                                                                  |
 +--------------------------------------------------------------------------------+------------------------------------------------------------------+
 | 03-filename_with_diacritics.zip                                                |   Pending                                                               |
@@ -133,7 +133,7 @@
 | 01-two_small_stored_files.zip                                                  |  Pending                                                                |
 | Two small stored files                                                         |                                                                  |
 +--------------------------------------------------------------------------------+------------------------------------------------------------------+
-| 02-two_small_stored_files_and_an_empty_directory.zip                           |                                                                  |
+| 02-two_small_stored_files_and_an_empty_directory.zip                           |  Works                                                                |
 | Two small stored files and an empty directory                                  |                                                                  |
 +--------------------------------------------------------------------------------+------------------------------------------------------------------+
 | 03-filename_with_diacritics.zip                                                |  Pending                                                                |

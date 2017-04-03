@@ -1,6 +1,6 @@
 # Is used internally by Streamer to keep track of entries in the archive during writing.
 # Normally you will not have to use this class directly
-class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor)
+class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor, :set_empty_directory_permissions)
   def initialize(*)
     super
     filename.force_encoding(Encoding::UTF_8)
@@ -16,11 +16,8 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
     flag = 0b00000000000
     flag |= 0b100000000000 if @requires_efs_flag # bit 11
     flag |= 0x0008 if use_data_descriptor        # bit 3
+    flag |= 0b1100001001 if set_empty_directory_permissions
     flag
   end
-  
-  def set_empty_directory_permissons(filename)
-    FileUtils.chmod 0644, Dir.pwd + "/" + "#{filename}"
-  end
-  
+
 end

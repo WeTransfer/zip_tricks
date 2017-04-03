@@ -265,8 +265,12 @@ class ZipTricks::Streamer
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
 
+
+  # A not-very-DRY approach to creating empty directories within a zip archive.
+  # Differentiates from the above by modifying the permissions to make sure 
+  # the directory created is usable.
   def add_empty_directory_and_write_local_header(filename:, crc32:, storage_mode:, compressed_size:,
-      uncompressed_size:, use_data_descriptor: false)
+      uncompressed_size:, use_data_descriptor: false, set_empty_directory_permissions: true)
 
     # Clean backslashes and uniqify filenames if there are duplicates
     filename = remove_backslash(filename)
@@ -275,12 +279,11 @@ class ZipTricks::Streamer
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
 
-    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
+    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor, set_empty_directory_permissions)
     @files << e
     @local_header_offsets << @out.tell
-    @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
+    @writer.write_local_file_header_for_empty_dir(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
-    e.set_empty_directory_permissons
   end
       
   def write_data_descriptor_for_last_entry

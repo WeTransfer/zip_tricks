@@ -171,7 +171,7 @@ describe ZipTricks::Streamer do
       zip << source_f.read
       
       # add an empty directory
-      zip.add_empty_directory(filename: 'test-empty')
+      zip.add_empty_directory(filename: 'Beatles')
       zip << source_f.read
 
       zip.close

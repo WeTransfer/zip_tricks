@@ -190,7 +190,7 @@ describe ZipTricks::ZipWriter do
         gp_flags: 555, storage_mode: 23,
         compressed_size: 901, uncompressed_size: 909102,
         mtime: Time.utc(2016, 2, 2, 14, 00), crc32: 89765,
-        filename: 'a-file.txt', external_attrs: 123) 
+        filename: 'a-file.txt') 
       
       br = ByteReader.new(buf)
       expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
@@ -250,7 +250,7 @@ describe ZipTricks::ZipWriter do
         gp_flags: 555, storage_mode: 23,
         compressed_size: 901, uncompressed_size: 0xFFFFFFFFF + 3,
         mtime: Time.utc(2016, 2, 2, 14, 00), crc32: 89765,
-        filename: 'a-file.txt', external_attrs: 123) 
+        filename: 'a-file.txt') 
       
       br = ByteReader.new(buf)
       expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
@@ -287,7 +287,7 @@ describe ZipTricks::ZipWriter do
         gp_flags: 555, storage_mode: 23,
         compressed_size: 0xFFFFFFFFF + 3, uncompressed_size: 901, # the worst compression scheme in the universe
         mtime: Time.utc(2016, 2, 2, 14, 00), crc32: 89765,
-        filename: 'a-file.txt', external_attrs: 123) 
+        filename: 'a-file.txt') 
       
       br = ByteReader.new(buf)
       expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
@@ -324,7 +324,7 @@ describe ZipTricks::ZipWriter do
         gp_flags: 555, storage_mode: 23,
         compressed_size: 8981, uncompressed_size: 819891, # the worst compression scheme in the universe
         mtime: Time.utc(2016, 2, 2, 14, 00), crc32: 89765,
-        filename: 'a-file.txt', external_attrs: 123) 
+        filename: 'a-file.txt') 
       
       br = ByteReader.new(buf)
       expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig

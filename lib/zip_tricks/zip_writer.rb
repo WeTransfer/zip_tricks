@@ -130,7 +130,7 @@ class ZipTricks::ZipWriter
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
   def write_central_directory_file_header(io:, local_file_header_location:, gp_flags:, storage_mode:, compressed_size:, uncompressed_size:, mtime:, crc32:, 
-    filename:, external_attrs: DEFAULT_EXTERNAL_ATTRS)
+    filename:)
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
     # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
     add_zip64 = (local_file_header_location > FOUR_BYTE_MAX_UINT) ||

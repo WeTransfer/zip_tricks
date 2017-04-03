@@ -204,9 +204,9 @@ class ZipTricks::Streamer
   end
   
   # Adds an empty directory to the archive.
-  def add_empty_directory(filename:, size:0, crc32:0)
-    add_file_and_write_local_header(filename: "#{filename}" + "/", crc32: crc32, storage_mode: STORED,
-      compressed_size: size, uncompressed_size: size)
+  def add_empty_directory(dirname:)
+    add_file_and_write_local_header(filename: "#{dirname}" + "/", crc32: 0, storage_mode: STORED,
+      compressed_size: 0, uncompressed_size: 0)
   end
   
   # Closes the archive. Writes the central directory, and switches the writer into

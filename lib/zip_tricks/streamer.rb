@@ -188,7 +188,7 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
-    add_file_and_write_local_header(filename: filename, storage_mode: STORED,
+    add_file_and_write_local_header(filename: filename, storage_mode: DEFLATED,
       use_data_descriptor: true, crc32: 0, compressed_size: 0, uncompressed_size: 0)
 
     w = DeflatedWriter.new(@out)

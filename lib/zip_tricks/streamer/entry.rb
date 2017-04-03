@@ -16,7 +16,6 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
     flag = 0b00000000000
     flag |= 0b100000000000 if @requires_efs_flag # bit 11
     flag |= 0x0008 if use_data_descriptor        # bit 3
-    flag |= 0b1100001001 if set_empty_directory_permissions
     flag
   end
 

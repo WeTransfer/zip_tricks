@@ -41,9 +41,9 @@ class ZipTricks::ZipWriter
   end
   EMPTY_DIRECTORY_EXTERNAL_ATTRS = begin
     # Applies the same security as above but creates an empty directory.
-    unix_perms = 0644
-    # file_type_dir = 004
-    # external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
+    unix_perms = 0755
+    file_type_dir = 004
+    external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
   end
   MADE_BY_SIGNATURE = begin
     # A combination of the VERSION_MADE_BY low byte and the OS type high byte
@@ -155,10 +155,8 @@ class ZipTricks::ZipWriter
       ''
     end
     extra_fields << timestamp_extra(mtime)
-    io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
-
+    
     io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
-
 
     io << filename                                     # file name (variable size)
     io << extra_fields
@@ -230,7 +228,12 @@ class ZipTricks::ZipWriter
       io << [0].pack(C_v)
     end
     io << [0].pack(C_v)                                # internal file attributes        2 bytes
-    io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
+    puts filename
+    if filename[-1] == "/"
+      io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)
+    else
+      io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
+    end
 
     if add_zip64                                       # relative offset of local header 4 bytes
       io << [FOUR_BYTE_MAX_UINT].pack(C_V)

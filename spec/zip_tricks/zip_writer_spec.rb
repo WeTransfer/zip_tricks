@@ -212,6 +212,36 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(898921)     # relative offset of local header
       expect(br.read_n(10)).to eq('a-file.txt') # the filename
     end
+
+    it 'writes the file header an entry that contains an empty directory' do
+      buf = StringIO.new
+      
+      subject.write_central_directory_file_header(io: buf, local_file_header_location: 898921,
+        gp_flags: 555, storage_mode: 23,
+        compressed_size: 0, uncompressed_size: 0,
+        mtime: Time.utc(2016, 2, 2, 14, 00), crc32: 0,
+        filename: 'directory/') 
+      
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x02014b50) # Central directory entry sig
+      expect(br.read_2b).to eq(820)        # version made by
+      expect(br.read_2b).to eq(20)         # version need to extract
+      expect(br.read_2b).to eq(555)        # general purpose bit flag (explicitly set to bogus value to ensure we pass it through)
+      expect(br.read_2b).to eq(23)         # compression method (explicitly set to bogus value)
+      expect(br.read_2b).to eq(28672)      # last mod file time
+      expect(br.read_2b).to eq(18498)      # last mod file date
+      expect(br.read_4b).to eq(0)          # crc32
+      expect(br.read_4b).to eq(0)          # compressed size
+      expect(br.read_4b).to eq(0)          # uncompressed size
+      expect(br.read_2b).to eq(10)         # filename length
+      expect(br.read_2b).to eq(9)          # extra field length
+      expect(br.read_2b).to eq(0)          # file comment
+      expect(br.read_2b).to eq(0)          # disk number, must be blanked to the maximum value because of The Unarchiver bug
+      expect(br.read_2b).to eq(0)          # internal file attributes
+      expect(br.read_4b).to eq(2179792896) # external file attributes
+      expect(br.read_4b).to eq(898921)     # relative offset of local header
+      expect(br.read_n(10)).to eq('directory/') # the filename
+    end
     
     it 'writes the file header for an entry that requires Zip64 extra because of the uncompressed size' do
       buf = StringIO.new

@@ -73,7 +73,6 @@ class ZipTricks::ZipWriter
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @param storage_mode[Fixnum] 8 for deflated, 0 for stored...
   # @return [void]
-  
   def write_local_file_header(io:, filename:, compressed_size:, uncompressed_size:, crc32:, gp_flags:, mtime:, storage_mode:)
     requires_zip64 = (compressed_size > FOUR_BYTE_MAX_UINT || uncompressed_size > FOUR_BYTE_MAX_UINT)
 
@@ -130,7 +129,6 @@ class ZipTricks::ZipWriter
   # @param external_attrs[Fixnum] bit-packed external attributes (defaults to UNIX file with 0644 permissions set)
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
-  
   def write_central_directory_file_header(io:, local_file_header_location:, gp_flags:, storage_mode:, compressed_size:, uncompressed_size:, mtime:, crc32:, 
     filename:, external_attrs: DEFAULT_EXTERNAL_ATTRS)
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
@@ -145,7 +143,7 @@ class ZipTricks::ZipWriter
     else
       io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)       # version needed to extract       2 bytes
     end
-    
+  
     io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
     io << [storage_mode].pack(C_v)                      # compression method              2 bytes
     io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes

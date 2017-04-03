@@ -1,6 +1,6 @@
 # Is used internally by Streamer to keep track of entries in the archive during writing.
 # Normally you will not have to use this class directly
-class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor, :set_empty_directory_permissions)
+class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size, :uncompressed_size, :storage_mode, :mtime, :use_data_descriptor)
   def initialize(*)
     super
     filename.force_encoding(Encoding::UTF_8)

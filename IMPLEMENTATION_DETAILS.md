@@ -91,8 +91,7 @@ https://commons.apache.org/proper/commons-compress/zip.html
 
 ## Directory support
 
-ZIP makes it possible to store empty directories (folders). For our purposes, however, we are going
-to store only the files. If you store a file, called, say, `docs/item.doc` then the unarchiver will
-automatically create the `docs` directory if it doesn't exist already. You can also store an entry
-with a length of 0 and set it's external attributes to be an empty directory, but we do not need
-that functionality - so it is also omitted.
+ZIP offers the possibility to store empty directories (folders). The directories that contain files, however, get
+created automatically at unarchive time.  If you store a file, called, say, `docs/item.doc` then the unarchiver will
+automatically create the `docs` directory if it doesn't exist already. So you need to use the directory creation
+methods only if you do not have any files in those directories.

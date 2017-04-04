@@ -213,7 +213,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_n(10)).to eq('a-file.txt') # the filename
     end
 
-    it 'writes the file header an entry that contains an empty directory' do
+    it 'writes the file header for an entry that contains an empty directory' do
       buf = StringIO.new
       
       subject.write_central_directory_file_header(io: buf, local_file_header_location: 898921,

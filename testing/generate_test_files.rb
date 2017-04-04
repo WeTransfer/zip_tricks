@@ -8,6 +8,16 @@ build_test "Two small stored files" do |zip|
   zip << $image_file
 end
 
+build_test "Two small stored files and an empty directory" do |zip|
+  zip.add_stored_entry(filename: 'text.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
+  zip << $war_and_peace
+
+  zip.add_stored_entry(filename: 'image.jpg', size: $image_file.bytesize, crc32: $image_file_crc)
+  zip << $image_file
+  
+  zip.add_empty_directory(dirname: "Chekov")
+end
+
 build_test "Filename with diacritics" do |zip|
   zip.add_stored_entry(filename: 'Kungälv.txt', size: $war_and_peace.bytesize, crc32: $war_and_peace_crc)
   zip << $war_and_peace

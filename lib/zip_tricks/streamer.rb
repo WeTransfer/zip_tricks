@@ -158,6 +158,16 @@ class ZipTricks::Streamer
     @out.tell
   end
 
+  # Adds an empty directory to the archive with a size of 0 and permissions of 755.
+  #
+  # @param dirname [String] the name of the directory in the archive
+  # @return [Fixnum] the offset the output IO is at after writing the entry header
+  def add_empty_directory(dirname:)
+    add_file_and_write_local_header(filename: "#{dirname}" + "/", crc32: 0, storage_mode: STORED,
+      compressed_size: 0, uncompressed_size: 0)
+    @out.tell
+  end
+  
   # Opens the stream for a stored file in the archive, and yields a writer for that file to the block.
   # Once the write completes, a data descriptor will be written with the actual compressed/uncompressed
   # sizes and the CRC32 checksum.
@@ -202,7 +212,7 @@ class ZipTricks::Streamer
     last_entry.uncompressed_size = uncomp
     write_data_descriptor_for_last_entry
   end
-
+    
   # Closes the archive. Writes the central directory, and switches the writer into
   # a state where it can no longer be written to.
   #
@@ -258,7 +268,7 @@ class ZipTricks::Streamer
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
   end
-
+      
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out, crc32: 0, compressed_size: e.compressed_size, uncompressed_size: e.uncompressed_size)

@@ -24,8 +24,11 @@ describe ZipTricks::SizeEstimator do
       r = estimator.add_compressed_entry(filename: "second-file-with-descriptor.bin", compressed_size: raw_file_3.size,
         uncompressed_size: raw_file_2.size, use_data_descriptor: true)
       expect(r).to eq(estimator), "add_compressed_entry should return self"
+
+      r = estimator.add_empty_directory_entry(dirname: "empty-directory/")
+      expect(r).to eq(estimator), "add_compressed_entry should return self"
     end
 
-    expect(predicted_size).to eq(2690185)
+    expect(predicted_size).to eq(2690313)
   end
 end

@@ -39,6 +39,12 @@ class ZipTricks::ZipWriter
     file_type_file = 010
     external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
   end
+  EMPTY_DIRECTORY_EXTERNAL_ATTRS = begin
+    # Applies permissions to an empty directory.
+    unix_perms = 0755
+    file_type_dir = 004
+    external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
+  end
   MADE_BY_SIGNATURE = begin
     # A combination of the VERSION_MADE_BY low byte and the OS type high byte
     os_type = 3 # UNIX
@@ -120,11 +126,10 @@ class ZipTricks::ZipWriter
   # @param uncompressed_size[Fixnum]  The size of the file once extracted
   # @param crc32[Fixnum] The CRC32 checksum of the file
   # @param mtime[Time]  the modification time to be recorded in the ZIP
-  # @param external_attrs[Fixnum] bit-packed external attributes (defaults to UNIX file with 0644 permissions set)
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
   def write_central_directory_file_header(io:, local_file_header_location:, gp_flags:, storage_mode:, compressed_size:, uncompressed_size:, mtime:, crc32:, 
-    filename:, external_attrs: DEFAULT_EXTERNAL_ATTRS)
+    filename:)
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
     # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
     add_zip64 = (local_file_header_location > FOUR_BYTE_MAX_UINT) ||
@@ -137,7 +142,7 @@ class ZipTricks::ZipWriter
     else
       io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)       # version needed to extract       2 bytes
     end
-
+  
     io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
     io << [storage_mode].pack(C_v)                      # compression method              2 bytes
     io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
@@ -176,7 +181,14 @@ class ZipTricks::ZipWriter
       io << [0].pack(C_v)
     end
     io << [0].pack(C_v)                                # internal file attributes        2 bytes
-    io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
+    
+    # Because the add_empty_directory method will create a directory with a trailing "/",
+    # this check can be used to assign proper permissions to the created directory.
+    if filename.end_with?("/")
+      io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)
+    else
+      io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
+    end
 
     if add_zip64                                       # relative offset of local header 4 bytes
       io << [FOUR_BYTE_MAX_UINT].pack(C_V)

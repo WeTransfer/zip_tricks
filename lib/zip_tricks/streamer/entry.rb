@@ -18,4 +18,5 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
     flag |= 0x0008 if use_data_descriptor        # bit 3
     flag
   end
+
 end

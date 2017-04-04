@@ -102,7 +102,32 @@ describe ZipTricks::Streamer do
 
     inspect_zip_with_external_tool(zip_file.path)
   end
+  
+  it 'can write and then read an empty directory' do
+    # Perform the zipping
+    zip_file = Tempfile.new('z')
+    zip_file.binmode
 
+    described_class.open(zip_file) do |zip|
+      zip.add_empty_directory(dirname: "Tunes")
+    end
+    zip_file.flush
+
+    per_filename = {}
+
+    Zip::File.open(zip_file.path) do |zip_file|
+      # Handle entries one by one
+      zip_file.each do |entry|
+        # The entry name gets returned with a binary encoding, we have to force it back.
+        per_filename[entry.name] = entry.get_input_stream.read 
+      end
+    end
+
+    expect(per_filename['Tunes/'].bytesize).to eq(0)
+
+    inspect_zip_with_external_tool(zip_file.path)
+  end
+  
   it 'creates an archive that OSX ArchiveUtility can handle' do
     outbuf = Tempfile.new('zip')
     outbuf.binmode
@@ -129,6 +154,9 @@ describe ZipTricks::Streamer do
       # ...and stored.
       zip.add_stored_entry(filename: 'war-and-peace-raw.txt', size: source_f.size, crc32: crc32)
       zip << source_f.read
+      
+      # Add an empty directory as well.
+      zip.add_empty_directory(dirname: 'Beatles')
 
       zip.close
 
@@ -142,7 +170,7 @@ describe ZipTricks::Streamer do
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')
   end
-
+  
   it 'archives files which can then be read using the usual means with Rubyzip' do
     zip_buf = Tempfile.new('zipp')
     zip_buf.binmode

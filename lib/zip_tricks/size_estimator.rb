@@ -61,13 +61,14 @@ class ZipTricks::SizeEstimator
     @streamer.write_data_descriptor_for_last_entry if udd
     self
   end
-
-  def add_empty_directory_entry(dirname:, use_data_descriptor: false)
-    udd = !!use_data_descriptor
+  
+  # Add an empty directory to the archive.
+  #
+  # @param dirname [String] the name of the directory
+  # @return self
+  def add_empty_directory_entry(dirname:)
     @streamer.add_file_and_write_local_header(filename: "#{dirname}" + "/", crc32: 0, storage_mode: 8,
-      compressed_size: 0, uncompressed_size: 0, use_data_descriptor: udd)
-    @streamer.simulate_write(0)
-    @streamer.write_data_descriptor_for_last_entry if udd
+      compressed_size: 0, uncompressed_size: 0)
     self
   end
 end

@@ -161,6 +161,7 @@ class ZipTricks::Streamer
   # Adds an empty directory to the archive with a size of 0 and permissions of 755.
   #
   # @param dirname [String] the name of the directory in the archive
+  # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_empty_directory(dirname:)
     add_file_and_write_local_header(filename: "#{dirname}" + "/", crc32: 0, storage_mode: STORED,
       compressed_size: 0, uncompressed_size: 0)

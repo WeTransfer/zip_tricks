@@ -37,6 +37,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 10.4'
   spec.add_development_dependency "rspec", "~> 3.2.0", '< 3.3'
   spec.add_development_dependency 'coderay'
-  spec.add_development_dependency "yard", "~> 0.8"
+  spec.add_development_dependency "yard", "~> 0.9"
   
 end

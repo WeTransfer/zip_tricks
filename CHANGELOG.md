@@ -1,4 +1,7 @@
+## 4.4.2
+
 * Add 2.4 to Travis rubies
+* Fix a severe performance degradation in Streamer with large file counts (https://github.com/WeTransfer/zip_tricks/pull/14)
 
 ## 4.4.1
 

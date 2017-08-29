@@ -33,9 +33,11 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rubyzip', '~> 1.1'
   spec.add_development_dependency 'terminal-table'
   spec.add_development_dependency 'range_utils'
+  
   spec.add_development_dependency 'rack', '~> 1.6' # For Jeweler
   spec.add_development_dependency 'rake', '~> 10.4'
-  spec.add_development_dependency "rspec", "~> 3.2.0", '< 3.3'
+  spec.add_development_dependency "rspec", "~> 3"
+  spec.add_development_dependency 'complexity_assert'
   spec.add_development_dependency 'coderay'
   spec.add_development_dependency "yard", "~> 0.9"
   

@@ -1,5 +1,3 @@
-require 'zlib'
-
 # Permits Deflate compression in independent blocks. The workflow is as follows:
 #
 # * Run every block to compress through deflate_chunk, remove the header, footer and adler32 from the result

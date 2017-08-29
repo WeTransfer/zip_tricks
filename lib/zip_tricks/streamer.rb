@@ -94,6 +94,7 @@ class ZipTricks::Streamer
     @out = stream
     @files = []
     @local_header_offsets = []
+    @filenames_set = Set.new
     @writer = writer
   end
 
@@ -183,7 +184,7 @@ class ZipTricks::Streamer
     crc, comp, uncomp = w.finish
 
     # Save the information into the entry for when the time comes to write out the central directory
-    last_entry = @files[-1]
+    last_entry = @files.last
     last_entry.crc32 = crc
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
@@ -257,13 +258,14 @@ class ZipTricks::Streamer
 
     # Clean backslashes and uniqify filenames if there are duplicates
     filename = remove_backslash(filename)
-    filename = uniquify_name(filename) if @files.any? { |e| e.filename == filename }
+    filename = uniquify_name(filename) if @filenames_set.include?(filename)
 
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
     raise Overflow, "Filename is too long" if filename.bytesize > 0xFFFF
 
     e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime=Time.now.utc, use_data_descriptor)
     @files << e
+    @filenames_set << e.filename
     @local_header_offsets << @out.tell
     @writer.write_local_file_header(io: @out, gp_flags: e.gp_flags, crc32: e.crc32, compressed_size: e.compressed_size,
       uncompressed_size: e.uncompressed_size, mtime: e.mtime, filename: e.filename, storage_mode: e.storage_mode)
@@ -279,7 +281,6 @@ class ZipTricks::Streamer
   end
 
   def uniquify_name(filename)
-    files = Set.new(@files.map(&:filename))
     copy_pattern = /\((\d+)\)$/ # we add (1), (2), (n) at the end of a filename if there is a duplicate
     parts = filename.split(".")
     ext = if parts.last =~ /gz|zip/ && parts.size > 2
@@ -297,7 +298,7 @@ class ZipTricks::Streamer
         fn_last_part = "#{fn_last_part} (#{duplicate_counter})"
       end
       new_filename = (parts + [fn_last_part, ext]).compact.join(".")
-      return new_filename unless files.include?(new_filename)
+      return new_filename unless @filenames_set.include?(new_filename)
       duplicate_counter += 1
     end
   end

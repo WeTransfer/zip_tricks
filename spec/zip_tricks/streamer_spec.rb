@@ -18,6 +18,24 @@ describe ZipTricks::Streamer do
   def rewind_after(*ios)
     yield.tap { ios.map(&:rewind) }
   end
+  
+  it'is able to deal with an obscene number of files in the ZIP' do
+    d = double()
+    allow(d).to receive(:write_local_file_header)
+    allow(d).to receive(:write_data_descriptor)
+    allow(d).to receive(:write_central_directory_file_header)
+    allow(d).to receive(:write_end_of_central_directory)
+    
+    described_class.open(ZipTricks::NullWriter, writer: d) do |w|
+      40_000.times do |i|
+        w.write_stored_file('%0004d_file' % i) {|body| body << 'w' }
+      end
+    end
+
+    # If there is a performance problem with file counts you will notice
+    # that this test is taking forever
+    expect(true).to eq(true)
+  end
 
   it 'raises an InvalidOutput if the given object does not support the methods' do
     expect {

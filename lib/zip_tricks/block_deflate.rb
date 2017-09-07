@@ -2,44 +2,54 @@ require 'zlib'
 
 # Permits Deflate compression in independent blocks. The workflow is as follows:
 #
-# * Run every block to compress through deflate_chunk, remove the header, footer and adler32 from the result
-# * Write out the compressed block bodies (the ones deflate_chunk returns)to your output, in sequence
+# * Run every block to compress through deflate_chunk, remove the header,
+#   footer and adler32 from the result
+# * Write out the compressed block bodies (the ones deflate_chunk returns)
+#   to your output, in sequence
 # * Write out the footer (\03\00)
 #
-# The resulting stream is guaranteed to be handled properly by all zip unarchiving tools, including the
-# BOMArchiveHelper/ArchiveUtility on OSX.
+# The resulting stream is guaranteed to be handled properly by all zip
+# unarchiving tools, including the BOMArchiveHelper/ArchiveUtility on OSX.
 #
 # You could also build a compressor for Rubyzip using this module quite easily,
 # even though this is outside the scope of the library.
 #
-# When you deflate the chunks separately, you need to write the end marker yourself (using `write_terminator`).
-# If you just want to deflate a large IO's contents, use `deflate_in_blocks_and_terminate` to have the end marker
-# written out for you.
+# When you deflate the chunks separately, you need to write the end marker
+# yourself (using `write_terminator`).
+# If you just want to deflate a large IO's contents, use
+# `deflate_in_blocks_and_terminate` to have the end marker written out for you.
 #
 # Basic usage to compress a file in parts:
-# 
+#
 #     source_file = File.open('12_gigs.bin', 'rb')
 #     compressed = Tempfile.new
-#     # Will not compress everything in memory, but do it per chunk to spare memory. `compressed`
+#     # Will not compress everything in memory, but do it per chunk to spare
+#       memory. `compressed`
 #     # will be written to at the end of each chunk.
-#     ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file, compressed)
-# 
-# You can also do the same to parts that you will later concatenate together elsewhere, in that case
-# you need to skip the end marker:
+#     ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file,
+#                                                             compressed)
+#
+# You can also do the same to parts that you will later concatenate together 
+# elsewhere, in that case you need to skip the end marker:
 # 
 #     compressed = Tempfile.new
-#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb), compressed)
-#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part2.bin', 'rb), compressed)
-#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb), compressed)
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb),
+#                                               compressed)
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part2.bin', 'rb),
+#                                               compressed)
+#     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('partN.bin', 'rb),
+#                                               compressed)
 #     ZipTricks::BlockDeflate.write_terminator(compressed)
-# 
+#
 # You can also elect to just compress strings in memory (to splice them later):
-# 
+#
 #     compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
-module ZipTricks::BlockDeflate
-  DEFAULT_BLOCKSIZE = 1024*1024*5
-  END_MARKER = [3, 0].pack("C*")
-  VALID_COMPRESSIONS = (Zlib::DEFAULT_COMPRESSION..Zlib::BEST_COMPRESSION).to_a.freeze # Zlib::NO_COMPRESSION..
+ 
+class ZipTricks::BlockDeflate
+  DEFAULT_BLOCKSIZE = 1_024 * 1024 * 5
+  END_MARKER = [3, 0].pack('C*')
+  # Zlib::NO_COMPRESSION..
+  VALID_COMPRESSIONS = (Zlib::DEFAULT_COMPRESSION..Zlib::BEST_COMPRESSION).to_a.freeze
   # Write the end marker (\x3\x0) to the given IO.
   #
   # `output_io` can also be a {ZipTricks::Streamer} to expedite ops.
@@ -83,7 +93,10 @@ module ZipTricks::BlockDeflate
   # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @param block_size [Fixnum] The block size to use (defaults to `DEFAULT_BLOCKSIZE`)
   # @return [Fixnum] number of bytes written to `output_io`
-  def self.deflate_in_blocks_and_terminate(input_io, output_io, level: Zlib::DEFAULT_COMPRESSION, block_size: DEFAULT_BLOCKSIZE)
+  def self.deflate_in_blocks_and_terminate(input_io,
+                                           output_io,
+                                           level: Zlib::DEFAULT_COMPRESSION,
+                                           block_size: DEFAULT_BLOCKSIZE)
     bytes_written = deflate_in_blocks(input_io, output_io, level: level, block_size: block_size)
     bytes_written + write_terminator(output_io)
   end
@@ -100,7 +113,10 @@ module ZipTricks::BlockDeflate
   # @param level [Fixnum] Zlib compression level (defaults to `Zlib::DEFAULT_COMPRESSION`)
   # @param block_size [Fixnum] The block size to use (defaults to `DEFAULT_BLOCKSIZE`)
   # @return [Fixnum] number of bytes written to `output_io`
-  def self.deflate_in_blocks(input_io, output_io, level: Zlib::DEFAULT_COMPRESSION, block_size: DEFAULT_BLOCKSIZE)
+  def self.deflate_in_blocks(input_io,
+                             output_io,
+                             level: Zlib::DEFAULT_COMPRESSION,
+                             block_size: DEFAULT_BLOCKSIZE)
     bytes_written = 0
     while block = input_io.read(block_size)
       deflated = deflate_chunk(block, level: level)

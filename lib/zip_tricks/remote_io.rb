@@ -36,6 +36,8 @@ class ZipTricks::RemoteIO
   #
   # @param n_bytes[Fixnum, nil] how many bytes to read, or `nil` to read all the way to the end
   # @return [String] the read bytes
+  # Rubocop: convention: Assignment Branch Condition size for read is too high. [17.92/15]
+  # Rubocop: convention: Method has too many lines. [13/10]
   def read(n_bytes=nil)
     @remote_size ||= request_object_size
 
@@ -87,7 +89,7 @@ class ZipTricks::RemoteIO
 
   private
 
-  def clamp(a,b,c)
+  def clamp(a, b, c)
     return a if b < a
     return c if b > c
     b

@@ -6,12 +6,15 @@
 # Please read the security warning in `FileReader` _VERY CAREFULLY_
 # before you use this module.
 class ZipTricks::RemoteUncap
-
-  # @param uri[String] the HTTP(S) URL to read the ZIP footer from 
+  # @param uri[String] the HTTP(S) URL to read the ZIP footer from
   # @param reader_class[Class] which class to use for reading
-  # @param options_for_zip_reader[Hash] any additional options to give to {ZipTricks::FileReader} when reading
-  # @return [Array<ZipTricks::FileReader::ZipEntry>] metadata about the files within the remote archive
-  def self.files_within_zip_at(uri, reader_class: ZipTricks::FileReader, **options_for_zip_reader)
+  # @param options_for_zip_reader[Hash] any additional options to give to
+  # {ZipTricks::FileReader} when reading
+  # @return [Array<ZipTricks::FileReader::ZipEntry>] metadata about the
+  # files within the remote archive
+  def self.files_within_zip_at( uri, 
+                                reader_class: ZipTricks::FileReader, 
+                                **options_for_zip_reader)
     fetcher = new(uri)
     fake_io = ZipTricks::RemoteIO.new(fetcher)
     reader = reader_class.new

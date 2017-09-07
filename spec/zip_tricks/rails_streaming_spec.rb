@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 describe ZipTricks::RailsStreaming do
-
   it 'calls the requisite controller methods' do
     class FakeController
       include ZipTricks::RailsStreaming
@@ -12,8 +11,8 @@ describe ZipTricks::RailsStreaming do
       
       def stream_zip
         zip_tricks_stream do |z|
-          z.write_deflated_file("hello.txt") do |f|
-            f << "Hello from Rails"
+          z.write_deflated_file('hello.txt') do |f|
+            f << 'ßHello from Rails'
           end
         end
       end
@@ -23,7 +22,7 @@ describe ZipTricks::RailsStreaming do
     ctr.stream_zip
     response = ctr.response
     
-    expect(response.headers["Content-Type"]).to eq("application/zip")
+    expect(response.headers['Content-Type']).to eq('application/zip')
     output_stream = response.stream
     expect(output_stream).to be_closed
     expect(output_stream.string).not_to be_empty

@@ -1,0 +1,6 @@
+Metrics/LineLength:
+  Max: 100
+
+AllCops:
+  Exclude:
+    - lib/zip_tricks/zip_writer.rb

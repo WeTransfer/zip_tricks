@@ -20,24 +20,6 @@ class ReadMonitor < SimpleDelegator
   end
 end
 
-module Keepalive
-  # Travis-CI kills the build if it does not receive output on standard out or standard error
-  # for longer than a few minutes. We have a few tests that take a _very_ long time, and during
-  # those tests this method has to be called every now and then to revive the output and let the
-  # build proceed.
-  def still_alive!
-    # Rubocop: convention: Do not introduce global variables.
-    # Rubocop: convention: Use a guard clause instead of wrapping the code
-    #          inside a conditional expression.
-    $keepalive_last_out_ping_at ||= Time.now
-    if (Time.now - $keepalive_last_out_ping_at) > 3
-      $keepalive_last_out_ping_at = Time.now
-      $stdout << '_'
-    end
-  end
-  module_function :still_alive!
-end
-
 class ManagedTempfile < Tempfile
   # Rubocop: convention: Replace class var @@managed_tempfiles with a class instance var.
   @@managed_tempfiles = []

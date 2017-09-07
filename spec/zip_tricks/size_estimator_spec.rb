@@ -33,6 +33,6 @@ describe ZipTricks::SizeEstimator do
       expect(r).to eq(estimator), 'add_compressed_entry should return self'
     end
 
-    expect(predicted_size).to eq(2_690_313)
+    expect(predicted_size).to eq(2_690_321)
   end
 end

@@ -419,8 +419,8 @@ describe ZipTricks::ZipWriter do
       expect(buf).not_to be_eof
       expect(br.read_2b).to eq(1)               # Zip64 extra tag
       expect(br.read_2b).to eq(28)              # Size of the Zip64 extra payload
-      expect(br.read_8b).to eq(819_891)          # uncompressed size
-      expect(br.read_8b).to eq(89_765_981)            # compressed size
+      expect(br.read_8b).to eq(819_891)         # uncompressed size
+      expect(br.read_8b).to eq(8_981)           # compressed size
       expect(br.read_8b).to eq(0xFFFFFFFFF + 1) # local file header location
     end
   end

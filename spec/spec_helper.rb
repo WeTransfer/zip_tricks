@@ -71,7 +71,6 @@ module ZipInspection
 end
 
 RSpec.configure do |config|
-  config.include Keepalive
   config.include ZipInspection
   
   config.after :each do

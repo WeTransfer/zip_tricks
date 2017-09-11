@@ -22,7 +22,7 @@ build_test 'Two small stored files and an empty directory' do |zip|
                        size: $image_file.bytesize,
                        crc32: $image_file_crc)
   zip << $image_file
-  
+
   zip.add_empty_directory(dirname: 'Chekov')
 end
 
@@ -112,13 +112,13 @@ end
 
 build_test 'Two entries larger than the overall Zip64 offset using data descriptors' do |zip|
   big = generate_big_entry((0xFFFFFFFF / 2) + 1_024)
-  
+
   zip.write_stored_file('repeated-A.txt') { |sink| big.write_to(sink) }
   zip.write_stored_file('repeated-B.txt') { |sink| big.write_to(sink) }
 end
 
 build_test 'One stored entry larger than Zip64 threshold using data descriptors' do |zip|
   big = generate_big_entry(0xFFFFFFFF + 64_000)
-  
+
   zip.write_stored_file('repeated-A.txt') { |sink| big.write_to(sink) }
 end

@@ -29,9 +29,9 @@ require 'zlib'
 #     ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_file,
 #                                                             compressed)
 #
-# You can also do the same to parts that you will later concatenate together 
+# You can also do the same to parts that you will later concatenate together
 # elsewhere, in that case you need to skip the end marker:
-# 
+#
 #     compressed = Tempfile.new
 #     ZipTricks::BlockDeflate.deflate_in_blocks(File.open('part1.bin', 'rb),
 #                                               compressed)
@@ -44,7 +44,7 @@ require 'zlib'
 # You can also elect to just compress strings in memory (to splice them later):
 #
 #     compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
- 
+
 class ZipTricks::BlockDeflate
   DEFAULT_BLOCKSIZE = 1_024 * 1024 * 5
   END_MARKER = [3, 0].pack('C*')

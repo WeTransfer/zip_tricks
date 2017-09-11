@@ -4,13 +4,13 @@
 module ZipTricks::NullWriter
   # @param data[String] the data to write
   # @return [self]
-  def self.<<(_data) 
+  def self.<<(_data)
     self
   end
-  
+
   # @param data[String] the data to write
   # @return [Fixnum] the amount of data that was supposed to be written
   def self.write(data)
-    data.bytesize 
+    data.bytesize
   end
 end

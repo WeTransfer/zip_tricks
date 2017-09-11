@@ -4,7 +4,11 @@ describe ZipTricks::RemoteUncap, webmock: true do
   let(:uri) { URI.parse('http://example.com/file.zip') }
 
   after :each do
-    File.unlink('temp.zip') rescue Errno::ENOENT
+    begin
+      File.unlink('temp.zip')
+    rescue
+      Errno::ENOENT
+    end
   end
 
   it 'returns an array of remote entries that can be used to fetch the segments \
@@ -67,7 +71,7 @@ describe ZipTricks::RemoteUncap, webmock: true do
   it 'can cope with an empty file within the zip' do
     payload1 = Tempfile.new 'payload1'
     payload1.flush
-    payload1.rewind;
+    payload1.rewind
 
     payload2 = Tempfile.new 'payload2'
     payload2 << Random.new.bytes(1024)
@@ -80,9 +84,9 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     readable_zip = Tempfile.new 'somezip'
     ZipTricks::Streamer.open(readable_zip) do |zip|
-      zip.add_stored_entry(filename: 'first-file-zero-size.bin', 
-                            size: payload1.size,
-                            crc32: payload1_crc)
+      zip.add_stored_entry(filename: 'first-file-zero-size.bin',
+                           size: payload1.size,
+                           crc32: payload1_crc)
       zip.write_stored_file('second-file.bin') { |w| IO.copy_stream(payload2, w) }
     end
     readable_zip.flush
@@ -103,7 +107,7 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     expect(first.filename).to eq('first-file-zero-size.bin')
     expect(first.compressed_size).to be_zero
-    
+
     expect(second.filename).to eq('second-file.bin')
     expect(second.uncompressed_size).to eq(payload2.size)
     readable_zip.seek(second.compressed_data_offset, IO::SEEK_SET)

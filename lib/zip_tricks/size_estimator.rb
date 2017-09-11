@@ -1,20 +1,20 @@
 # Helps to estimate archive sizes
 class ZipTricks::SizeEstimator
   require_relative 'streamer'
-  
+
   # Used to mark a couple of methods public
   class DetailStreamer < ::ZipTricks::Streamer
     public :add_file_and_write_local_header, :write_data_descriptor_for_last_entry
   end
   private_constant :DetailStreamer
-  
+
   # Creates a new estimator with a Streamer object. Normally you should use
   # `estimate` instead an not use this method directly.
   def initialize(streamer)
     @streamer = streamer
   end
   private :initialize
-  
+
   # Performs the estimate using fake archiving. It needs to know the sizes of the
   # entries upfront. Usage:
   #
@@ -41,11 +41,11 @@ class ZipTricks::SizeEstimator
   # @return self
   def add_stored_entry(filename:, size:, use_data_descriptor: false)
     udd = !!use_data_descriptor
-    @streamer.add_file_and_write_local_header(filename: filename, 
-                                              crc32: 0, 
+    @streamer.add_file_and_write_local_header(filename: filename,
+                                              crc32: 0,
                                               storage_mode: 0,
-                                              compressed_size: size, 
-                                              uncompressed_size: size, 
+                                              compressed_size: size,
+                                              uncompressed_size: size,
                                               use_data_descriptor: udd)
     @streamer.simulate_write(size)
     @streamer.write_data_descriptor_for_last_entry if udd
@@ -60,30 +60,30 @@ class ZipTricks::SizeEstimator
   # @param use_data_descriptor[Boolean] whether the entry uses a postfix data
   # descriptor to specify size
   # @return self
-  def add_compressed_entry(filename:, uncompressed_size:, 
-                           compressed_size:, 
+  def add_compressed_entry(filename:, uncompressed_size:,
+                           compressed_size:,
                            use_data_descriptor: false)
     udd = !!use_data_descriptor
-    @streamer.add_file_and_write_local_header(filename: filename, 
-                                              crc32: 0, 
+    @streamer.add_file_and_write_local_header(filename: filename,
+                                              crc32: 0,
                                               storage_mode: 8,
-                                              compressed_size: compressed_size, 
-                                              uncompressed_size: uncompressed_size, 
+                                              compressed_size: compressed_size,
+                                              uncompressed_size: uncompressed_size,
                                               use_data_descriptor: udd)
     @streamer.simulate_write(compressed_size)
     @streamer.write_data_descriptor_for_last_entry if udd
     self
   end
-  
+
   # Add an empty directory to the archive.
   #
   # @param dirname [String] the name of the directory
   # @return self
   def add_empty_directory_entry(dirname:)
-    @streamer.add_file_and_write_local_header(filename: dirname.to_s + '/', 
-                                              crc32: 0, 
+    @streamer.add_file_and_write_local_header(filename: dirname.to_s + '/',
+                                              crc32: 0,
                                               storage_mode: 8,
-                                              compressed_size: 0, 
+                                              compressed_size: 0,
                                               uncompressed_size: 0)
     self
   end

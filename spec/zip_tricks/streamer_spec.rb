@@ -20,9 +20,13 @@ describe ZipTricks::Streamer do
 
   class FakeZipWriter
     def write_local_file_header(*);               end
+
     def write_data_descriptor(*);                 end
+
     def write_central_directory_file_header(*);   end
+
     def write_central_directory_file_header(*);   end
+
     def write_end_of_central_directory(*);        end
   end
 

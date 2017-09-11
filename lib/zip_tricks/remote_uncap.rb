@@ -12,9 +12,9 @@ class ZipTricks::RemoteUncap
   # {ZipTricks::FileReader} when reading
   # @return [Array<ZipTricks::FileReader::ZipEntry>] metadata about the
   # files within the remote archive
-  def self.files_within_zip_at( uri, 
-                                reader_class: ZipTricks::FileReader, 
-                                **options_for_zip_reader)
+  def self.files_within_zip_at(uri,
+                               reader_class: ZipTricks::FileReader,
+                               **options_for_zip_reader)
     fetcher = new(uri)
     fake_io = ZipTricks::RemoteIO.new(fetcher)
     reader = reader_class.new

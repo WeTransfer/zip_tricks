@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
       'public gem pushes.'
   end
 
-  spec.files          = `git ls-files -z`.split("\x0").reject do |f|
+  spec.files = `git ls-files -z`.split("\x0").reject do |f|
     f.match(%r{^(test|spec|features)/})
   end
   spec.bindir         = 'exe'
@@ -35,7 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rubyzip', '~> 1.1'
   spec.add_development_dependency 'terminal-table'
   spec.add_development_dependency 'range_utils'
-  
+
   spec.add_development_dependency 'rack', '~> 1.6' # For Jeweler
   spec.add_development_dependency 'rake', '~> 10.4'
   spec.add_development_dependency 'rspec', '~> 3'

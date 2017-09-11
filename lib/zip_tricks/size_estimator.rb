@@ -40,7 +40,7 @@ class ZipTricks::SizeEstimator
   # data descriptor to specify size
   # @return self
   def add_stored_entry(filename:, size:, use_data_descriptor: false)
-    udd = !!use_data_descriptor
+    udd = use_data_descriptor
     @streamer.add_file_and_write_local_header(filename: filename,
                                               crc32: 0,
                                               storage_mode: 0,
@@ -63,7 +63,7 @@ class ZipTricks::SizeEstimator
   def add_compressed_entry(filename:, uncompressed_size:,
                            compressed_size:,
                            use_data_descriptor: false)
-    udd = !!use_data_descriptor
+    udd = use_data_descriptor
     @streamer.add_file_and_write_local_header(filename: filename,
                                               crc32: 0,
                                               storage_mode: 8,

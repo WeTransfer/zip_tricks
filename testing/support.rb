@@ -4,14 +4,14 @@ Bundler.setup
 require_relative '../lib/zip_tricks'
 require 'terminal-table'
 
-$war_and_peace = File.open(__dir__ + '/in/war-and-peace.txt', 'rb'){ |f| f.read }.freeze
+$war_and_peace = File.open(__dir__ + '/in/war-and-peace.txt', 'rb', &:read).freeze
 $war_and_peace_crc = Zlib.crc32($war_and_peace)
 
-$image_file     = File.open(__dir__ + '/in/VTYL8830.jpg', 'rb'){ |f| f.read }.freeze
+$image_file     = File.open(__dir__ + '/in/VTYL8830.jpg', 'rb', &:read).freeze
 $image_file_crc = Zlib.crc32($image_file)
 
 # Rubocop: convention: Missing top-level class documentation comment.
-BigEntry = Struct.new(:crc32, :size, :iterations) do 
+BigEntry = Struct.new(:crc32, :size, :iterations) do
   def write_to(io)
     iterations.times { io << $war_and_peace }
   end
@@ -71,9 +71,9 @@ def prepare_test_protocol
     ]
     platforms.each do |platform_name|
       f.puts ''
-      table = Terminal::Table.new title: platform_name, headings: %w(Test Outcome)
+      table = Terminal::Table.new title: platform_name, headings: %w[Test Outcome]
       $test_descs.each_with_index do |desc, i|
-        test_name = [desc.filename, '%s' % desc.title].join("\n")
+        test_name = [desc.filename, format('%s', desc.title)].join("\n")
         outcome = ' ' * 64
         table << [test_name, outcome]
         table << :separator if i < ($test_descs.length - 1)

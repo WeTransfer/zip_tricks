@@ -1,13 +1,17 @@
 # Is used internally by Streamer to keep track of entries in the archive during writing.
 # Normally you will not have to use this class directly
-class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size, 
-                                              :uncompressed_size, :storage_mode, :mtime, 
+class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size,
+                                              :uncompressed_size, :storage_mode, :mtime,
                                               :use_data_descriptor)
   def initialize(*)
     super
     filename.force_encoding(Encoding::UTF_8)
     # Rubocop: convention: Avoid using rescue in its modifier form.
-    @requires_efs_flag = !(filename.encode(Encoding::ASCII) rescue false)
+    @requires_efs_flag = !(begin
+                             filename.encode(Encoding::ASCII)
+                           rescue
+                             false
+                           end)
   end
 
   # Set the general purpose flags for the entry. We care about is the EFS

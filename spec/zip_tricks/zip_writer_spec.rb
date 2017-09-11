@@ -436,13 +436,13 @@ describe ZipTricks::ZipWriter do
                                              num_files_in_archive: num_files)
 
       br = ByteReader.new(buf)
-      expect(br.read_4b).to eq(0x06054b50)# EOCD signature
+      expect(br.read_4b).to eq(0x06054b50) # EOCD signature
       expect(br.read_2b).to eq(0)         # number of this disk
       expect(br.read_2b).to eq(0)         # number of the disk with the EOCD record
       expect(br.read_2b).to eq(num_files) # number of files on this disk
       expect(br.read_2b).to eq(num_files) # number of files in central directory
                                           # total (for all disks)
-      expect(br.read_4b).to eq(9_091)     # size of the central directory (cdir records for all files)
+      expect(br.read_4b).to eq(9_091) # size of the central directory (cdir records for all files)
       expect(br.read_4b).to eq(9_091_211) # start of central directory offset from
                                           # the beginning of file/disk
 
@@ -494,7 +494,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0x07064b50)      # Zip64 EOCD locator signature
       expect(br.read_4b).to eq(0)               # Number of the disk with the EOCD locator signature
       expect(br.read_8b).to eq((0xFFFFFFFF + 3) + 9_091) # Where the Zip64 EOCD record starts
-      expect(br.read_4b).to eq(1)               # Total number of disks
+      expect(br.read_4b).to eq(1)           # Total number of disks
 
                                             # Then the usual EOCD record
       expect(br.read_4b).to eq(0x06054b50)  # EOCD signature

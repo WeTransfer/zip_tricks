@@ -9,20 +9,19 @@ require_relative '../lib/zip_tricks'
 # it's entirety before sending. Unless you use a buffering Rack server of
 # course (WEBrick or Thin).
 class ZipDownload
-  # Rubocop: convention: Method has too many lines. 
   def call(env)
     file_path = env['PATH_INFO'] # Should be the absolute path on the filesystem
-    
+
     # Open the file for binary reading
     f = File.open(file_path, 'rb')
     filename = File.basename(file_path)
-    
+
     # Compute the CRC32 upfront. We do not use local footers for post-computing
     # the CRC32, so you _do_ have to precompute it beforehand. Ideally, you
     # would do that before storing the files you will be sending out later on.
     crc32 = ZipTricks::StreamCRC32.from_io(f)
     f.rewind
-    
+
     # Compute the size of the download, so that a
     # real Content-Length header can be sent. Also, if your download
     # stops at some point, the downloading browser will be able to tell
@@ -32,7 +31,7 @@ class ZipDownload
     size = ZipTricks::SizeEstimator.estimate do |ar|
       ar.add_stored_entry(filename, f.size)
     end
-    
+
     # Create a suitable Rack response body, that will support each(),
     # close() and all the other methods. We can then return it up the stack.
     zip_response_body = ZipTricks::RackBody.new do |zip|
@@ -49,11 +48,11 @@ class ZipDownload
         f.close # Make sure the opened file we read from gets closed
       end
     end
-    
+
     # Add a Content-Disposition so that the download has a .zip extension
     # (this will not work well with UTF-8 filenames on Windows, but hey!)
     content_disposition = format('attachment; filename=%s.zip', filename)
-    
+
     # and return the response, adding the Content-Length we have computed earlier
     [
       200,

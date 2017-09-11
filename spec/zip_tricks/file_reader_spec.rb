@@ -1,30 +1,29 @@
 require 'spec_helper'
 describe ZipTricks::FileReader do
-  
   context 'with a file without EOCD' do
     it 'raises the MissingEOCD exception and refuses to read' do
       f = StringIO.new
       10.times { f << ('A' * 1_024) }
       f.rewind
-      
+
       expect { described_class.read_zip_structure(io: f) }.to raise_error(described_class::MissingEOCD)
     end
   end
-  
+
   describe 'read_zip_straight_ahead' do
     it 'returns all the entries it can recover' do
       zipfile = StringIO.new
       war_and_peace = File.read(__dir__ + '/war-and-peace.txt')
       ZipTricks::Streamer.open(zipfile) do |zip|
-        zip.add_stored_entry filename: 'text1.txt', 
-                             crc32: Zlib.crc32(war_and_peace), 
+        zip.add_stored_entry filename: 'text1.txt',
+                             crc32: Zlib.crc32(war_and_peace),
                              size: war_and_peace.bytesize
         zip << war_and_peace
-        zip.add_stored_entry filename: 'text2.txt', 
-                             crc32: Zlib.crc32(war_and_peace), 
+        zip.add_stored_entry filename: 'text2.txt',
+                             crc32: Zlib.crc32(war_and_peace),
                              size: war_and_peace.bytesize
         zip << war_and_peace
-        zip.add_stored_entry filename: 'text3.txt', 
+        zip.add_stored_entry filename: 'text3.txt',
                              crc32: Zlib.crc32(war_and_peace),
                              size: war_and_peace.bytesize
         zip << war_and_peace
@@ -38,28 +37,28 @@ describe ZipTricks::FileReader do
         expect(entry.compressed_size).to eq(496_006)
         expect(entry.uncompressed_size).to eq(496_006)
       end
-      
+
       first, second, third = recovered_entries
       expect(first.compressed_data_offset).to eq(48)
       expect(second.compressed_data_offset).to eq(496_102)
       expect(third.compressed_data_offset).to eq(992_156)
-      
+
       recovered_entries.each do |entry|
         zipfile.seek(entry.compressed_data_offset)
         expect(zipfile.read(5)).to eq(war_and_peace[0...5])
       end
     end
-    
+
     it 'recovers an entry that uses Zip64 extra fields' do
       zipfile = StringIO.new
       w = ZipTricks::ZipWriter.new
-      w.write_local_file_header(io: zipfile, 
-                                filename: 'big.bin', 
-                                compressed_size: 0xFFFFFFFFFF, 
+      w.write_local_file_header(io: zipfile,
+                                filename: 'big.bin',
+                                compressed_size: 0xFFFFFFFFFF,
                                 uncompressed_size: 0xFFFFFFFFF,
-                                crc32: 0, 
-                                gp_flags: 0, 
-                                mtime: Time.now, 
+                                crc32: 0,
+                                gp_flags: 0,
+                                mtime: Time.now,
                                 storage_mode: 0)
       zipfile.rewind
       recovered_entries = described_class.read_zip_straight_ahead(io: zipfile)
@@ -67,7 +66,7 @@ describe ZipTricks::FileReader do
       entry = recovered_entries.shift
       expect(entry.compressed_size).to eq(0xFFFFFFFFFF)
     end
-    
+
     it 'raises when an entry uses a data descriptor' do
       zipfile = StringIO.new
       ZipTricks::Streamer.open(zipfile) do |zip|
@@ -76,7 +75,7 @@ describe ZipTricks::FileReader do
         end
       end
       zipfile.rewind
-      
+
       expect { described_class.read_zip_straight_ahead(io: zipfile) }.to raise_error(described_class::UnsupportedFeature)
     end
   end
@@ -87,37 +86,37 @@ describe ZipTricks::FileReader do
       zipfile = StringIO.new
       tolstoy = File.read(__dir__ + '/war-and-peace.txt')
       tolstoy.force_encoding(Encoding::BINARY)
-      
+
       # Make a one-off Writer that corrupts the size of the central directory
       # and says there is more data in it than there actually is
       class EvilWriter < ZipTricks::ZipWriter
         def write_end_of_central_directory(**kwargs)
           # Pretend there has to be more data
-          kwargs[:central_directory_size] = kwargs[:central_directory_size] + 64 
+          kwargs[:central_directory_size] = kwargs[:central_directory_size] + 64
           super(**kwargs)
         end
       end
-        
+
       ZipTricks::Streamer.open(zipfile, writer: EvilWriter.new) do |zip|
         zip.write_deflated_file('text-1.txt') { |sink| sink << tolstoy }
         zip.write_deflated_file('text-2.txt') { |sink| sink << tolstoy }
       end
-      
+
       # Find the start of the EOCD record (signature, then the information
       # about disk numbers and the information about the file counts
       eocd_start_marker = [0x06054b50, 0, 0, 2, 2].pack('Vvvvv')
       eocd_offset = zipfile.string.index(eocd_start_marker)
       expect(eocd_offset).not_to be_nil
-      
+
       # Seek to the offset where the central directory size is going to be
       # (just after the string we looked for)
       zipfile.seek(eocd_offset + eocd_start_marker.bytesize)
       # and overwrite it.
       zipfile.write([118].pack('V'))
       zipfile.rewind
-      
+
       entries = ZipTricks::FileReader.read_zip_structure(io: zipfile)
-      
+
       expect(entries.length).to eq(2)
     end
   end
@@ -159,7 +158,7 @@ describe ZipTricks::FileReader do
         end
       end
       zipfile.rewind
-    
+
       read_monitor = ReadMonitor.new(zipfile)
       entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
       # Rubocop: warning: Useless assignment to variable - entries.
@@ -177,7 +176,7 @@ describe ZipTricks::FileReader do
         end
       end
       zipfile.rewind
-    
+
       read_monitor = ReadMonitor.new(zipfile)
       entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
       expect(read_monitor.num_reads).to eq(44)
@@ -228,7 +227,7 @@ describe ZipTricks::FileReader do
       expect(readback[0..10]).to eq(tolstoy[0..10])
     end
   end
-  
+
   describe '#get_compressed_data_offset' do
     it 'reads the offset for an entry having Zip64 extra fields' do
       w = ZipTricks::ZipWriter.new
@@ -242,14 +241,14 @@ describe ZipTricks::FileReader do
                                 gp_flags: 4,
                                 mtime: Time.now,
                                 storage_mode: 8)
-      
+
       out.rewind
-      
-      compressed_data_offset = subject.get_compressed_data_offset(io: out, 
+
+      compressed_data_offset = subject.get_compressed_data_offset(io: out,
                                                                   local_file_header_offset: 7_656_177)
       expect(compressed_data_offset).to eq(7_656_245)
     end
-    
+
     it 'reads the offset for an entry having a long name' do
       w = ZipTricks::ZipWriter.new
       out = StringIO.new
@@ -262,23 +261,23 @@ describe ZipTricks::FileReader do
                                 gp_flags: 4,
                                 mtime: Time.now,
                                 storage_mode: 8)
-      
+
       out.rewind
-      
-      compressed_data_offset = subject.get_compressed_data_offset(io: out, 
+
+      compressed_data_offset = subject.get_compressed_data_offset(io: out,
                                                                   local_file_header_offset: 7)
       expect(compressed_data_offset).to eq(94)
     end
   end
-  
+
   it 'is able to latch to the EOCD location even if the signature for the EOCD record appears all over the ZIP' do
     # A VERY evil ZIP file which has this signature all over
     eocd_sig = [0x06054b50].pack('V')
     evil_str = "#{eocd_sig} and #{eocd_sig}"
-    
+
     z = StringIO.new
     w = ZipTricks::ZipWriter.new
-    w.write_local_file_header(io: z, 
+    w.write_local_file_header(io: z,
                               filename: evil_str,
                               compressed_size: evil_str.bytesize,
                               uncompressed_size: evil_str.bytesize,
@@ -297,17 +296,17 @@ describe ZipTricks::FileReader do
                                           uncompressed_size: evil_str.bytesize,
                                           mtime: Time.now,
                                           crc32: 0x06054b50)
-    w.write_end_of_central_directory( io: z,
-                                      start_of_central_directory_location: where,
-                                      central_directory_size: z.tell - where,
-                                      num_files_in_archive: 1,
-                                      comment: evil_str)
-    
+    w.write_end_of_central_directory(io: z,
+                                     start_of_central_directory_location: where,
+                                     central_directory_size: z.tell - where,
+                                     num_files_in_archive: 1,
+                                     comment: evil_str)
+
     z.rewind
     entries = described_class.read_zip_structure(io: z)
     expect(entries.length).to eq(1)
   end
-  
+
   it 'can handle a Zip64 central directory fields that only contains the required fields (substitutes for standard fields)' do
     # In this example central directory, 2 entries contain Zip64 extra where
     # only the local header offset is set (8 bytes each)

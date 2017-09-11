@@ -146,9 +146,9 @@ class ZipTricks::Streamer
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_compressed_entry(filename:, compressed_size:, uncompressed_size:, crc32:)
-    add_file_and_write_local_header(filename: filename, crc32: crc32, 
-                                    storage_mode: DEFLATED, 
-                                    compressed_size: compressed_size, 
+    add_file_and_write_local_header(filename: filename, crc32: crc32,
+                                    storage_mode: DEFLATED,
+                                    compressed_size: compressed_size,
                                     uncompressed_size: uncompressed_size)
     @out.tell
   end
@@ -163,10 +163,10 @@ class ZipTricks::Streamer
   # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_stored_entry(filename:, size:, crc32:)
-    add_file_and_write_local_header(filename: filename, 
-                                    crc32: crc32, 
+    add_file_and_write_local_header(filename: filename,
+                                    crc32: crc32,
                                     storage_mode: STORED,
-                                    compressed_size: size, 
+                                    compressed_size: size,
                                     uncompressed_size: size)
     @out.tell
   end
@@ -176,14 +176,14 @@ class ZipTricks::Streamer
   # @param dirname [String] the name of the directory in the archive
   # @return [Fixnum] the offset the output IO is at after writing the entry header
   def add_empty_directory(dirname:)
-    add_file_and_write_local_header(filename: dirname.to_s + '/', 
-                                    crc32: 0, 
+    add_file_and_write_local_header(filename: dirname.to_s + '/',
+                                    crc32: 0,
                                     storage_mode: STORED,
-                                    compressed_size: 0, 
+                                    compressed_size: 0,
                                     uncompressed_size: 0)
     @out.tell
   end
-  
+
   # Opens the stream for a stored file in the archive, and yields a writer
   # for that file to the block.
   # Once the write completes, a data descriptor will be written with the
@@ -192,11 +192,11 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_stored_file(filename)
-    add_file_and_write_local_header(filename: filename, 
+    add_file_and_write_local_header(filename: filename,
                                     storage_mode: STORED,
-                                    use_data_descriptor: true, 
-                                    crc32: 0, 
-                                    compressed_size: 0, 
+                                    use_data_descriptor: true,
+                                    crc32: 0,
+                                    compressed_size: 0,
                                     uncompressed_size: 0)
 
     w = StoredWriter.new(@out)
@@ -210,9 +210,9 @@ class ZipTricks::Streamer
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
 
-    @writer.write_data_descriptor(io: @out, 
-                                  crc32: crc, 
-                                  compressed_size: comp, 
+    @writer.write_data_descriptor(io: @out,
+                                  crc32: crc,
+                                  compressed_size: comp,
                                   uncompressed_size: uncomp)
   end
 
@@ -224,11 +224,11 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
-    add_file_and_write_local_header(filename: filename, 
+    add_file_and_write_local_header(filename: filename,
                                     storage_mode: DEFLATED,
-                                    use_data_descriptor: true, 
-                                    crc32: 0, 
-                                    compressed_size: 0, 
+                                    use_data_descriptor: true,
+                                    crc32: 0,
+                                    compressed_size: 0,
                                     uncompressed_size: 0)
 
     w = DeflatedWriter.new(@out)
@@ -243,7 +243,7 @@ class ZipTricks::Streamer
     last_entry.uncompressed_size = uncomp
     write_data_descriptor_for_last_entry
   end
-    
+
   # Closes the archive. Writes the central directory, and switches the writer into
   # a state where it can no longer be written to.
   #
@@ -259,29 +259,29 @@ class ZipTricks::Streamer
     # Write out the central directory entries, one for each file
     @files.each_with_index do |entry, i|
       header_loc = @local_header_offsets.fetch(i)
-      @writer.write_central_directory_file_header(io: @out, 
+      @writer.write_central_directory_file_header(io: @out,
                                                   local_file_header_location: header_loc,
-                                                  gp_flags: entry.gp_flags, 
+                                                  gp_flags: entry.gp_flags,
                                                   storage_mode: entry.storage_mode,
-                                                  compressed_size: entry.compressed_size, 
+                                                  compressed_size: entry.compressed_size,
                                                   uncompressed_size: entry.uncompressed_size,
-                                                  mtime: entry.mtime, 
-                                                  crc32: entry.crc32, 
-                                                  filename: entry.filename) 
-                                                  #, external_attrs: DEFAULT_EXTERNAL_ATTRS)
+                                                  mtime: entry.mtime,
+                                                  crc32: entry.crc32,
+                                                  filename: entry.filename)
+      # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
 
     # Record the central directory size, for the EOCDR
     cdir_size = @out.tell - cdir_starts_at
 
     # Write out the EOCDR
-    @writer. write_end_of_central_directory(io: @out, 
+    @writer. write_end_of_central_directory(io: @out,
                                             start_of_central_directory_location: cdir_starts_at,
-                                            central_directory_size: cdir_size, 
+                                            central_directory_size: cdir_size,
                                             num_files_in_archive: @files.length)
 
     # Clear the files so that GC will not have to trace all the way to here to deallocate them
-    @files.clear 
+    @files.clear
     @filenames_set.clear
 
     # and return the final offset
@@ -302,22 +302,32 @@ class ZipTricks::Streamer
   # Rubocop: convention: Assignment Branch Condition size for
   #          add_file_and_write_local_header is too high. [24.52/15]
   # Rubocop: convention: Avoid parameter lists longer than 5 parameters. [6/5]
-  def add_file_and_write_local_header(filename:, 
-                                      crc32:, 
-                                      storage_mode:, 
+  def add_file_and_write_local_header(filename:,
+                                      crc32:,
+                                      storage_mode:,
                                       compressed_size:,
-                                      uncompressed_size:, 
+                                      uncompressed_size:,
                                       use_data_descriptor: false)
 
     # Clean backslashes and uniqify filenames if there are duplicates
     filename = remove_backslash(filename)
     filename = uniquify_name(filename) if @filenames_set.include?(filename)
 
-    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
+    # Rubocop: Favor a normal unless-statement over a modifier clause in a multiline statement
+    unless [STORED, DEFLATED].include?(storage_mode)
+      raise UnknownMode, "Unknown compression \
+                          mode #{storage_mode}"
+    end
 
     raise Overflow, 'Filename is too long' if filename.bytesize > 0xFFFF
 
-    e = Entry.new(filename, crc32, compressed_size, uncompressed_size, storage_mode, mtime = Time.now.utc, use_data_descriptor)
+    e = Entry.new(filename,
+                  crc32,
+                  compressed_size,
+                  uncompressed_size,
+                  storage_mode,
+                  mtime = Time.now.utc,
+                  use_data_descriptor)
     @files << e
     @filenames_set << e.filename
     @local_header_offsets << @out.tell
@@ -330,10 +340,10 @@ class ZipTricks::Streamer
                                     filename: e.filename,
                                     storage_mode: e.storage_mode)
   end
-      
+
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
-    @writer.write_data_descriptor(io: @out, 
+    @writer.write_data_descriptor(io: @out,
                                   crc32: 0,
                                   compressed_size: e.compressed_size,
                                   uncompressed_size: e.uncompressed_size)
@@ -349,7 +359,7 @@ class ZipTricks::Streamer
   # Rubocop: convention: Perceived complexity for uniquify_name is too high. [8/7]
   def uniquify_name(filename)
     # we add (1), (2), (n) at the end of a filename if there is a duplicate
-    copy_pattern = /\((\d+)\)$/ 
+    copy_pattern = /\((\d+)\)$/
     parts = filename.split('.')
     ext = if parts.last =~ /gz|zip/ && parts.size > 2
             parts.pop(2)

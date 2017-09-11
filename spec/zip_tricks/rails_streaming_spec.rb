@@ -8,7 +8,7 @@ describe ZipTricks::RailsStreaming do
       def initialize
         @response = Struct.new(:headers, :stream).new({}, StringIO.new)
       end
-      
+
       def stream_zip
         zip_tricks_stream do |z|
           z.write_deflated_file('hello.txt') do |f|
@@ -17,11 +17,11 @@ describe ZipTricks::RailsStreaming do
         end
       end
     end
-    
+
     ctr = FakeController.new
     ctr.stream_zip
     response = ctr.response
-    
+
     expect(response.headers['Content-Type']).to eq('application/zip')
     output_stream = response.stream
     expect(output_stream).to be_closed

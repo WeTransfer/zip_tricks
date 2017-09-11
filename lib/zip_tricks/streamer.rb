@@ -268,7 +268,7 @@ class ZipTricks::Streamer
                                                   mtime: entry.mtime,
                                                   crc32: entry.crc32,
                                                   filename: entry.filename)
-      # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
+                                                  # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
 
     # Record the central directory size, for the EOCDR
@@ -313,10 +313,8 @@ class ZipTricks::Streamer
     filename = remove_backslash(filename)
     filename = uniquify_name(filename) if @filenames_set.include?(filename)
 
-    # Rubocop: Favor a normal unless-statement over a modifier clause in a multiline statement
     unless [STORED, DEFLATED].include?(storage_mode)
-      raise UnknownMode, "Unknown compression \
-                          mode #{storage_mode}"
+      raise UnknownMode, "Unknown compression mode #{storage_mode}"
     end
 
     raise Overflow, 'Filename is too long' if filename.bytesize > 0xFFFF

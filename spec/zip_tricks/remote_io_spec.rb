@@ -62,13 +62,14 @@ describe ZipTricks::RemoteIO do
       @subject = described_class.new
 
       allow(@subject).to receive(:request_object_size).and_return(@buf.size)
-      allow(@subject).to receive(:request_range) { |range| @buf.read[range].tap { @buf.rewind }
+      allow(@subject).to receive(:request_range) { |range|
+        @buf.read[range].tap { @buf.rewind }
       }
     end
 
     after :each do
       if @buf
-        @buf.close 
+        @buf.close
         @buf.unlink
       end
     end
@@ -91,7 +92,7 @@ describe ZipTricks::RemoteIO do
           expect(data).to eq('')
         end
       end
-      
+
       it 'returns exact amount of bytes at the start of the buffer' do
         bytes_read = @subject.read(10)
         expect(@subject.tell).to eq(10)

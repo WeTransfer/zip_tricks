@@ -9,7 +9,7 @@ class ZipTricks::BlockWrite
   end
 
   # Make sure those methods raise outright
-  %i(seek pos= to_s).each do |m|
+  %i[seek pos= to_s].each do |m|
     define_method(m) do |*_args|
       raise "#{m} not supported - this IO adapter is non-rewindable"
     end
@@ -21,10 +21,14 @@ class ZipTricks::BlockWrite
     return if buf.nil?
 
     # Ensure we ALWAYS write in binary encoding.
-    encoded = 
+    encoded =
       if buf.encoding != Encoding::BINARY
         # If we got a frozen string we can't force_encoding on it
-        buf.force_encoding(Encoding::BINARY) rescue buf.dup.force_encoding(Encoding::BINARY)
+        begin
+          buf.force_encoding(Encoding::BINARY)
+        rescue
+          buf.dup.force_encoding(Encoding::BINARY)
+        end
       else
         buf
       end
@@ -32,7 +36,7 @@ class ZipTricks::BlockWrite
     #  buf.dup.force_encoding(Encoding::BINARY)
     # Zero-size output has a special meaning  when using chunked encoding
     return if encoded.bytesize.zero?
-    
+
     @block.call(encoded)
     self
   end

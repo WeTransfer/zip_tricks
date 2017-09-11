@@ -27,7 +27,6 @@ describe ZipTricks::Streamer do
   end
 
   it 'has linear performance depending on the file count' do
-
     module FilecountComplexity
       def self.generate_args(size)
         [size]
@@ -41,7 +40,7 @@ describe ZipTricks::Streamer do
         end
       end
     end
-    
+
     expect(FilecountComplexity).to be_linear
   end
 
@@ -66,10 +65,10 @@ describe ZipTricks::Streamer do
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)
-    pos = zip.add_compressed_entry( filename: 'file.jpg', 
-                                    uncompressed_size: 182_919, 
-                                    compressed_size: 8_912, 
-                                    crc32: 8_912)
+    pos = zip.add_compressed_entry(filename: 'file.jpg',
+                                   uncompressed_size: 182_919,
+                                   compressed_size: 8_912,
+                                   crc32: 8_912)
     expect(pos).to eq(io.tell)
     expect(pos).to eq(47)
 
@@ -101,8 +100,8 @@ describe ZipTricks::Streamer do
 
     compressed_blockwise = StringIO.new
     rewind_after(compressed_blockwise, f) do
-      ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(f, 
-                                                              compressed_blockwise, 
+      ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(f,
+                                                              compressed_blockwise,
                                                               block_size: 1_024)
     end
 
@@ -111,9 +110,9 @@ describe ZipTricks::Streamer do
     zip_file.binmode
 
     described_class.open(zip_file) do |zip|
-      zip.add_compressed_entry(filename: 'compressed-file.bin', 
+      zip.add_compressed_entry(filename: 'compressed-file.bin',
                                uncompressed_size: f.size,
-                               crc32: crc, 
+                               crc32: crc,
                                compressed_size: compressed_blockwise.size)
       zip << compressed_blockwise.read
     end
@@ -134,7 +133,7 @@ describe ZipTricks::Streamer do
 
     inspect_zip_with_external_tool(zip_file.path)
   end
-  
+
   it 'can write and then read an empty directory' do
     # Perform the zipping
     zip_file = Tempfile.new('z')
@@ -159,7 +158,7 @@ describe ZipTricks::Streamer do
 
     inspect_zip_with_external_tool(zip_file.path)
   end
-  
+
   it 'creates an archive that OSX ArchiveUtility can handle' do
     outbuf = Tempfile.new('zip')
     outbuf.binmode
@@ -175,27 +174,31 @@ describe ZipTricks::Streamer do
 
       # Compress in blocks of 4 Kb
       rewind_after(source_f, compressed_buffer) do
-        ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_f, 
-                                                                compressed_buffer, 
+        ZipTricks::BlockDeflate.deflate_in_blocks_and_terminate(source_f,
+                                                                compressed_buffer,
                                                                 block_size: 1_024 * 4)
       end
 
       # Add this file compressed...
       zip.add_compressed_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
-        crc32: crc32, compressed_size: compressed_buffer.size)
+                               crc32: crc32, compressed_size: compressed_buffer.size)
       zip << compressed_buffer.string
 
       # ...and stored.
       zip.add_stored_entry(filename: 'war-and-peace-raw.txt', size: source_f.size, crc32: crc32)
       zip << source_f.read
-      
+
       # Add an empty directory as well.
       zip.add_empty_directory(dirname: 'Beatles')
 
       zip.close
 
       outbuf.flush
-      File.unlink('test.zip') rescue nil
+      begin
+        File.unlink('test.zip')
+      rescue
+        nil
+      end
       File.rename(outbuf.path, 'osx-archive-test.zip')
 
       # Mark this test as skipped if the system does not have the binary
@@ -204,7 +207,7 @@ describe ZipTricks::Streamer do
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')
   end
-  
+
   it 'archives files which can then be read using the usual means with Rubyzip' do
     zip_buf = Tempfile.new('zipp')
     zip_buf.binmode
@@ -227,12 +230,12 @@ describe ZipTricks::Streamer do
 
     # Perform the zipping
     zip = described_class.new(output_io)
-    zip.add_stored_entry(filename: 'first-file.bin', 
-                         size: raw_file1.size, 
+    zip.add_stored_entry(filename: 'first-file.bin',
+                         size: raw_file1.size,
                          crc32: Zlib.crc32(raw_file1))
     zip << raw_file1
-    zip.add_stored_entry(filename: 'second-file.bin', 
-                         size: raw_file2.size, 
+    zip.add_stored_entry(filename: 'second-file.bin',
+                         size: raw_file2.size,
                          crc32: Zlib.crc32(raw_file2))
     zip << raw_file2
     zip.close
@@ -270,12 +273,12 @@ describe ZipTricks::Streamer do
 
     # Perform the zipping
     zip = described_class.new(zip_buf)
-    zip.add_stored_entry(filename: 'first-file.bin', 
-                         size: raw_file1.size, 
+    zip.add_stored_entry(filename: 'first-file.bin',
+                         size: raw_file1.size,
                          crc32: Zlib.crc32(raw_file1))
     zip << raw_file1
-    zip.add_stored_entry(filename: 'второй-файл.bin', 
-                         size: raw_file2.size, 
+    zip.add_stored_entry(filename: 'второй-файл.bin',
+                         size: raw_file2.size,
                          crc32: Zlib.crc32(raw_file2))
     IO.copy_stream(StringIO.new(raw_file2), zip)
     zip.close
@@ -297,7 +300,8 @@ describe ZipTricks::Streamer do
     end
   end
 
-  it 'creates an archive with data descriptors that can be opened by Rubyzip, with a small number of very tiny text files' do
+  it 'creates an archive with data descriptors that can be opened by Rubyzip, \
+      with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     # Rubocop: warning: Useless assignment to variable - z
     z = described_class.open(tf) do |zip|

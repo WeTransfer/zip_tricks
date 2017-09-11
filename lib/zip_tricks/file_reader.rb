@@ -197,7 +197,7 @@ class ZipTricks::FileReader
     eocd_offset = get_eocd_offset(io, zip_file_size)
 
     zip64_end_of_cdir_location = get_zip64_eocd_location(io, eocd_offset)
-    num_files, cdir_location, cdir_size = 
+    num_files, cdir_location, _cdir_size = 
       if zip64_end_of_cdir_location
         num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
       else

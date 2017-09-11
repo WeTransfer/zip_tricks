@@ -268,7 +268,7 @@ class ZipTricks::Streamer
                                                   mtime: entry.mtime,
                                                   crc32: entry.crc32,
                                                   filename: entry.filename)
-                                                  # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
+      # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
 
     # Record the central directory size, for the EOCDR

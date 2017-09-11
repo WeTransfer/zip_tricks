@@ -31,4 +31,3 @@ class ZipTricks::FileReader::StoredReader
     @already_read >= @compressed_data_size
   end
 end
-  

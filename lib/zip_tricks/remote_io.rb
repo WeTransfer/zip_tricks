@@ -20,25 +20,25 @@ class ZipTricks::RemoteIO
     @pos = clamp(0, offset, @remote_size)
     0 # always return 0!
   end
-  
+
   # Emulates IO#size.
   #
   # @return [Fixnum] the size of the remote resource
   def size
     @remote_size ||= request_object_size
   end
-  
+
   # Emulates IO#read, but requires the number of bytes to read
   # The read will be limited to the
   # size of the remote resource relative to the current offset in the IO,
   # so if you are at offset 0 in the IO of size 10, doing a `read(20)`
-  # will only return you 10 bytes of result, and not raise any exceptions. 
+  # will only return you 10 bytes of result, and not raise any exceptions.
   #
   # @param n_bytes[Fixnum, nil] how many bytes to read, or `nil` to read all the way to the end
   # @return [String] the read bytes
   # Rubocop: convention: Assignment Branch Condition size for read is too high. [17.92/15]
   # Rubocop: convention: Method has too many lines. [13/10]
-  def read(n_bytes=nil)
+  def read(n_bytes = nil)
     @remote_size ||= request_object_size
 
     # If the resource is empty there is nothing to read

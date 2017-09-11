@@ -351,7 +351,7 @@ describe ZipTricks::Streamer do
              'file\\one.jpg', 'My.Super.file.txt.zip', 'My.Super.file.txt.zip']
     fake_writer = double('Writer').as_null_object
     seen_filenames = []
-    allow(fake_writer).to receive(:write_local_file_header) { |filename:, **others|
+    allow(fake_writer).to receive(:write_local_file_header) { |filename:, **_others|
       seen_filenames << filename
     }
     zip_streamer = described_class.new(StringIO.new, writer: fake_writer)

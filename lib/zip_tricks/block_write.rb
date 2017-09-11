@@ -10,7 +10,7 @@ class ZipTricks::BlockWrite
 
   # Make sure those methods raise outright
   %i(seek pos= to_s).each do |m|
-    define_method(m) do |*args|
+    define_method(m) do |*_args|
       raise "#{m} not supported - this IO adapter is non-rewindable"
     end
   end

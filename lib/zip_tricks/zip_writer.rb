@@ -1,3 +1,5 @@
+# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Layout/ElseAlignment, Metrics/ParameterLists, Layout/LeadingCommentSpace, Lint/EndAlignment, Layout/IndentationWidth
+#
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.
 #
@@ -35,15 +37,15 @@ class ZipTricks::ZipWriter
     # but for now just putting in sane defaults will do. For example, Trac with zipinfo does this:
     # zipinfo.external_attr = 0644 << 16L # permissions -r-wr--r--.
     # We snatch the incantations from Rubyzip for this.
-    unix_perms = 0644
-    file_type_file = 010
-    external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
+    unix_perms = 0o644
+    file_type_file = 0o10
+    external_attrs = (file_type_file << 12 | (unix_perms & 0o7777)) << 16
   end
   EMPTY_DIRECTORY_EXTERNAL_ATTRS = begin
     # Applies permissions to an empty directory.
-    unix_perms = 0755
-    file_type_dir = 004
-    external_attrs = (file_type_file << 12 | (unix_perms & 07777)) << 16
+    unix_perms = 0o755
+    file_type_dir = 0o04
+    external_attrs = (file_type_file << 12 | (unix_perms & 0o7777)) << 16
   end
   MADE_BY_SIGNATURE = begin
     # A combination of the VERSION_MADE_BY low byte and the OS type high byte
@@ -56,14 +58,14 @@ class ZipTricks::ZipWriter
   C_Qe = 'Q<'.freeze  # Encode an 8-byte unsigned little-endian uint
   C_C = 'C'.freeze # For bit-encoded strings
   C_N = 'N'.freeze # Encode a 4-byte signed little-endian int
-  
+
   private_constant :FOUR_BYTE_MAX_UINT, :TWO_BYTE_MAX_UINT,
     :VERSION_MADE_BY, :VERSION_NEEDED_TO_EXTRACT, :VERSION_NEEDED_TO_EXTRACT_ZIP64,
     :DEFAULT_EXTERNAL_ATTRS, :MADE_BY_SIGNATURE,
     :C_V, :C_v, :C_Qe, :ZIP_TRICKS_COMMENT
 
-  # Writes the local file header, that precedes the actual file _data_. 
-  # 
+  # Writes the local file header, that precedes the actual file _data_.
+  #
   # @param io[#<<] the buffer to write the local file header to
   # @param filename[String]  the name of the file in the archive
   # @param compressed_size[Fixnum]    The size of the compressed (or stored) data - how much space it uses in the ZIP
@@ -109,6 +111,7 @@ class ZipTricks::ZipWriter
     else
       ''
     end
+
     extra_fields << timestamp_extra(mtime)
 
     io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
@@ -128,8 +131,15 @@ class ZipTricks::ZipWriter
   # @param mtime[Time]  the modification time to be recorded in the ZIP
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
-  def write_central_directory_file_header(io:, local_file_header_location:, gp_flags:, storage_mode:, compressed_size:, uncompressed_size:, mtime:, crc32:, 
-    filename:)
+  def write_central_directory_file_header(io:,
+                                          local_file_header_location:,
+                                          gp_flags:,
+                                          storage_mode:,
+                                          compressed_size:,
+                                          uncompressed_size:,
+                                          mtime:,
+                                          crc32:,
+                                          filename:)
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
     # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
     add_zip64 = (local_file_header_location > FOUR_BYTE_MAX_UINT) ||
@@ -142,7 +152,7 @@ class ZipTricks::ZipWriter
     else
       io << [VERSION_NEEDED_TO_EXTRACT].pack(C_v)       # version needed to extract       2 bytes
     end
-  
+
     io << [gp_flags].pack(C_v)                          # general purpose bit flag        2 bytes
     io << [storage_mode].pack(C_v)                      # compression method              2 bytes
     io << [to_binary_dos_time(mtime)].pack(C_v)         # last mod file time              2 bytes
@@ -161,13 +171,12 @@ class ZipTricks::ZipWriter
     io << [filename.bytesize].pack(C_v)                 # file name length                2 bytes
 
     extra_fields = if add_zip64
-      zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location,
-          compressed_size: compressed_size, uncompressed_size: uncompressed_size)
+      zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     else
       ''
     end
     extra_fields << timestamp_extra(mtime)
-    
+
     io << [extra_fields.bytesize].pack(C_v)             # extra field length              2 bytes
 
     io << [0].pack(C_v)                                 # file comment length             2 bytes
@@ -181,10 +190,10 @@ class ZipTricks::ZipWriter
       io << [0].pack(C_v)
     end
     io << [0].pack(C_v)                                # internal file attributes        2 bytes
-    
+
     # Because the add_empty_directory method will create a directory with a trailing "/",
     # this check can be used to assign proper permissions to the created directory.
-    if filename.end_with?("/")
+    if filename.end_with?('/')
       io << [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_V)
     else
       io << [DEFAULT_EXTERNAL_ATTRS].pack(C_V)           # external file attributes        4 bytes
@@ -215,7 +224,6 @@ class ZipTricks::ZipWriter
                                   # for the data descriptor record.
     io << [crc32].pack(C_V)                             # crc-32                          4 bytes
 
-
     # If one of the sizes is above 0xFFFFFFF use ZIP64 lengths (8 bytes) instead. A good unarchiver
     # will decide to unpack it as such if it finds the Zip64 extra for the file in the central directory.
     # So also use the opportune moment to switch the entry to Zip64 if needed
@@ -236,7 +244,7 @@ class ZipTricks::ZipWriter
   # @return [void]
   def write_end_of_central_directory(io:, start_of_central_directory_location:, central_directory_size:, num_files_in_archive:, comment: ZIP_TRICKS_COMMENT)
     zip64_eocdr_offset = start_of_central_directory_location + central_directory_size
-    
+
     zip64_required = central_directory_size > FOUR_BYTE_MAX_UINT ||
       start_of_central_directory_location > FOUR_BYTE_MAX_UINT ||
       zip64_eocdr_offset > FOUR_BYTE_MAX_UINT ||
@@ -311,7 +319,7 @@ class ZipTricks::ZipWriter
     io << [comment.bytesize].pack(C_v)                      # .ZIP file comment length        2 bytes
     io << comment                                           # .ZIP file comment       (variable size)
   end
-  
+
   private
 
   # Writes the Zip64 extra field for the local file header. Will be used by `write_local_file_header` when any sizes given to it warrant that.
@@ -336,7 +344,7 @@ class ZipTricks::ZipWriter
   # remaining times
   def timestamp_extra(mtime)
     #         Local-header version:
-    # 
+    #
     #         Value         Size        Description
     #         -----         ----        -----------
     # (time)  0x5455        Short       tag for this extra block type ("UT")
@@ -345,9 +353,9 @@ class ZipTricks::ZipWriter
     #         (ModTime)     Long        time of last modification (UTC/GMT)
     #         (AcTime)      Long        time of last access (UTC/GMT)
     #         (CrTime)      Long        time of original creation (UTC/GMT)
-    # 
+    #
     #         Central-header version:
-    # 
+    #
     #         Value         Size        Description
     #         -----         ----        -----------
     # (time)  0x5455        Short       tag for this extra block type ("UT")
@@ -357,7 +365,7 @@ class ZipTricks::ZipWriter
     #
     # The lower three bits of Flags in both headers indicate which time-
     #       stamps are present in the LOCAL extra field:
-    # 
+    #
     #       bit 0           if set, modification time is present
     #       bit 1           if set, access time is present
     #       bit 2           if set, creation time is present
@@ -371,7 +379,7 @@ class ZipTricks::ZipWriter
     ]
     pack_array(data_and_packspecs)
   end
-  
+
   # Writes the Zip64 extra field for the central directory header.It differs from the extra used in the local file header because it
   # also contains the location of the local file header in the ZIP as an 8-byte int.
   #
@@ -390,15 +398,15 @@ class ZipTricks::ZipWriter
     ]
     pack_array(data_and_packspecs)
   end
-  
+
   def to_binary_dos_time(t)
-    (t.sec/2) + (t.min << 5) + (t.hour << 11)
+    (t.sec / 2) + (t.min << 5) + (t.hour << 11)
   end
 
   def to_binary_dos_date(t)
     (t.day) + (t.month << 5) + ((t.year - 1980) << 9)
   end
-  
+
   # Unzips a given array of tuples of "numeric value, pack specifier" and then packs all the odd
   # values using specifiers from all the even values. It is harder to explain than to show:
   #

@@ -2,37 +2,41 @@ inherit_from: .rubocop_todo.yml
 
 Metrics/LineLength:
   Max: 100
-  Exclude: 
-    - spec/zip_tricks/block_deflate_spec.rb
-    - spec/zip_tricks/file_reader_spec.rb
 
 AllCops:
   Exclude:
-    - lib/zip_tricks/zip_writer.rb
-    - spec/zip_tricks/zip_writer.rb
-    - spec/spec_helper.rb
+    - spec/**/*.rb
     - zip_tricks.gemspec
 
 Style/ClassAndModuleChildren:
   Enabled:
     false
 
+# "begin; ... rescue; end " without saying that we only rescue StandardError and below.
+# Can be debated, but I think it is reasonable to expect any Rubyist to know what errors
+# the standard rescue clause covers.
+Lint/RescueWithoutErrorClass:
+  Enabled: false
+
 Lint/AssignmentInCondition:
   Enabled: false
 
-Metrics/ClassLength:
-  Exclude:
-    - lib/zip_tricks/file_reader.rb
-    - lib/zip_tricks/streamer.rb
+# We use % all over and nothing ever came out of it
+Style/FormatString:
+  Enabled: false
 
+# We have classes with methods having long bodies. We apply a lot of literal small
+# operations which have to be applied in one locality specifically. Additionally,
+# class length is a bit of a boilerplate metric
+Metrics/ClassLength:
+  Enabled: false
+
+# Idem. We have quite some methods that do a lot of small writes/reads in rapid
+# succession - not because those methods have high cyclomatic complexity, but
+# because they perform a single operation consisting of many sequential small
+# ones.
 Metrics/MethodLength:
-  Exclude:
-    - examples/rack_application.rb
-    - lib/zip_tricks/block_write.rb
-    - lib/zip_tricks/file_reader.rb
-    - lib/zip_tricks/remote_io.rb
-    - lib/zip_tricks/streamer.rb
-    - testing/support.rb
+  Enabled: false
 
 Metrics/AbcSize:
   Exclude:
@@ -45,7 +49,6 @@ Metrics/AbcSize:
 Metrics/BlockLength:
   Exclude:
     - lib/zip_tricks/file_reader.rb
-    - spec/zip_tricks/*
 
 Layout/MultilineOperationIndentation:
   Exclude:
@@ -54,10 +57,6 @@ Layout/MultilineOperationIndentation:
 Metrics/ParameterLists:
   Exclude: 
     - lib/zip_tricks/streamer.rb
-
-Layout/CommentIndentation:
-  Exclude:
-    - spec/zip_tricks/zip_writer_spec.rb
 
 Style/GlobalVars:
   Exclude:

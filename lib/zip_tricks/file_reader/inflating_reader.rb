@@ -1,3 +1,4 @@
+# Rubocop: convention: Missing top-level class documentation comment.
 class ZipTricks::FileReader::InflatingReader
   def initialize(from_io, compressed_data_size)
     @io = from_io
@@ -6,7 +7,7 @@ class ZipTricks::FileReader::InflatingReader
     @zlib_inflater = ::Zlib::Inflate.new(-Zlib::MAX_WBITS)
   end
 
-  def extract(n_bytes=nil)
+  def extract(n_bytes = nil)
     n_bytes ||= (@compressed_data_size - @already_read)
 
     return if eof?

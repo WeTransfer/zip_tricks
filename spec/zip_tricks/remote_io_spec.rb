@@ -1,9 +1,9 @@
 require 'spec_helper'
 
 describe ZipTricks::RemoteIO do
-
   context 'working with the fetcher object' do
-    it 'asks the fetcher object to obtain the object size and the actual data when reading' do
+    it 'asks the fetcher object to obtain the object size and the actual data \
+        when reading' do
       mock_fetcher = double(request_object_size: 120, request_range: 'abc')
       subject = described_class.new(mock_fetcher)
       expect(subject.read(3)).to eq('abc')
@@ -11,17 +11,19 @@ describe ZipTricks::RemoteIO do
   end
 
   context 'when it internally addresses a remote resource' do
-    it 'requests the size of the resource once via #request_object_size and does neet to read if resource is empty' do
+    it 'requests the size of the resource once via #request_object_size and \
+        does neet to read if resource is empty' do
       subject = described_class.new
       expect(subject).to receive(:request_object_size).and_return(0)
       expect(subject.read).to be_nil
     end
 
-    it 'performs remote reads when repeatedly requesting the same chunk, via #request_range' do
+    it 'performs remote reads when repeatedly requesting the same chunk, via \
+        #request_range' do
       subject = described_class.new
 
       expect(subject).to receive(:request_object_size).and_return(120)
-      allow(subject).to receive(:request_range) {|range|
+      allow(subject).to receive(:request_range) { |range|
         expect(range).to eq(5..14)
         Random.new.bytes(10)
       }
@@ -36,9 +38,7 @@ describe ZipTricks::RemoteIO do
     context 'with an unsupported mode' do
       it 'raises an error' do
         uncap = described_class.new
-        expect {
-          uncap.seek(123, :UNSUPPORTED)
-        }.to raise_error(/unsupported/i)
+        expect { uncap.seek(123, :UNSUPPORTED) }.to raise_error(/unsupported/i)
       end
     end
 
@@ -62,14 +62,15 @@ describe ZipTricks::RemoteIO do
       @subject = described_class.new
 
       allow(@subject).to receive(:request_object_size).and_return(@buf.size)
-      allow(@subject).to receive(:request_range) {|range|
+      allow(@subject).to receive(:request_range) { |range|
         @buf.read[range].tap { @buf.rewind }
       }
     end
 
     after :each do
       if @buf
-        @buf.close; @buf.unlink
+        @buf.close
+        @buf.unlink
       end
     end
 
@@ -83,14 +84,15 @@ describe ZipTricks::RemoteIO do
     end
 
     context 'with length' do
-      it 'supports an unlimited number of reads of size 0 and does not perform remote fetches for them' do
+      it 'supports an unlimited number of reads of size 0 and does not perform \
+          remote fetches for them' do
         expect(@subject).not_to receive(:request_range)
         20.times do
           data = @subject.read(0)
           expect(data).to eq('')
         end
       end
-      
+
       it 'returns exact amount of bytes at the start of the buffer' do
         bytes_read = @subject.read(10)
         expect(@subject.tell).to eq(10)
@@ -102,7 +104,7 @@ describe ZipTricks::RemoteIO do
         @subject.seek(456, IO::SEEK_SET)
 
         bytes_read = @subject.read(10)
-        expect(@subject.tell).to eq(456+10)
+        expect(@subject.tell).to eq(456 + 10)
 
         @buf.seek(456)
         expect(bytes_read).to eq(@buf.read(10))
@@ -112,7 +114,7 @@ describe ZipTricks::RemoteIO do
         at_end = @buf.size - 4
         @subject.seek(at_end, IO::SEEK_SET)
 
-        expect(@subject.tell).to eq(15728636)
+        expect(@subject.tell).to eq(15_728_636)
         bytes_read = @subject.read(10)
         expect(@subject.tell).to eq(@buf.size) # Should have moved the pos pointer to the end
 

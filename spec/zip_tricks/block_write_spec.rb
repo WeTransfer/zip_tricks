@@ -3,9 +3,7 @@ require_relative '../spec_helper'
 describe ZipTricks::BlockWrite do
   it 'calls the given block each time data is written' do
     blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
+    adapter = described_class.new { |s| blobs << s }
 
     adapter << 'hello'
     adapter << 'world'
@@ -16,9 +14,7 @@ describe ZipTricks::BlockWrite do
 
   it 'supports chained shovel' do
     blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
+    adapter = described_class.new { |s| blobs << s }
 
     adapter << 'hello' << 'world' << '!'
 
@@ -26,41 +22,35 @@ describe ZipTricks::BlockWrite do
   end
 
   it 'can write in all possible encodings, even if the strings are frozen' do
-    destination = ''.encode(Encoding::BINARY)
-
     accum_string = ''
-    adapter = described_class.new{|s| accum_string << s }
+    adapter = described_class.new { |s| accum_string << s }
 
     adapter << 'hello'
     adapter << 'привет'
     adapter << 'привет'.freeze
     adapter << '!'
-    adapter << Random.new.bytes(1024)
+    adapter << Random.new.bytes(1_024)
 
-    expect(accum_string.bytesize).to eq(1054)
+    expect(accum_string.bytesize).to eq(1_054)
   end
 
   it 'can be closed' do
-    expect(described_class.new{}.close).to be_nil
+    expect(described_class.new {}.close).to be_nil
   end
 
   it 'forces the written strings to binary encoding' do
     blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
+    adapter = described_class.new { |s| blobs << s }
     adapter << 'hello'.encode(Encoding::UTF_8)
     adapter << 'world'.encode(Encoding::BINARY)
     adapter << '!'
     expect(blobs).not_to be_empty
-    blobs.each {|s| expect(s.encoding).to eq(Encoding::BINARY) }
+    blobs.each { |s| expect(s.encoding).to eq(Encoding::BINARY) }
   end
 
   it 'omits strings of zero length' do
     blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
+    adapter = described_class.new { |s| blobs << s }
     adapter << 'hello'
     adapter << ''
     adapter << '!'
@@ -69,9 +59,7 @@ describe ZipTricks::BlockWrite do
 
   it 'omits nils' do
     blobs = []
-    adapter = described_class.new{|s|
-      blobs << s
-    }
+    adapter = described_class.new { |s| blobs << s }
     adapter << 'hello'
     adapter << nil
     adapter << '!'
@@ -79,17 +67,11 @@ describe ZipTricks::BlockWrite do
   end
 
   it 'raises a TypeError on specific unsupported methods' do
-    adapter = described_class.new {|s| }
-    expect {
-      adapter.seek(123)
-    }.to raise_error(/non\-rewindable/)
+    adapter = described_class.new { |s| }
+    expect { adapter.seek(123) }.to raise_error(/non\-rewindable/)
 
-    expect {
-      adapter.to_s
-    }.to raise_error(/non\-rewindable/)
+    expect { adapter.to_s }.to raise_error(/non\-rewindable/)
 
-    expect {
-      adapter.pos = 123
-    }.to raise_error(/non\-rewindable/)
+    expect { adapter.pos = 123 }.to raise_error(/non\-rewindable/)
   end
 end

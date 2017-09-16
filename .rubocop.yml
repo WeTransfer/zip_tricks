@@ -1,0 +1,65 @@
+inherit_from: .rubocop_todo.yml
+
+Metrics/LineLength:
+  Max: 100
+  Exclude: 
+    - spec/zip_tricks/block_deflate_spec.rb
+    - spec/zip_tricks/file_reader_spec.rb
+
+AllCops:
+  Exclude:
+    - lib/zip_tricks/zip_writer.rb
+    - spec/zip_tricks/zip_writer.rb
+    - spec/spec_helper.rb
+    - zip_tricks.gemspec
+
+Style/ClassAndModuleChildren:
+  Enabled:
+    false
+
+Lint/AssignmentInCondition:
+  Enabled: false
+
+Metrics/ClassLength:
+  Exclude:
+    - lib/zip_tricks/file_reader.rb
+    - lib/zip_tricks/streamer.rb
+
+Metrics/MethodLength:
+  Exclude:
+    - examples/rack_application.rb
+    - lib/zip_tricks/block_write.rb
+    - lib/zip_tricks/file_reader.rb
+    - lib/zip_tricks/remote_io.rb
+    - lib/zip_tricks/streamer.rb
+    - testing/support.rb
+
+Metrics/AbcSize:
+  Exclude:
+    - examples/rack_application.rb
+    - lib/zip_tricks/file_reader.rb
+    - lib/zip_tricks/remote_io.rb
+    - lib/zip_tricks/streamer.rb
+    - testing/support.rb
+    
+Metrics/BlockLength:
+  Exclude:
+    - lib/zip_tricks/file_reader.rb
+    - spec/zip_tricks/*
+
+Layout/MultilineOperationIndentation:
+  Exclude:
+    - lib/zip_tricks/file_reader.rb  
+
+Metrics/ParameterLists:
+  Exclude: 
+    - lib/zip_tricks/streamer.rb
+
+Layout/CommentIndentation:
+  Exclude:
+    - spec/zip_tricks/zip_writer_spec.rb
+
+Style/GlobalVars:
+  Exclude:
+    - testing/generate_test_files.rb
+    - testing/support.rb

@@ -13,14 +13,16 @@ class ZipTricks::RackBody
   #       estimator.add_stored_entry(filename: 'large.tif', size: 1289894)
   #     end
   #
-  #     # Prepare the response body. The block will only be called when the response starts to be written.
+  #     # Prepare the response body. The block will only be called when the
+  #       response starts to be written.
   #     body = ZipTricks::RackBody.new do | streamer |
   #       streamer.add_stored_entry(filename: 'large.tif', size: 1289894, crc32: 198210)
   #       streamer << large_file.read(1024*1024) until large_file.eof?
   #       ...
   #     end
   #
-  #     return [200, {'Content-Type' => 'binary/octet-stream', 'Content-Length' => content_length.to_s}, body]
+  #     return [200, {'Content-Type' => 'binary/octet-stream',
+  #     'Content-Length' => content_length.to_s}, body]
   def initialize(&blk)
     @archiving_block = blk
   end
@@ -36,6 +38,5 @@ class ZipTricks::RackBody
   # Does nothing because nothing has to be deallocated or canceled
   # even if the zip output is incomplete. The archive gets closed
   # automatically as part of {ZipTricks::Streamer.open}
-  def close
-  end
+  def close; end
 end

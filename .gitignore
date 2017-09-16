@@ -9,6 +9,9 @@ rdoc
 doc
 .yardoc
 
+# Rubocop
+rubocop.html
+
 # bundler
 .bundle
 Gemfile.lock

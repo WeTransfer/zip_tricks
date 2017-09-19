@@ -7,6 +7,7 @@ AllCops:
   Exclude:
     - spec/**/*.rb
     - zip_tricks.gemspec
+    - vendor/**/*
 
 Style/ClassAndModuleChildren:
   Enabled:
@@ -45,17 +46,17 @@ Metrics/AbcSize:
     - lib/zip_tricks/remote_io.rb
     - lib/zip_tricks/streamer.rb
     - testing/support.rb
-    
+
 Metrics/BlockLength:
   Exclude:
     - lib/zip_tricks/file_reader.rb
 
 Layout/MultilineOperationIndentation:
   Exclude:
-    - lib/zip_tricks/file_reader.rb  
+    - lib/zip_tricks/file_reader.rb
 
 Metrics/ParameterLists:
-  Exclude: 
+  Exclude:
     - lib/zip_tricks/streamer.rb
 
 Style/GlobalVars:

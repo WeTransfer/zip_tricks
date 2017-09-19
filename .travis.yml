@@ -9,4 +9,6 @@ cache: bundler
 matrix:
   allow_failures:
     - rvm: jruby-9.0
-script: bundle exec rspec
+script:
+  - bundle exec rubocop -c .rubocop.yml --force-exclusion
+  - bundle exec rspec

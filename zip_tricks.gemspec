@@ -24,6 +24,13 @@ Gem::Specification.new do |spec|
       'public gem pushes.'
   end
 
+  # Be friendly to automated scavenging systems / dependency tracking servers
+  s.metadata = {
+    'source_code_uri' => 'https://github.com/WeTransfer/zip_tricks',
+    'changelog_uri'   => 'https://github.com/WeTransfer/zip_tricks/blob/master/CHANGELOG.md',
+    'documentation_uri' => 'http://www.rubydoc.info/gems/zip_tricks',
+  }
+
   spec.files = `git ls-files -z`.split("\x0").reject do |f|
     f.match(%r{^(test|spec|features)/})
   end

@@ -344,7 +344,7 @@ class ZipTricks::Streamer
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out,
-                                  crc32: 0,
+                                  crc32: e.crc32,
                                   compressed_size: e.compressed_size,
                                   uncompressed_size: e.uncompressed_size)
   end

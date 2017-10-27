@@ -304,6 +304,41 @@ describe ZipTricks::Streamer do
     end
   end
 
+  it 'writes the correct archive elements when using data descriptors' do
+    out = StringIO.new
+    fake_w = double('Writer')
+    expect(fake_w).to receive(:write_local_file_header) {|**kwargs|
+      expect(kwargs[:storage_mode]).to eq(8)
+      expect(kwargs[:crc32]).to be_zero
+      expect(kwargs[:filename]).to eq('somefile.txt')
+    }
+    expect(fake_w).to receive(:write_data_descriptor) {|**kwargs|
+      expect(kwargs[:crc32]).to eq(2729945713)
+      expect(kwargs[:compressed_size]).to eq(19)
+      expect(kwargs[:uncompressed_size]).to eq(17)
+    }
+    expect(fake_w).to receive(:write_central_directory_file_header) {|**kwargs|
+      expect(kwargs[:local_file_header_location]).to eq(0)
+      expect(kwargs[:filename]).to eq('somefile.txt')
+      expect(kwargs[:gp_flags]).to eq(8)
+      expect(kwargs[:storage_mode]).to eq(8)
+      expect(kwargs[:compressed_size]).to eq(19)
+      expect(kwargs[:uncompressed_size]).to eq(17)
+      expect(kwargs[:crc32]).to eq(2729945713)
+      kwargs[:io] << "fake"
+    }
+    expect(fake_w).to receive(:write_end_of_central_directory) {|**kwargs|
+      expect(kwargs[:start_of_central_directory_location]).to be > 0
+      expect(kwargs[:central_directory_size]).to be > 0
+      expect(kwargs[:num_files_in_archive]).to eq(1)
+    }
+    ZipTricks::Streamer.open(out, writer: fake_w) do |z|
+      z.write_deflated_file('somefile.txt') do |out|
+        out << "Experimental data"
+      end
+    end
+  end
+
   it 'creates an archive with data descriptors that can be opened by Rubyzip, \
       with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')

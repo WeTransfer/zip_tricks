@@ -204,14 +204,7 @@ class ZipTricks::Streamer
     w = StoredWriter.new(@out)
     yield(Writable.new(w))
     crc, comp, uncomp = w.finish
-
-    # Save the information into the entry for when the time comes to write
-    # out the central directory
-    last_entry = @files.last
-    last_entry.crc32 = crc
-    last_entry.compressed_size = comp
-    last_entry.uncompressed_size = uncomp
-    write_data_descriptor_for_last_entry
+    update_last_entry_and_write_data_descriptor(crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
   end
 
   # Opens the stream for a deflated file in the archive, and yields a writer
@@ -232,14 +225,7 @@ class ZipTricks::Streamer
     w = DeflatedWriter.new(@out)
     yield(Writable.new(w))
     crc, comp, uncomp = w.finish
-
-    # Save the information into the entry for when the time comes to write
-    # out the central directory
-    last_entry = @files[-1]
-    last_entry.crc32 = crc
-    last_entry.compressed_size = comp
-    last_entry.uncompressed_size = uncomp
-    write_data_descriptor_for_last_entry
+    update_last_entry_and_write_data_descriptor(crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into
@@ -293,6 +279,20 @@ class ZipTricks::Streamer
   # @return [ZipTricks::ZipWriter] the writer to perform writes with
   def create_writer
     ZipTricks::ZipWriter.new
+  end
+
+  def update_last_entry_and_write_data_descriptor(crc32:, compressed_size:, uncompressed_size:)
+    # Save the information into the entry for when the time comes to write
+    # out the central directory
+    last_entry = @files.fetch(-1)
+    last_entry.crc32 = crc32
+    last_entry.compressed_size = compressed_size
+    last_entry.uncompressed_size = uncompressed_size
+
+    @writer.write_data_descriptor(io: @out,
+                                  crc32: last_entry.crc32,
+                                  compressed_size: last_entry.compressed_size,
+                                  uncompressed_size: last_entry.uncompressed_size)
   end
 
   private

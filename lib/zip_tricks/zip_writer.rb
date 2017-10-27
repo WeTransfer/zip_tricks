@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Layout/ElseAlignment, Metrics/ParameterLists, Layout/LeadingCommentSpace, Lint/EndAlignment, Layout/IndentationWidth
+# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Metrics/ParameterLists, Layout/LeadingCommentSpace,
 #
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.

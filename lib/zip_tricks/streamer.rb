@@ -1,3 +1,5 @@
+require 'set'
+
 # Is used to write streamed ZIP archives into the provided IO-ish object.
 # The output IO is never going to be rewound or seeked, so the output
 # of this object can be coupled directly to, say, a Rack output.

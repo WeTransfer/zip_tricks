@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Layout/ElseAlignment, Metrics/ParameterLists, Layout/LeadingCommentSpace, Lint/EndAlignment, Layout/IndentationWidth
 #
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
@@ -172,8 +173,11 @@ class ZipTricks::ZipWriter
 
     extra_fields = StringIO.new
     if add_zip64
-      extra_fields << zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location,
-         compressed_size: compressed_size, uncompressed_size: uncompressed_size)
+      extra_fields << zip_64_extra_for_central_directory_file_header(
+        local_file_header_location: local_file_header_location,
+        compressed_size: compressed_size,
+        uncompressed_size: uncompressed_size
+      )
     end
     extra_fields << timestamp_extra(mtime)
 

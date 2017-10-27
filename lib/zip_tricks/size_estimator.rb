@@ -4,7 +4,7 @@ class ZipTricks::SizeEstimator
 
   # Used to mark a couple of methods public
   class DetailStreamer < ::ZipTricks::Streamer
-    public :add_file_and_write_local_header, :write_data_descriptor_for_last_entry
+    public :add_file_and_write_local_header
   end
   private_constant :DetailStreamer
 
@@ -40,15 +40,16 @@ class ZipTricks::SizeEstimator
   # data descriptor to specify size
   # @return self
   def add_stored_entry(filename:, size:, use_data_descriptor: false)
-    udd = use_data_descriptor
     @streamer.add_file_and_write_local_header(filename: filename,
                                               crc32: 0,
                                               storage_mode: 0,
                                               compressed_size: size,
                                               uncompressed_size: size,
-                                              use_data_descriptor: udd)
+                                              use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(size)
-    @streamer.write_data_descriptor_for_last_entry if udd
+    if use_data_descriptor
+      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size) 
+    end
     self
   end
 
@@ -63,15 +64,16 @@ class ZipTricks::SizeEstimator
   def add_compressed_entry(filename:, uncompressed_size:,
                            compressed_size:,
                            use_data_descriptor: false)
-    udd = use_data_descriptor
     @streamer.add_file_and_write_local_header(filename: filename,
                                               crc32: 0,
                                               storage_mode: 8,
                                               compressed_size: compressed_size,
                                               uncompressed_size: uncompressed_size,
-                                              use_data_descriptor: udd)
+                                              use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(compressed_size)
-    @streamer.write_data_descriptor_for_last_entry if udd
+    if use_data_descriptor
+      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size) 
+    end
     self
   end
 

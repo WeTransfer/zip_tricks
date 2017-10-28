@@ -9,6 +9,7 @@ class ZipTricks::Streamer::Writable
   def initialize(streamer, writer)
     @streamer = streamer
     @writer = writer
+    @closed = false
   end
 
   # Writes the given data to the output stream
@@ -32,6 +33,8 @@ class ZipTricks::Streamer::Writable
   # Flushes the writer and recovers the CRC32/size values. It then calls
   # `update_last_entry_and_write_data_descriptor` on the given Streamer.
   def close
+    return if @closed
     @streamer.update_last_entry_and_write_data_descriptor(**@writer.finish)
+    @closed = true
   end
 end

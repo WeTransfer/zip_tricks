@@ -54,13 +54,17 @@ require 'set'
 # offsets in the IO will not be updated - which will result in an invalid ZIP.
 #
 # 
-# ## On-the-fly deflate -using the Streamer with async/suspended writes
+# ## On-the-fly deflate -using the Streamer with async/suspended writes and data descriptors
+#
+# If you are unable to use the block versions of `write_deflated_file` and `write_stored_file`
+# there is an option to use a separate writer object. It gets returned from `deflated_writer_for`
+# and `stored_writer_for` methods, and will write out the data descriptors with the CRC32 and
+# the sizes when you call `finish` on it.
 # 
 #     ZipTricks::Streamer.open(socket) do | zip |
-#       zip.add_compressed_entry(filename: "myfile1.bin", size: 0, crc32: 0, use_data_descriptor: true)
-#       w = zip.deflated_writer
-#       IO.copy_stream(some_io, w)
-#       zip.update_last_entry_and_write_data_descriptor(**w.finish)
+#       w = zip.deflated_writer_for("myfile1.bin")
+#       w << data
+#       w.finish
 #     end
 # 
 # The central directory will be written automatically at the end of the `open` block.
@@ -158,7 +162,7 @@ class ZipTricks::Streamer
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_compressed_entry(filename:, compressed_size:, uncompressed_size:, crc32:, use_data_descriptor: false)
+  def add_compressed_entry(filename:, compressed_size: 0, uncompressed_size: 0, crc32: 0, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename, crc32: crc32,
                                     storage_mode: DEFLATED,
                                     compressed_size: compressed_size,
@@ -177,7 +181,7 @@ class ZipTricks::Streamer
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor. When in use
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_stored_entry(filename:, size:, crc32:, use_data_descriptor: false)
+  def add_stored_entry(filename:, size: 0, crc32: 0, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     crc32: crc32,
                                     storage_mode: STORED,
@@ -214,9 +218,9 @@ class ZipTricks::Streamer
                      crc32: 0,
                      size: 0)
 
-    w = StoredWriter.new(@out)
-    yield(Writable.new(w))
-    update_last_entry_and_write_data_descriptor(**w.finish)
+    writable = Writable.new(self, StoredWriter.new(@out))
+    yield(writable)
+    writable.close
   end
 
   # Opens the stream for a deflated file in the archive, and yields a writer
@@ -233,9 +237,9 @@ class ZipTricks::Streamer
                          compressed_size: 0,
                          uncompressed_size: 0)
 
-    w = DeflatedWriter.new(@out)
-    yield(Writable.new(w))
-    update_last_entry_and_write_data_descriptor(**w.finish)
+    writable = Writable.new(self, DeflatedWriter.new(@out))
+    yield(writable)
+    writable.close
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into

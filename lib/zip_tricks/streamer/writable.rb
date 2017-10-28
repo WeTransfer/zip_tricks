@@ -6,7 +6,8 @@
 class ZipTricks::Streamer::Writable
   # Initializes a new Writable with the object it delegates the writes to.
   # Normally you would not need to use this method directly
-  def initialize(writer)
+  def initialize(streamer, writer)
+    @streamer = streamer
     @writer = writer
   end
 
@@ -26,5 +27,11 @@ class ZipTricks::Streamer::Writable
   def write(d)
     @writer << d
     d.bytesize
+  end
+  
+  # Flushes the writer and recovers the CRC32/size values. It then calls
+  # `update_last_entry_and_write_data_descriptor` on the given Streamer.
+  def close
+    @streamer.update_last_entry_and_write_data_descriptor(**@writer.finish)
   end
 end

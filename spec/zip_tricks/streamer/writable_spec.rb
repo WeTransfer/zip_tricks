@@ -11,6 +11,13 @@ describe ZipTricks::Streamer::Writable do
       expect(buf.string).to eq('hello!')
       expect(result).to eq(subject)
     end
+    
+    it 'raises if the write is attempted after closing'
+  end
+
+  describe '#close' do
+    it 'finishes the writer and writes data descriptor on the Streamer'
+    it 'does not write the data descriptor twice'
   end
 
   describe '#write' do

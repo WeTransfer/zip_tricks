@@ -115,7 +115,7 @@ class ZipTricks::Streamer
   # `IO.copy_stream(from, to)`.
   #
   # @param binary_data [String] a String in binary encoding
-  # @return [Fixnum] the number of bytes written
+  # @return [Integer] the number of bytes written
   def write(binary_data)
     @out << binary_data
     binary_data.bytesize
@@ -142,12 +142,12 @@ class ZipTricks::Streamer
   # Streamer, because otherwise it is impossible to know it's size upfront.
   #
   # @param filename [String] the name of the file in the entry
-  # @param compressed_size [Fixnum] the size of the compressed entry that
+  # @param compressed_size [Integer] the size of the compressed entry that
   # is going to be written into the archive
-  # @param uncompressed_size [Fixnum] the size of the entry when uncompressed, in bytes
-  # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
+  # @param uncompressed_size [Integer] the size of the entry when uncompressed, in bytes
+  # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
-  # @return [Fixnum] the offset the output IO is at after writing the entry header
+  # @return [Integer] the offset the output IO is at after writing the entry header
   def add_compressed_entry(filename:, compressed_size:, uncompressed_size:, crc32:, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename, crc32: crc32,
                                     storage_mode: DEFLATED,
@@ -163,10 +163,10 @@ class ZipTricks::Streamer
   # times to write the actual contents of the body.
   #
   # @param filename [String] the name of the file in the entry
-  # @param size [Fixnum] the size of the file when uncompressed, in bytes
-  # @param crc32 [Fixnum] the CRC32 checksum of the entry when uncompressed
+  # @param size [Integer] the size of the file when uncompressed, in bytes
+  # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor. When in use
-  # @return [Fixnum] the offset the output IO is at after writing the entry header
+  # @return [Integer] the offset the output IO is at after writing the entry header
   def add_stored_entry(filename:, size:, crc32:, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     crc32: crc32,
@@ -180,7 +180,7 @@ class ZipTricks::Streamer
   # Adds an empty directory to the archive with a size of 0 and permissions of 755.
   #
   # @param dirname [String] the name of the directory in the archive
-  # @return [Fixnum] the offset the output IO is at after writing the entry header
+  # @return [Integer] the offset the output IO is at after writing the entry header
   def add_empty_directory(dirname:)
     add_file_and_write_local_header(filename: dirname.to_s + '/',
                                     crc32: 0,
@@ -237,7 +237,7 @@ class ZipTricks::Streamer
   #
   # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
   #
-  # @return [Fixnum] the offset the output IO is at after closing the archive
+  # @return [Integer] the offset the output IO is at after closing the archive
   # Rubocop: convention: Assignment Branch Condition size for close is too high. [18.25/15]
   # Rubocop: convention: Method has too many lines. [13/10]
   def close

@@ -72,7 +72,9 @@ class ZipTricks::SizeEstimator
                                               use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(compressed_size)
     if use_data_descriptor
-      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size) 
+      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0,
+                                                            compressed_size: compressed_size,
+                                                            uncompressed_size: uncompressed_size) 
     end
     self
   end
@@ -86,7 +88,8 @@ class ZipTricks::SizeEstimator
                                               crc32: 0,
                                               storage_mode: 8,
                                               compressed_size: 0,
-                                              uncompressed_size: 0)
+                                              uncompressed_size: 0,
+                                              use_data_descriptor: false)
     self
   end
 end

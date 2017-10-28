@@ -224,7 +224,8 @@ class ZipTricks::Streamer
   # descriptor is going to be written.
   #
   # @param filename[String] the name of the file in the archive
-  # @yield [#<<, #write] an object that the file contents must be written to
+  # @yield [#<<, #write] an object that the file contents must be written to that will be automatically closed
+  # @return [#<<, #write, #close] an object that the file contents must be written to, has to be closed manually
   def write_stored_file(filename)
     add_stored_entry(filename: filename,
                      use_data_descriptor: true,

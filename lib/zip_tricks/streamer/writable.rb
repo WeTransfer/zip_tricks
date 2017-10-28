@@ -17,6 +17,7 @@ class ZipTricks::Streamer::Writable
   # @param d[String] the binary string to write (part of the uncompressed file)
   # @return [self]
   def <<(d)
+    raise "Trying to write to a closed Writable" if @closed
     @writer << d
     self
   end
@@ -26,7 +27,7 @@ class ZipTricks::Streamer::Writable
   # @param d[String] the binary string to write (part of the uncompressed file)
   # @return [Fixnum] the number of bytes written
   def write(d)
-    @writer << d
+    self << d
     d.bytesize
   end
   

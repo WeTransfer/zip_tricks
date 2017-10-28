@@ -53,6 +53,16 @@ require 'set'
 # so far. When using `sendfile` the Ruby write methods get bypassed entirely, and the
 # offsets in the IO will not be updated - which will result in an invalid ZIP.
 #
+# 
+# ## On-the-fly deflate -using the Streamer with async/suspended writes
+# 
+#     ZipTricks::Streamer.open(socket) do | zip |
+#       zip.add_compressed_entry(filename: "myfile1.bin", size: 0, crc32: 0, use_data_descriptor: true)
+#       w = zip.deflated_writer
+#       IO.copy_stream(some_io, w)
+#       zip.update_last_entry_and_write_data_descriptor(**w.finish)
+#     end
+# 
 # The central directory will be written automatically at the end of the `open` block.
 # Rubocop: convention: Class has too many lines. [138/100]
 class ZipTricks::Streamer
@@ -206,9 +216,7 @@ class ZipTricks::Streamer
 
     w = StoredWriter.new(@out)
     yield(Writable.new(w))
-    crc, comp, uncomp = w.finish
-
-    update_last_entry_and_write_data_descriptor(crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
+    update_last_entry_and_write_data_descriptor(**w.finish)
   end
 
   # Opens the stream for a deflated file in the archive, and yields a writer
@@ -227,9 +235,7 @@ class ZipTricks::Streamer
 
     w = DeflatedWriter.new(@out)
     yield(Writable.new(w))
-    crc, comp, uncomp = w.finish
-
-    update_last_entry_and_write_data_descriptor(crc32: crc, compressed_size: comp, uncompressed_size: uncomp)
+    update_last_entry_and_write_data_descriptor(**w.finish)
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into
@@ -304,7 +310,7 @@ class ZipTricks::Streamer
                                   crc32: last_entry.crc32,
                                   compressed_size: last_entry.compressed_size,
                                   uncompressed_size: last_entry.uncompressed_size)
-    @io.tell
+    @out.tell
   end
 
   private
@@ -351,14 +357,6 @@ class ZipTricks::Streamer
                                     mtime: e.mtime,
                                     filename: e.filename,
                                     storage_mode: e.storage_mode)
-  end
-
-  def write_data_descriptor_for_last_entry
-    e = @files.fetch(-1)
-    @writer.write_data_descriptor(io: @out,
-                                  crc32: e.crc32,
-                                  compressed_size: e.compressed_size,
-                                  uncompressed_size: e.uncompressed_size)
   end
 
   def remove_backslash(filename)

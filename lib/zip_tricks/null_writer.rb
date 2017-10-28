@@ -7,10 +7,4 @@ module ZipTricks::NullWriter
   def self.<<(data)
     self
   end
-
-  # @param data[String] the data to write
-  # @return [Fixnum] the amount of data that was supposed to be written
-  def self.write(data)
-    data.bytesize
-  end
 end

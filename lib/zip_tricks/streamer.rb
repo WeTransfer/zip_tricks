@@ -210,6 +210,19 @@ class ZipTricks::Streamer
   # Once the write completes, a data descriptor will be written with the
   # actual compressed/uncompressed sizes and the CRC32 checksum.
   #
+  # Using a block, the write will be terminated with a data descriptor outright.
+  #
+  #  zip.write_stored_file("foo.txt") do |sink|
+  #    IO.copy_stream(source_file, sink)
+  #  end
+  #
+  # If deferred writes are desired (for example - to integerate with an API that
+  # does not support blocks, or to work with non-blocking environments) the method
+  # has to be called without a block. In that case it returns the sink instead,
+  # permitting to write to it in a deferred fashion. When `close` is called on
+  # the sink, any remanining compression output will be flushed and the data
+  # descriptor is going to be written.
+  #
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_stored_file(filename)
@@ -219,14 +232,30 @@ class ZipTricks::Streamer
                      size: 0)
 
     writable = Writable.new(self, StoredWriter.new(@out))
-    yield(writable)
-    writable.close
+    if block_given?
+      yield(writable)
+      writable.close
+    end
+    writable
   end
 
   # Opens the stream for a deflated file in the archive, and yields a writer
   # for that file to the block. Once the write completes, a data descriptor
   # will be written with the actual compressed/uncompressed sizes and the
   # CRC32 checksum.
+  #
+  # Using a block, the write will be terminated with a data descriptor outright.
+  #
+  #  zip.write_stored_file("foo.txt") do |sink|
+  #    IO.copy_stream(source_file, sink)
+  #  end
+  #
+  # If deferred writes are desired (for example - to integerate with an API that
+  # does not support blocks, or to work with non-blocking environments) the method
+  # has to be called without a block. In that case it returns the sink instead,
+  # permitting to write to it in a deferred fashion. When `close` is called on
+  # the sink, any remanining compression output will be flushed and the data
+  # descriptor is going to be written.
   #
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
@@ -238,8 +267,11 @@ class ZipTricks::Streamer
                          uncompressed_size: 0)
 
     writable = Writable.new(self, DeflatedWriter.new(@out))
-    yield(writable)
-    writable.close
+    if block_given?
+      yield(writable)
+      writable.close
+    end
+    writable
   end
 
   # Closes the archive. Writes the central directory, and switches the writer into

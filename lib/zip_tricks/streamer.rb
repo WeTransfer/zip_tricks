@@ -57,17 +57,23 @@ require 'set'
 # ## On-the-fly deflate -using the Streamer with async/suspended writes and data descriptors
 #
 # If you are unable to use the block versions of `write_deflated_file` and `write_stored_file`
-# there is an option to use a separate writer object. It gets returned from `deflated_writer_for`
-# and `stored_writer_for` methods, and will write out the data descriptors with the CRC32 and
-# the sizes when you call `finish` on it.
-# 
+# there is an option to use a separate writer object. It gets returned from `write_deflated_file`
+# and `write_stored_file` if you do not provide them with a block, and will accept data writes.
+#
 #     ZipTricks::Streamer.open(socket) do | zip |
-#       w = zip.deflated_writer_for("myfile1.bin")
+#       w = zip.write_stored_file('mov.mp4')
 #       w << data
-#       w.finish
+#       w.close
 #     end
-# 
-# The central directory will be written automatically at the end of the `open` block.
+#
+# The central directory will be written automatically at the end of the `open` block. If you need
+# to manage the Streamer manually, or defer the central directory write until appropriate, use
+# the constructor instead:
+#
+#    zip = ZipTricks::Streamer.new(out_io)
+#    .....
+#    zip.close
+#
 # Rubocop: convention: Class has too many lines. [138/100]
 class ZipTricks::Streamer
   require_relative 'streamer/deflated_writer'
@@ -99,7 +105,7 @@ class ZipTricks::Streamer
 
   # Creates a new Streamer on top of the given IO-ish object.
   #
-  # @param stream[IO] the destination IO for the ZIP (should respond to `<<`)
+  # @param stream[IO] the destination IO for the ZIP. Anything that responds to `<<` can be used.
   # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   def initialize(stream, writer: create_writer)
@@ -157,7 +163,7 @@ class ZipTricks::Streamer
   #
   # @param filename [String] the name of the file in the entry
   # @param compressed_size [Integer] the size of the compressed entry that
-  # is going to be written into the archive
+  #                                   is going to be written into the archive
   # @param uncompressed_size [Integer] the size of the entry when uncompressed, in bytes
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
@@ -212,9 +218,9 @@ class ZipTricks::Streamer
   #
   # Using a block, the write will be terminated with a data descriptor outright.
   #
-  #  zip.write_stored_file("foo.txt") do |sink|
-  #    IO.copy_stream(source_file, sink)
-  #  end
+  #     zip.write_stored_file("foo.txt") do |sink|
+  #       IO.copy_stream(source_file, sink)
+  #     end
   #
   # If deferred writes are desired (for example - to integerate with an API that
   # does not support blocks, or to work with non-blocking environments) the method
@@ -222,6 +228,17 @@ class ZipTricks::Streamer
   # permitting to write to it in a deferred fashion. When `close` is called on
   # the sink, any remanining compression output will be flushed and the data
   # descriptor is going to be written.
+  #
+  # Note that even though it does not have to happen within the same call stack,
+  # call sequencing still must be observed. It is therefore not possible to do
+  # this:
+  #
+  #     writer_for_file1 = zip.write_stored_file("foo.bar")
+  #     writer_for_file2 = zip.write_stored_file("foo.bar")
+  #
+  # because it is likely to result in an invalid ZIP file structure later on.
+  # So using this facility in async scenarios is certainly possible, but care
+  # and attention is recommended.
   #
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to that will be automatically closed
@@ -257,6 +274,17 @@ class ZipTricks::Streamer
   # permitting to write to it in a deferred fashion. When `close` is called on
   # the sink, any remanining compression output will be flushed and the data
   # descriptor is going to be written.
+  #
+  # Note that even though it does not have to happen within the same call stack,
+  # call sequencing still must be observed. It is therefore not possible to do
+  # this:
+  #
+  #   writer_for_file1 = zip.write_deflated_file("foo.bar")
+  #   writer_for_file2 = zip.write_deflated_file("foo.bar")
+  #
+  # because it is likely to result in an invalid ZIP file structure later on.
+  # So using this facility in async scenarios is certainly possible, but care
+  # and attention is recommended.
   #
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to

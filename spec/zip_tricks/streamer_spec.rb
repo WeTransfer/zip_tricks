@@ -363,6 +363,28 @@ describe ZipTricks::Streamer do
     end
   end
 
+  it 'supports deferred writes using the return values from write_deflated_file and write_stored_file' do
+    out = StringIO.new
+    fake_w = double('Writer')
+    expect(fake_w).to receive(:write_local_file_header)
+    expect(fake_w).to receive(:write_data_descriptor)
+    expect(fake_w).to receive(:write_local_file_header)
+    expect(fake_w).to receive(:write_data_descriptor)
+    expect(fake_w).to receive(:write_central_directory_file_header)
+    expect(fake_w).to receive(:write_central_directory_file_header)
+    expect(fake_w).to receive(:write_end_of_central_directory)
+
+    ZipTricks::Streamer.open(out, writer: fake_w) do |z|
+      out = z.write_deflated_file('somefile.txt')
+      out << "Experimental data"
+      out.close
+
+      out = z.write_stored_file('uncompressed.txt')
+      out << "Some uncompressed data"
+      out.close
+    end
+  end
+
   it 'creates an archive with data descriptors that can be opened by Rubyzip, \
       with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')

@@ -2,12 +2,6 @@
 class ZipTricks::SizeEstimator
   require_relative 'streamer'
 
-  # Used to mark a couple of methods public
-  class DetailStreamer < ::ZipTricks::Streamer
-    public :add_file_and_write_local_header
-  end
-  private_constant :DetailStreamer
-
   # Creates a new estimator with a Streamer object. Normally you should use
   # `estimate` instead an not use this method directly.
   def initialize(streamer)
@@ -21,13 +15,13 @@ class ZipTricks::SizeEstimator
   #     expected_zip_size = SizeEstimator.estimate do | estimator |
   #       estimator.add_stored_entry(filename: "file.doc", size: 898291)
   #       estimator.add_compressed_entry(filename: "family.tif",
-  #       uncompressed_size: 89281911, compressed_size: 121908)
+  #               uncompressed_size: 89281911, compressed_size: 121908)
   #     end
   #
   # @return [Integer] the size of the resulting archive, in bytes
   # @yield [SizeEstimator] the estimator
   def self.estimate
-    streamer = DetailStreamer.new(ZipTricks::NullWriter)
+    streamer = ZipTricks::Streamer.new(ZipTricks::NullWriter)
     estimator = new(streamer)
     yield(estimator)
     streamer.close # Returns the .tell of the contained IO
@@ -41,12 +35,10 @@ class ZipTricks::SizeEstimator
   # data descriptor to specify size
   # @return self
   def add_stored_entry(filename:, size:, use_data_descriptor: false)
-    @streamer.add_file_and_write_local_header(filename: filename,
-                                              crc32: 0,
-                                              storage_mode: 0,
-                                              compressed_size: size,
-                                              uncompressed_size: size,
-                                              use_data_descriptor: use_data_descriptor)
+    @streamer.add_stored_entry(filename: filename,
+                               crc32: 0,
+                               size: size,
+                               use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(size)
     if use_data_descriptor
       @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size) 
@@ -60,17 +52,15 @@ class ZipTricks::SizeEstimator
   # @param uncompressed_size [Fixnum] size of the uncompressed entry
   # @param compressed_size [Fixnum] size of the compressed entry
   # @param use_data_descriptor[Boolean] whether the entry uses a postfix data
-  # descriptor to specify size
+  #                                     descriptor to specify size
   # @return self
-  def add_compressed_entry(filename:, uncompressed_size:,
-                           compressed_size:,
-                           use_data_descriptor: false)
-    @streamer.add_file_and_write_local_header(filename: filename,
-                                              crc32: 0,
-                                              storage_mode: 8,
-                                              compressed_size: compressed_size,
-                                              uncompressed_size: uncompressed_size,
-                                              use_data_descriptor: use_data_descriptor)
+  def add_compressed_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)
+    @streamer.add_compressed_entry(filename: filename,
+                                   crc32: 0,
+                                   compressed_size: compressed_size,
+                                   uncompressed_size: uncompressed_size,
+                                   use_data_descriptor: use_data_descriptor)
+
     @streamer.simulate_write(compressed_size)
     if use_data_descriptor
       @streamer.update_last_entry_and_write_data_descriptor(crc32: 0,
@@ -85,12 +75,7 @@ class ZipTricks::SizeEstimator
   # @param dirname [String] the name of the directory
   # @return self
   def add_empty_directory_entry(dirname:)
-    @streamer.add_file_and_write_local_header(filename: dirname.to_s + '/',
-                                              crc32: 0,
-                                              storage_mode: 8,
-                                              compressed_size: 0,
-                                              uncompressed_size: 0,
-                                              use_data_descriptor: false)
+    @streamer.add_empty_directory(dirname: dirname)
     self
   end
 end

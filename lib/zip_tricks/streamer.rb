@@ -68,13 +68,13 @@ require 'set'
 #
 # The central directory will be written automatically at the end of the `open` block. If you need
 # to manage the Streamer manually, or defer the central directory write until appropriate, use
-# the constructor instead:
+# the constructor instead and call `Streamer#close`:
 #
-#    zip = ZipTricks::Streamer.new(out_io)
-#    .....
-#    zip.close
+#     zip = ZipTricks::Streamer.new(out_io)
+#     .....
+#     zip.close
 #
-# Rubocop: convention: Class has too many lines. [138/100]
+# Calling {Streamer#close} **will not** call `#close` on the underlying IO object.
 class ZipTricks::Streamer
   require_relative 'streamer/deflated_writer'
   require_relative 'streamer/writable'
@@ -230,8 +230,10 @@ class ZipTricks::Streamer
   # call sequencing still must be observed. It is therefore not possible to do
   # this:
   #
-  #     writer_for_file1 = zip.write_stored_file("foo.bar")
-  #     writer_for_file2 = zip.write_stored_file("foo.bar")
+  #     writer_for_file1 = zip.write_stored_file("somefile.jpg")
+  #     writer_for_file2 = zip.write_stored_file("another.tif")
+  #     writer_for_file1 << data
+  #     writer_for_file2 << data
   #
   # because it is likely to result in an invalid ZIP file structure later on.
   # So using this facility in async scenarios is certainly possible, but care
@@ -261,9 +263,9 @@ class ZipTricks::Streamer
   #
   # Using a block, the write will be terminated with a data descriptor outright.
   #
-  #  zip.write_stored_file("foo.txt") do |sink|
-  #    IO.copy_stream(source_file, sink)
-  #  end
+  #     zip.write_stored_file("foo.txt") do |sink|
+  #       IO.copy_stream(source_file, sink)
+  #     end
   #
   # If deferred writes are desired (for example - to integerate with an API that
   # does not support blocks, or to work with non-blocking environments) the method
@@ -276,8 +278,12 @@ class ZipTricks::Streamer
   # call sequencing still must be observed. It is therefore not possible to do
   # this:
   #
-  #   writer_for_file1 = zip.write_deflated_file("foo.bar")
-  #   writer_for_file2 = zip.write_deflated_file("foo.bar")
+  #     writer_for_file1 = zip.write_deflated_file("somefile.jpg")
+  #     writer_for_file2 = zip.write_deflated_file("another.tif")
+  #     writer_for_file1 << data
+  #     writer_for_file2 << data
+  #     writer_for_file1.close
+  #     writer_for_file2.close
   #
   # because it is likely to result in an invalid ZIP file structure later on.
   # So using this facility in async scenarios is certainly possible, but care
@@ -306,8 +312,6 @@ class ZipTricks::Streamer
   # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
   #
   # @return [Integer] the offset the output IO is at after closing the archive
-  # Rubocop: convention: Assignment Branch Condition size for close is too high. [18.25/15]
-  # Rubocop: convention: Method has too many lines. [13/10]
   def close
     # Record the central directory offset, so that it can be written into the EOCD record
     cdir_starts_at = @out.tell
@@ -324,17 +328,16 @@ class ZipTricks::Streamer
                                                   mtime: entry.mtime,
                                                   crc32: entry.crc32,
                                                   filename: entry.filename)
-      # , external_attrs: DEFAULT_EXTERNAL_ATTRS)
     end
 
     # Record the central directory size, for the EOCDR
     cdir_size = @out.tell - cdir_starts_at
 
     # Write out the EOCDR
-    @writer. write_end_of_central_directory(io: @out,
-                                            start_of_central_directory_location: cdir_starts_at,
-                                            central_directory_size: cdir_size,
-                                            num_files_in_archive: @files.length)
+    @writer.write_end_of_central_directory(io: @out,
+                                           start_of_central_directory_location: cdir_starts_at,
+                                           central_directory_size: cdir_size,
+                                           num_files_in_archive: @files.length)
 
     # Clear the files so that GC will not have to trace all the way to here to deallocate them
     @files.clear
@@ -355,6 +358,8 @@ class ZipTricks::Streamer
 
   # Updates the last entry written with the CRC32 checksum and compressed/uncompressed
   # sizes. For stored entries, `compressed_size` and `uncompressed_size` are the same.
+  # After updating the entry will immediately write the data descriptor bytes
+  # to the output.
   #
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param compressed_size [Integer] the size of the compressed segment within the ZIP
@@ -377,9 +382,6 @@ class ZipTricks::Streamer
 
   private
 
-  # Rubocop: convention: Assignment Branch Condition size for
-  #          add_file_and_write_local_header is too high. [24.52/15]
-  # Rubocop: convention: Avoid parameter lists longer than 5 parameters. [6/5]
   def add_file_and_write_local_header(filename:,
                                       crc32:,
                                       storage_mode:,
@@ -425,10 +427,6 @@ class ZipTricks::Streamer
     filename.tr('\\', '_')
   end
 
-  # Rubocop: convention: Assignment Branch Condition size for uniquify_name
-  #          is too high. [19.87/15]
-  # Rubocop: convention: Method has too many lines. [19/10]
-  # Rubocop: convention: Perceived complexity for uniquify_name is too high. [8/7]
   def uniquify_name(filename)
     # we add (1), (2), (n) at the end of a filename if there is a duplicate
     copy_pattern = /\((\d+)\)$/

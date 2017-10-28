@@ -4,7 +4,7 @@
 module ZipTricks::NullWriter
   # @param data[String] the data to write
   # @return [self]
-  def self.<<(data)
+  def self.<<(_)
     self
   end
 end

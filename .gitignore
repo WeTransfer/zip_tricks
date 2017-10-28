@@ -54,3 +54,6 @@ testing/*.zip
 
 # For rubinius:
 #*.rbc
+
+# Rubocop report
+rubocop.html

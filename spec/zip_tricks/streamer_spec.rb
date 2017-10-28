@@ -363,6 +363,23 @@ describe ZipTricks::Streamer do
     end
   end
 
+  it 'allows the yielded writable sinks to be closed twice even when using a block' do
+    out = StringIO.new
+    fake_w = double('Writer')
+    expect(fake_w).to receive(:write_local_file_header)
+    expect(fake_w).to receive(:write_data_descriptor)
+    expect(fake_w).to receive(:write_local_file_header)
+    expect(fake_w).to receive(:write_data_descriptor)
+    expect(fake_w).to receive(:write_central_directory_file_header)
+    expect(fake_w).to receive(:write_central_directory_file_header)
+    expect(fake_w).to receive(:write_end_of_central_directory)
+
+    ZipTricks::Streamer.open(out, writer: fake_w) do |z|
+      z.write_deflated_file('somefile.txt', &:close)
+      z.write_stored_file('uncompressed.txt', &:close)
+    end
+  end
+
   it 'supports deferred writes using the return values from write_deflated_file and write_stored_file' do
     out = StringIO.new
     fake_w = double('Writer')

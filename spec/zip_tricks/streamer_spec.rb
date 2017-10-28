@@ -163,6 +163,27 @@ describe ZipTricks::Streamer do
     inspect_zip_with_external_tool(zip_file.path)
   end
 
+  it 'can write the data descriptor and updates the last entry as well' do
+    fake_out = StringIO.new
+    out = StringIO.new
+    fake_w = double('Writer')
+    expect(fake_w).to receive(:write_local_file_header)
+    expect(fake_w).to receive(:write_data_descriptor)
+    expect(fake_w).to receive(:write_central_directory_file_header)
+    expect(fake_w).to receive(:write_end_of_central_directory)
+
+    file_contents = "Some data from file"
+    crc = Zlib.crc32("Some data from file")
+
+    ZipTricks::Streamer.open(out, writer: fake_w) do |zip|
+      zip.add_stored_entry(filename: 'somefile.txt', use_data_descriptor: true)
+      zip << file_contents
+      zip.update_last_entry_and_write_data_descriptor(crc32: crc,
+                                                      compressed_size: file_contents.bytesize,
+                                                      uncompressed_size: file_contents.bytesize)
+    end
+  end
+
   it 'creates an archive that OSX ArchiveUtility can handle' do
     outbuf = Tempfile.new('zip')
     outbuf.binmode

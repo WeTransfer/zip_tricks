@@ -1,5 +1,8 @@
-# Gets yielded from the writing methods of the CompressingStreamer
-# and accepts the data being written into the ZIP
+# Gets yielded from the writing methods of the Streamer
+# and accepts the data being written into the ZIP for deflate
+# or stored modes. Can be used as a destination for `IO.copy_stream`
+#
+#    IO.copy_stream(File.open('source.bin', 'rb), writable)
 class ZipTricks::Streamer::Writable
   # Initializes a new Writable with the object it delegates the writes to.
   # Normally you would not need to use this method directly

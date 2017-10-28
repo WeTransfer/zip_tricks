@@ -27,11 +27,6 @@ class ZipTricks::Streamer::DeflatedWriter
     self
   end
 
-  def write(data)
-    self << data
-    data.bytesize
-  end
-
   private
 
   def interim_flush

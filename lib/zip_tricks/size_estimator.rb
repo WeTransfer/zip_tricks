@@ -24,12 +24,13 @@ class ZipTricks::SizeEstimator
   #       uncompressed_size: 89281911, compressed_size: 121908)
   #     end
   #
-  # @return [Fixnum] the size of the resulting archive, in bytes
+  # @return [Integer] the size of the resulting archive, in bytes
   # @yield [SizeEstimator] the estimator
   def self.estimate
-    output_io = ZipTricks::WriteAndTell.new(ZipTricks::NullWriter)
-    DetailStreamer.open(output_io) { |zip| yield(new(zip)) }
-    output_io.tell
+    streamer = DetailStreamer.new(ZipTricks::NullWriter)
+    estimator = new(streamer)
+    yield(estimator)
+    streamer.close # Returns the .tell of the contained IO
   end
 
   # Add a fake entry to the archive, to see how big it is going to be in the end.

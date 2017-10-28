@@ -15,7 +15,7 @@ class ZipTricks::Streamer::DeflatedWriter
 
   def finish
     @io << @deflater.finish until @deflater.finished?
-    [@crc.to_i, @io.tell - @started_at, @uncompressed_size]
+    {crc32: @crc.to_i, compressed_size: @io.tell - @started_at, uncompressed_size: @uncompressed_size}
   end
 
   def <<(data)

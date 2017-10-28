@@ -16,6 +16,6 @@ class ZipTricks::Streamer::StoredWriter
 
   def finish
     size = @io.tell - @started_at
-    [@crc.to_i, size, size]
+    {crc32: @crc.to_i, compressed_size: size, uncompressed_size: size}
   end
 end

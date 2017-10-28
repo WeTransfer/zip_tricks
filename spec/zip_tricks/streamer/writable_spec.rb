@@ -4,7 +4,7 @@ describe ZipTricks::Streamer::Writable do
   describe '#<<' do
     it 'writes the given data to the destination and returns self' do
       buf = StringIO.new
-      subject = described_class.new(buf)
+      subject = described_class.new(double('streamer'), buf)
 
       result = subject << 'hello!'
 
@@ -16,7 +16,7 @@ describe ZipTricks::Streamer::Writable do
   describe '#write' do
     it 'writes the given data to the destination and returns the number of bytes written' do
       buf = StringIO.new
-      subject = described_class.new(buf)
+      subject = described_class.new(double('streamer'), buf)
 
       result = subject.write('hello!')
 

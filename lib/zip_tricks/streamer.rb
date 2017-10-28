@@ -126,8 +126,8 @@ class ZipTricks::Streamer
   # (like the `sendfile()` call) after writing the headers, or if you
   # just need to figure out the size of the archive.
   #
-  # @param num_bytes [Numeric] how many bytes are going to be written bypassing the Streamer
-  # @return [Numeric] position in the output stream / ZIP archive
+  # @param num_bytes [Integer] how many bytes are going to be written bypassing the Streamer
+  # @return [Integer] position in the output stream / ZIP archive
   def simulate_write(num_bytes)
     @out.advance_position_by(num_bytes)
     @out.tell
@@ -285,6 +285,13 @@ class ZipTricks::Streamer
     ZipTricks::ZipWriter.new
   end
 
+  # Updates the last entry written with the CRC32 checksum and compressed/uncompressed
+  # sizes. For stored entries, `compressed_size` and `uncompressed_size` are the same.
+  #
+  # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
+  # @param compressed_size [Integer] the size of the compressed segment within the ZIP
+  # @param uncompressed_size [Integer] the size of the entry once uncompressed
+  # @return [Integer] the offset the output IO is at after writing the data descriptor
   def update_last_entry_and_write_data_descriptor(crc32:, compressed_size:, uncompressed_size:)
     # Save the information into the entry for when the time comes to write
     # out the central directory
@@ -297,6 +304,7 @@ class ZipTricks::Streamer
                                   crc32: last_entry.crc32,
                                   compressed_size: last_entry.compressed_size,
                                   uncompressed_size: last_entry.uncompressed_size)
+    @io.tell
   end
 
   private

@@ -26,6 +26,15 @@ describe ZipTricks::WriteAndTell do
     expect(buf.bytesize).to eq(91) # It already contained some bytes
   end
 
+  it 'is able to write into a null writer or a blackhole maintaining offsets' do
+    writer = described_class.new(ZipTricks::NullWriter)
+    writer << "Hello"
+    writer << "Goodbye"
+    writer << "What a day!"
+    writer.advance_position_by(10)
+    expect(writer.tell).to eq(33)
+  end
+
   it 'advances the internal pointer using advance_position_by' do
     str = ''
 

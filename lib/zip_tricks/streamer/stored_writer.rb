@@ -14,11 +14,6 @@ class ZipTricks::Streamer::StoredWriter
     self
   end
 
-  def write(data)
-    self << data
-    data.bytesize
-  end
-
   def finish
     size = @io.tell - @started_at
     [@crc.to_i, size, size]

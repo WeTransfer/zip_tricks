@@ -110,11 +110,8 @@ class ZipTricks::Streamer
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   def initialize(stream, writer: create_writer)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
-    unless stream.respond_to?(:tell) && stream.respond_to?(:advance_position_by)
-      stream = ZipTricks::WriteAndTell.new(stream)
-    end
 
-    @out = stream
+    @out = ZipTricks::WriteAndTell.new(stream)
     @files = []
     @local_header_offsets = []
     @filenames_set = Set.new

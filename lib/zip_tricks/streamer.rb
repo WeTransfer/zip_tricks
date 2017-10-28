@@ -211,11 +211,7 @@ class ZipTricks::Streamer
     last_entry.crc32 = crc
     last_entry.compressed_size = comp
     last_entry.uncompressed_size = uncomp
-
-    @writer.write_data_descriptor(io: @out,
-                                  crc32: crc,
-                                  compressed_size: comp,
-                                  uncompressed_size: uncomp)
+    write_data_descriptor_for_last_entry
   end
 
   # Opens the stream for a deflated file in the archive, and yields a writer
@@ -344,7 +340,7 @@ class ZipTricks::Streamer
   def write_data_descriptor_for_last_entry
     e = @files.fetch(-1)
     @writer.write_data_descriptor(io: @out,
-                                  crc32: 0,
+                                  crc32: e.crc32,
                                   compressed_size: e.compressed_size,
                                   uncompressed_size: e.uncompressed_size)
   end

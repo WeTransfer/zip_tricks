@@ -1,4 +1,6 @@
-# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Layout/ElseAlignment, Metrics/ParameterLists, Layout/LeadingCommentSpace, Lint/EndAlignment, Layout/IndentationWidth
+# frozen_string_literal: true
+
+# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Metrics/ParameterLists, Layout/LeadingCommentSpace,
 #
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.
@@ -102,22 +104,21 @@ class ZipTricks::ZipWriter
     # Filename should not be longer than 0xFFFF otherwise this wont fit here
     io << [filename.bytesize].pack(C_v)                 # file name length             2 bytes
 
+    extra_fields = StringIO.new
+
     # Interesting tidbit:
     # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
     # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
     # Zip64 extra field as _the first_ extra field.
-    extra_fields = if requires_zip64
-      zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    else
-      ''
+    if requires_zip64
+      extra_fields << zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     end
-
     extra_fields << timestamp_extra(mtime)
 
-    io << [extra_fields.bytesize].pack(C_v)            # extra field length              2 bytes
+    io << [extra_fields.size].pack(C_v)            # extra field length              2 bytes
 
     io << filename                                     # file name (variable size)
-    io << extra_fields
+    io << extra_fields.string
   end
 
   # Writes the file header for the central directory, for a particular file in the archive. When writing out this data,
@@ -170,14 +171,17 @@ class ZipTricks::ZipWriter
     # Filename should not be longer than 0xFFFF otherwise this wont fit here
     io << [filename.bytesize].pack(C_v)                 # file name length                2 bytes
 
-    extra_fields = if add_zip64
-      zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location, compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    else
-      ''
+    extra_fields = StringIO.new
+    if add_zip64
+      extra_fields << zip_64_extra_for_central_directory_file_header(
+        local_file_header_location: local_file_header_location,
+        compressed_size: compressed_size,
+        uncompressed_size: uncompressed_size
+      )
     end
     extra_fields << timestamp_extra(mtime)
 
-    io << [extra_fields.bytesize].pack(C_v)             # extra field length              2 bytes
+    io << [extra_fields.size].pack(C_v)                 # extra field length              2 bytes
 
     io << [0].pack(C_v)                                 # file comment length             2 bytes
 
@@ -205,7 +209,7 @@ class ZipTricks::ZipWriter
       io << [local_file_header_location].pack(C_V)
     end
     io << filename                                     # file name (variable size)
-    io << extra_fields                                 # extra field (variable size)
+    io << extra_fields.string                          # extra field (variable size)
     #(empty)                                           # file comment (variable size)
   end
 

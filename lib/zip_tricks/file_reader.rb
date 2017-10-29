@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+# rubocop:disable Naming/ConstantName
+
 require 'stringio'
 
 # A very barebones ZIP file reader. Is made for maximum interoperability, but at the same
@@ -538,7 +542,7 @@ class ZipTricks::FileReader
     # Start reading from the _comment_ of the zip file (from the very end).
     # The maximum size of the comment is 0xFFFF (what fits in 2 bytes)
     implied_position_of_eocd_record = zip_file_size - MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE
-    implied_position_of_eocd_record = 0 if implied_position_of_eocd_record < 0
+    implied_position_of_eocd_record = 0 if implied_position_of_eocd_record.negative?
 
     # Use a soft seek (we might not be able to get as far behind in the IO as we want)
     # and a soft read (we might not be able to read as many bytes as we want)
@@ -662,9 +666,9 @@ class ZipTricks::FileReader
     [num_files_total, central_dir_offset, central_dir_size]
   end
 
-  C_V = 'V'.freeze
-  C_v = 'v'.freeze
-  C_Qe = 'Q<'.freeze
+  C_V = 'V'
+  C_v = 'v'
+  C_Qe = 'Q<'
 
   # To prevent too many tiny reads, read the maximum possible size of end of
   # central directory record upfront (all the fixed fields + at most 0xFFFF

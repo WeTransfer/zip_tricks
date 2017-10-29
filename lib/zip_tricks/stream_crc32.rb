@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A simple stateful class for keeping track of a CRC32 value through multiple writes
 class ZipTricks::StreamCRC32
   # Compute a CRC32 value from an IO object. The object should respond to `read` and `eof?`

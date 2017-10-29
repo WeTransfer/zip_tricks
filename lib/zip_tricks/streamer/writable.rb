@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Gets yielded from the writing methods of the Streamer
 # and accepts the data being written into the ZIP for deflate
 # or stored modes. Can be used as a destination for `IO.copy_stream`
@@ -30,7 +32,7 @@ class ZipTricks::Streamer::Writable
     self << d
     d.bytesize
   end
-  
+
   # Flushes the writer and recovers the CRC32/size values. It then calls
   # `update_last_entry_and_write_data_descriptor` on the given Streamer.
   def close

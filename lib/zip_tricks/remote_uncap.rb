@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Alows reading the central directory of a remote ZIP file without
 # downloading the entire file. The central directory provides the
 # offsets at which the actual file contents is located. You can then

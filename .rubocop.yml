@@ -1,13 +1,16 @@
 inherit_from: .rubocop_todo.yml
 
 Metrics/LineLength:
-  Max: 100
+  Max: 120
 
 AllCops:
   Exclude:
     - spec/**/*.rb
     - zip_tricks.gemspec
+    - Gemfile
+    - Rakefile
     - vendor/**/*
+    - julik_scratchpad/**/*
 
 Style/ClassAndModuleChildren:
   Enabled:
@@ -63,3 +66,14 @@ Style/GlobalVars:
   Exclude:
     - testing/generate_test_files.rb
     - testing/support.rb
+
+# The advice this cop gives varies depending on the Ruby version,
+# so no - I will not be following two conflicting recommendations.
+Style/MutableConstant:
+  Enabled: false
+
+Layout/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+Style/Alias:
+  EnforcedStyle: prefer_alias_method

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Rubocop: convention: Missing top-level class documentation comment.
 class ZipTricks::FileReader::StoredReader
   def initialize(from_io, compressed_data_size)

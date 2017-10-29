@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Is used internally by Streamer to keep track of entries in the archive during writing.
 # Normally you will not have to use this class directly
 class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size,

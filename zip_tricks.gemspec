@@ -42,5 +42,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'complexity_assert'
   spec.add_development_dependency 'coderay'
   spec.add_development_dependency 'yard', '~> 0.9'
-  spec.add_development_dependency 'rubocop', '0.49.1' # No conforming to arbitrary rules that _change_ underneath you
+  spec.add_development_dependency 'rubocop', '0.51.0' # No conforming to arbitrary rules that _change_ underneath you
 end

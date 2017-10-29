@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Helps to estimate archive sizes
 class ZipTricks::SizeEstimator
   require_relative 'streamer'
@@ -41,7 +43,7 @@ class ZipTricks::SizeEstimator
                                use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(size)
     if use_data_descriptor
-      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size) 
+      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size)
     end
     self
   end
@@ -56,16 +58,16 @@ class ZipTricks::SizeEstimator
   # @return self
   def add_deflated_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)
     @streamer.add_deflated_entry(filename: filename,
-                                   crc32: 0,
-                                   compressed_size: compressed_size,
-                                   uncompressed_size: uncompressed_size,
-                                   use_data_descriptor: use_data_descriptor)
+                                 crc32: 0,
+                                 compressed_size: compressed_size,
+                                 uncompressed_size: uncompressed_size,
+                                 use_data_descriptor: use_data_descriptor)
 
     @streamer.simulate_write(compressed_size)
     if use_data_descriptor
       @streamer.update_last_entry_and_write_data_descriptor(crc32: 0,
                                                             compressed_size: compressed_size,
-                                                            uncompressed_size: uncompressed_size) 
+                                                            uncompressed_size: uncompressed_size)
     end
     self
   end

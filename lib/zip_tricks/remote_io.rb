@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # An object that fakes just-enough of an IO to be dangerous
 # - or, more precisely, to be useful as a source for the FileReader
 # central directory parser. Effectively we substitute an IO object
@@ -47,7 +49,7 @@ class ZipTricks::RemoteIO
     maximum_avaialable = @remote_size - @pos
     n_bytes ||= maximum_avaialable # nil == read to the end of file
     return '' if n_bytes.zero?
-    raise ArgumentError, "No negative reads(#{n_bytes})" if n_bytes < 0
+    raise ArgumentError, "No negative reads(#{n_bytes})" if n_bytes.negative?
 
     n_bytes = clamp(0, n_bytes, maximum_avaialable)
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Should be included into a Rails controller (together with `ActionController::Live`)
 # for easy ZIP output from any action.
 module ZipTricks::RailsStreaming

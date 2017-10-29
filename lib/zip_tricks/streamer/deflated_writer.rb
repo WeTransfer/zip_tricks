@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ZipTricks::Streamer::DeflatedWriter
   # After how many bytes of incoming data the deflater for the
   # contents must be flushed. This is done to prevent unreasonable

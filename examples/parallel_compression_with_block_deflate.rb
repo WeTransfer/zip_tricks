@@ -71,7 +71,7 @@ size_of_uncompressed_file = compressed_tempfiles_and_crc_of_parts.map { |e| e[2]
 output = File.open('zip_created_in_parallel.zip', 'wb')
 
 ZipTricks::Streamer.open(output) do |zip|
-  zip.add_compressed_entry('parallel.bin',
+  zip.add_deflated_entry('parallel.bin',
                            size_of_uncompressed_file,
                            entire_file_crc.to_i,
                            size_of_deflated_segment)

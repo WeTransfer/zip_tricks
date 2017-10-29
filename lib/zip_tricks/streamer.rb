@@ -2,7 +2,8 @@ require 'set'
 
 # Is used to write streamed ZIP archives into the provided IO-ish object.
 # The output IO is never going to be rewound or seeked, so the output
-# of this object can be coupled directly to, say, a Rack output.
+# of this object can be coupled directly to, say, a Rack output. The
+# output can also be a String, Array or anything that responds to `<<`.
 #
 # Allows for splicing raw files (for "stored" entries without compression)
 # and splicing of deflated files (for "deflated" storage mode).
@@ -165,7 +166,7 @@ class ZipTricks::Streamer
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_compressed_entry(filename:, compressed_size: 0, uncompressed_size: 0, crc32: 0, use_data_descriptor: false)
+  def add_deflated_entry(filename:, compressed_size: 0, uncompressed_size: 0, crc32: 0, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename, crc32: crc32,
                                     storage_mode: DEFLATED,
                                     compressed_size: compressed_size,
@@ -173,6 +174,9 @@ class ZipTricks::Streamer
                                     use_data_descriptor: use_data_descriptor)
     @out.tell
   end
+
+  # Will be phased out in ZipTricks 5.x
+  alias_method :add_compressed_entry, :add_deflated_entry
 
   # Writes out the local header for an entry (file in the ZIP) that is using
   # the stored storage model (is stored as-is).
@@ -292,7 +296,7 @@ class ZipTricks::Streamer
   # @param filename[String] the name of the file in the archive
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
-    add_compressed_entry(filename: filename,
+    add_deflated_entry(filename: filename,
                          use_data_descriptor: true,
                          crc32: 0,
                          compressed_size: 0,

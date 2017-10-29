@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Stashes a block given by the Rack webserver when calling each() on a body, and calls
 # that block every time it is written to using :<< (shovel). Poses as an IO for rubyzip.
 

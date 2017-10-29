@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Can be used as a Rack response body directly. Will yield
 # a {ZipTricks::Streamer} for adding entries to the archive and writing
 # zip entry bodies.

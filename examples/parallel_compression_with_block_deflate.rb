@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../lib/zip_tricks'
 require 'tempfile'
 
@@ -72,9 +74,9 @@ output = File.open('zip_created_in_parallel.zip', 'wb')
 
 ZipTricks::Streamer.open(output) do |zip|
   zip.add_deflated_entry('parallel.bin',
-                           size_of_uncompressed_file,
-                           entire_file_crc.to_i,
-                           size_of_deflated_segment)
+                         size_of_uncompressed_file,
+                         entire_file_crc.to_i,
+                         size_of_deflated_segment)
   compressed_part_files.each do |part_file|
     part_file.rewind
     while blob = part_file.read(2048)

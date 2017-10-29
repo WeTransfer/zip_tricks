@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A tiny wrapper over any object that supports :<<.
 # Adds :tell and :advance_position_by.
 class ZipTricks::WriteAndTell

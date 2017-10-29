@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../lib/zip_tricks'
 
 # An example of how you can create a Rack endpoint for your ZIP downloads.
@@ -56,7 +58,7 @@ class ZipDownload
     # and return the response, adding the Content-Length we have computed earlier
     [
       200,
-      { 'Content-Length' => size.to_s, 'Content-Disposition' => content_disposition },
+      {'Content-Length' => size.to_s, 'Content-Disposition' => content_disposition},
       zip_response_body
     ]
   end

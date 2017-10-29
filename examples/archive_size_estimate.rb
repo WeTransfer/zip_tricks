@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../lib/zip_tricks'
 
 # Predict how large a ZIP file is going to be without having access to

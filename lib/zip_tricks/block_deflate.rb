@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'zlib'
 
 # Permits Deflate compression in independent blocks. The workflow is as follows:

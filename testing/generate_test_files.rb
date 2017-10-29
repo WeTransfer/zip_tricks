@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'support'
 
 build_test 'Two small stored files' do |zip|

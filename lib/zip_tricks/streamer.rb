@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'set'
 
 # Is used to write streamed ZIP archives into the provided IO-ish object.
@@ -54,7 +56,7 @@ require 'set'
 # so far. When using `sendfile` the Ruby write methods get bypassed entirely, and the
 # offsets in the IO will not be updated - which will result in an invalid ZIP.
 #
-# 
+#
 # ## On-the-fly deflate -using the Streamer with async/suspended writes and data descriptors
 #
 # If you are unable to use the block versions of `write_deflated_file` and `write_stored_file`
@@ -297,10 +299,10 @@ class ZipTricks::Streamer
   # @yield [#<<, #write] an object that the file contents must be written to
   def write_deflated_file(filename)
     add_deflated_entry(filename: filename,
-                         use_data_descriptor: true,
-                         crc32: 0,
-                         compressed_size: 0,
-                         uncompressed_size: 0)
+                       use_data_descriptor: true,
+                       crc32: 0,
+                       compressed_size: 0,
+                       uncompressed_size: 0)
 
     writable = Writable.new(self, DeflatedWriter.new(@out))
     if block_given?
@@ -404,7 +406,9 @@ class ZipTricks::Streamer
     raise Overflow, 'Filename is too long' if filename.bytesize > 0xFFFF
 
     if use_data_descriptor
-      crc32, compressed_size, uncompressed_size = 0, 0, 0
+      crc32 = 0
+      compressed_size = 0
+      uncompressed_size = 0
     end
 
     e = Entry.new(filename,
@@ -444,11 +448,11 @@ class ZipTricks::Streamer
 
     duplicate_counter = 1
     loop do
-      if fn_last_part =~ copy_pattern
-        fn_last_part.sub!(copy_pattern, "(#{duplicate_counter})")
-      else
-        fn_last_part = "#{fn_last_part} (#{duplicate_counter})"
-      end
+      fn_last_part = if fn_last_part.match?(copy_pattern)
+                       fn_last_part.sub(copy_pattern, "(#{duplicate_counter})")
+                     else
+                       "#{fn_last_part} (#{duplicate_counter})"
+                     end
       new_filename = (parts + [fn_last_part, ext]).compact.join('.')
       return new_filename unless @filenames_set.include?(new_filename)
       duplicate_counter += 1

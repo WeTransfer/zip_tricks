@@ -69,7 +69,7 @@ describe ZipTricks::Streamer do
   it 'returns the position in the IO at every call' do
     io = StringIO.new
     zip = described_class.new(io)
-    pos = zip.add_compressed_entry(filename: 'file.jpg',
+    pos = zip.add_deflated_entry(filename: 'file.jpg',
                                    uncompressed_size: 182_919,
                                    compressed_size: 8_912,
                                    crc32: 8_912)
@@ -114,7 +114,7 @@ describe ZipTricks::Streamer do
     zip_file.binmode
 
     described_class.open(zip_file) do |zip|
-      zip.add_compressed_entry(filename: 'compressed-file.bin',
+      zip.add_deflated_entry(filename: 'compressed-file.bin',
                                uncompressed_size: f.size,
                                crc32: crc,
                                compressed_size: compressed_blockwise.size)
@@ -205,7 +205,7 @@ describe ZipTricks::Streamer do
       end
 
       # Add this file compressed...
-      zip.add_compressed_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
+      zip.add_deflated_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
                                crc32: crc32, compressed_size: compressed_buffer.size)
       zip << compressed_buffer.string
 
@@ -286,6 +286,14 @@ describe ZipTricks::Streamer do
       inspect_zip_with_external_tool(zip_buf.path)
     end
     Dir.chdir(wd)
+  end
+
+  it 'still supports #add_compressed_entry (to be removed in v.5)' do
+    out = StringIO.new
+    zip = described_class.new(out)
+    zip.add_compressed_entry(filename: 'foo.bar', compressed_size: 123, uncompressed_size: 456, crc32: 9)
+    zip.close
+    expect(out.size).to be > 0
   end
 
   it 'sets the general-purpose flag for entries with UTF8 names' do

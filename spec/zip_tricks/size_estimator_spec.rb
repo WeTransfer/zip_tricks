@@ -13,26 +13,34 @@ describe ZipTricks::SizeEstimator do
 
       estimator.add_stored_entry(filename: 'second-file.bin', size: raw_file_two.size)
 
-      r = estimator.add_compressed_entry(filename: 'second-file.bin',
+      r = estimator.add_deflated_entry(filename: 'second-file.bin',
                                          compressed_size: raw_file_three.size,
                                          uncompressed_size: raw_file_two.size)
-      expect(r).to eq(estimator), 'add_compressed_entry should return self'
+      expect(r).to eq(estimator), 'add_deflated_entry should return self'
 
       r = estimator.add_stored_entry(filename: 'first-file-with-descriptor.bin',
                                      size: raw_file_one.size,
                                      use_data_descriptor: true)
       expect(r).to eq(estimator), 'add_stored_entry should return self'
 
-      r = estimator.add_compressed_entry(filename: 'second-file-with-descriptor.bin',
+      r = estimator.add_deflated_entry(filename: 'second-file-with-descriptor.bin',
                                          compressed_size: raw_file_three.size,
                                          uncompressed_size: raw_file_two.size,
                                          use_data_descriptor: true)
-      expect(r).to eq(estimator), 'add_compressed_entry should return self'
+      expect(r).to eq(estimator), 'add_deflated_entry should return self'
 
       r = estimator.add_empty_directory_entry(dirname: 'empty-directory/')
-      expect(r).to eq(estimator), 'add_compressed_entry should return self'
+      expect(r).to eq(estimator), 'add_deflated_entry should return self'
     end
 
     expect(predicted_size).to eq(2_690_321)
   end
+
+  it 'still supports #add_compressed_entry (to be removed in v.5)' do
+    predicted_size = described_class.estimate do |zip|
+      zip.add_compressed_entry(filename: 'foo.bar', compressed_size: 123, uncompressed_size: 456)
+    end
+    expect(predicted_size).to be > 0
+  end
+
 end

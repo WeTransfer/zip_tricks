@@ -14,7 +14,7 @@ class ZipTricks::SizeEstimator
   #
   #     expected_zip_size = SizeEstimator.estimate do | estimator |
   #       estimator.add_stored_entry(filename: "file.doc", size: 898291)
-  #       estimator.add_compressed_entry(filename: "family.tif",
+  #       estimator.add_deflated_entry(filename: "family.tif",
   #               uncompressed_size: 89281911, compressed_size: 121908)
   #     end
   #
@@ -54,8 +54,8 @@ class ZipTricks::SizeEstimator
   # @param use_data_descriptor[Boolean] whether the entry uses a postfix data
   #                                     descriptor to specify size
   # @return self
-  def add_compressed_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)
-    @streamer.add_compressed_entry(filename: filename,
+  def add_deflated_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)
+    @streamer.add_deflated_entry(filename: filename,
                                    crc32: 0,
                                    compressed_size: compressed_size,
                                    uncompressed_size: uncompressed_size,
@@ -69,6 +69,9 @@ class ZipTricks::SizeEstimator
     end
     self
   end
+
+  # Will be phased out in ZipTricks 5.x
+  alias_method :add_compressed_entry, :add_deflated_entry
 
   # Add an empty directory to the archive.
   #

@@ -448,7 +448,7 @@ class ZipTricks::Streamer
 
     duplicate_counter = 1
     loop do
-      fn_last_part = if fn_last_part.match?(copy_pattern)
+      fn_last_part = if fn_last_part =~ copy_pattern
                        fn_last_part.sub(copy_pattern, "(#{duplicate_counter})")
                      else
                        "#{fn_last_part} (#{duplicate_counter})"

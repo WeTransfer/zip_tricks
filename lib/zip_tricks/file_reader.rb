@@ -542,7 +542,7 @@ class ZipTricks::FileReader
     # Start reading from the _comment_ of the zip file (from the very end).
     # The maximum size of the comment is 0xFFFF (what fits in 2 bytes)
     implied_position_of_eocd_record = zip_file_size - MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE
-    implied_position_of_eocd_record = 0 if implied_position_of_eocd_record.negative?
+    implied_position_of_eocd_record = 0 if implied_position_of_eocd_record < 0
 
     # Use a soft seek (we might not be able to get as far behind in the IO as we want)
     # and a soft read (we might not be able to read as many bytes as we want)

@@ -49,7 +49,7 @@ class ZipTricks::RemoteIO
     maximum_avaialable = @remote_size - @pos
     n_bytes ||= maximum_avaialable # nil == read to the end of file
     return '' if n_bytes.zero?
-    raise ArgumentError, "No negative reads(#{n_bytes})" if n_bytes.negative?
+    raise ArgumentError, "No negative reads(#{n_bytes})" if n_bytes < 0
 
     n_bytes = clamp(0, n_bytes, maximum_avaialable)
 

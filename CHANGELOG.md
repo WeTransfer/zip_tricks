@@ -1,3 +1,7 @@
+## 4.5.1
+
+* Speed up CRC32 calculation using a buffer of 5MB (have to combine CRCs less often)
+
 ## 4.5.0
 
 * Rename `Streamer#add_compressed_entry` and `SizeEstimator#add_compressed_entry` to `add_deflated_entry`

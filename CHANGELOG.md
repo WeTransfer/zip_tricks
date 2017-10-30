@@ -1,3 +1,12 @@
+## 4.5.0
+
+* Rename `Streamer#add_compressed_entry` and `SizeEstimator#add_compressed_entry` to `add_deflated_entry`
+  to indicate the type of compression that is going to get used.
+* Make  `Streamer#write_(deflated|stored)_file` return a writable object that can be `.close`d, to
+  permit usage of those methods in situations where suspending a block is inconvenient (make deferred writing possible).
+* Fix CRC32 checksums in `Streamer#write_deflated_file`
+* Add `Streamer#update_last_entry_and_write_data_descriptor` to permit externally-driven flows that use data descriptors
+
 ## 4.4.2
 
 * Add 2.4 to Travis rubies

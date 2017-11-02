@@ -37,7 +37,7 @@ class ZipTricks::WriteBuffer
     self
   end
 
-  # Flushes the buffer and returns the result of `#to_` of the contained `writable`.
+  # Flushes the buffer and returns the result of `#to_i` of the contained `writable`.
   # Primarily facilitates working with StreamCRC32 objects where you finish the
   # computation by retrieving the CRC as an integer
   #

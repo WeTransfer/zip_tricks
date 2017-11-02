@@ -12,6 +12,7 @@ class ZipTricks::Streamer::DeflatedWriter
     @started_at = @io.tell
     @crc = ZipTricks::StreamCRC32.new
     @deflater = ::Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION, -::Zlib::MAX_WBITS)
+    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, 64 * 1024)
     @bytes_since_last_flush = 0
   end
 
@@ -25,7 +26,9 @@ class ZipTricks::Streamer::DeflatedWriter
     @bytes_since_last_flush += data.bytesize
     @io << @deflater.deflate(data)
     @crc << data
+
     interim_flush
+
     self
   end
 

@@ -7,7 +7,7 @@ class ZipTricks::Streamer::StoredWriter
     @uncompressed_size = 0
     @compressed_size = 0
     @started_at = @io.tell
-    @crc = ZipTricks::StreamCRC32.new
+    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, 64 * 1024)
   end
 
   def <<(data)

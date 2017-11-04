@@ -6,14 +6,22 @@
 class ZipTricks::Streamer::DeflatedWriter
   # After how many bytes of incoming data the deflater for the
   # contents must be flushed. This is done to prevent unreasonable
-  # memory use when archiving large files.
+  # memory use when archiving large files, and to ensure we write to
+  # the socket often enough while still maintaining acceptable
+  # compression
   FLUSH_EVERY_N_BYTES = 1024 * 1024 * 5
+
+  # The amount of bytes we will buffer before computing the intermediate
+  # CRC32 checksums. Benchmarks show that the optimum is 64KB (see
+  # `bench/buffered_crc32_bench.rb), if that is exceeded Zlib is going
+  # to perform internal CRC combine calls which will make the speed go down again.
+  CRC32_BUFFER_SIZE = 64 * 1024
 
   def initialize(io)
     @compressed_io = ZipTricks::WriteAndTell.new(io)
     @uncompressed_size = 0
     @deflater = ::Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION, -::Zlib::MAX_WBITS)
-    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, 64 * 1024)
+    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
     @bytes_since_last_flush = 0
   end
 

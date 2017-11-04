@@ -6,27 +6,27 @@ require 'benchmark/ips'
 require_relative '../lib/zip_tricks'
 
 # Create an array of 15 bytes
-data = Random.new.bytes(5*1024*1024).unpack("C*")
+data = Random.new.bytes(5 * 1024 * 1024).unpack('C*')
 buffer_sizes = [
   1,
   256,
   512,
   1024,
-  8*1024,
-  16*1024,
-  32*1024,
-  64*1024,
-  128*1024,
-  256*1024,
-  512*1024,
-  1024*1024,
-  2*1024*1024,
+  8 * 1024,
+  16 * 1024,
+  32 * 1024,
+  64 * 1024,
+  128 * 1024,
+  256 * 1024,
+  512 * 1024,
+  1024 * 1024,
+  2 * 1024 * 1024
 ]
 
 require 'benchmark/ips'
 
 Benchmark.ips do |x|
-  x.config(:time => 5, :warmup => 2)
+  x.config(time: 5, warmup: 2)
   buffer_sizes.each do |buf_size|
     x.report "Single-byte <<-writes of #{data.length} using a #{buf_size} byte buffer" do
       crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, buf_size)

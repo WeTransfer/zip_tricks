@@ -26,7 +26,6 @@ buffer_sizes = [
 
 require 'benchmark/ips'
 
-
 Benchmark.ips do |x|
   x.config(time: 5, warmup: 2)
   buffer_sizes.each do |buf_size|

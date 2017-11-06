@@ -152,7 +152,6 @@ describe ZipTricks::Streamer do
       # Handle entries one by one
       zipfile.each do |entry|
         # The entry name gets returned with a binary encoding, we have to force it back.
-        puts entry.name
         per_filename[entry.name] = entry.get_raw_input_stream.read
       end
     end

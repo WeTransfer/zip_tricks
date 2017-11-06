@@ -5,7 +5,7 @@ require 'benchmark'
 require 'benchmark/ips'
 require_relative '../lib/zip_tricks'
 
-data = Random.new.bytes(5 * 1024 * 1024).unpack('C*')
+data = Random.new.bytes(5 * 1024 * 1024).split(//)
 buffer_sizes = [
   1,
   256,

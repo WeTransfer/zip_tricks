@@ -1,3 +1,7 @@
+## 4.5.2
+
+* Fix unused var in EMPTY_DIRECTORY_EXTERNAL_ATTRS (https://github.com/WeTransfer/zip_tricks/pull/25)
+
 ## 4.5.1
 
 * Speed up CRC32 calculation using a buffer of 5MB (have to combine CRCs less often)
@@ -83,7 +87,7 @@
   to modifications. The straw that broke the camel's back in this case is the insistence of RubyZip on writing out padding
   for the Zip64 extra fields in the local entries that it would never replace with useful data, which was breaking unarchiving
   when using Windows Explorer.
-  
+
 ## 2.7.0
 
 * Add `Streamer#write` so that the Streamer can be used as argument to `IO.copy_stream`

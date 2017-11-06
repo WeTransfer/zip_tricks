@@ -1,6 +1,6 @@
 ## 4.5.2
 
-* Fix unused var in EMPTY_DIRECTORY_EXTERNAL_ATTRS (https://github.com/WeTransfer/zip_tricks/pull/25)
+* Replace the incorrectly used `file` type for empty directory entries with the appropriate `directory` type
 
 ## 4.5.1
 

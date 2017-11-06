@@ -154,11 +154,12 @@ describe ZipTricks::Streamer do
       # Handle entries one by one
       zipfile.each do |entry|
         # The entry name gets returned with a binary encoding, we have to force it back.
-        per_filename[entry.name] = entry.get_input_stream.read
+        puts entry.name
+        per_filename[entry.name] = entry.get_raw_input_stream.read
       end
     end
 
-    expect(per_filename['Tunes/'].bytesize).to eq(0)
+    expect(per_filename['Tunes/'].bytesize).to eq(157)
 
     inspect_zip_with_external_tool(zip_file.path)
   end

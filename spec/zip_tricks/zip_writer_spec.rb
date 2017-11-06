@@ -284,7 +284,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(0)               # disk number, must be blanked to the
                                                 # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
-      expect(br.read_4b).to eq(2_179_792_896)   # external file attributes
+      expect(br.read_4b).to eq(1_106_051_072)   # external file attributes
       expect(br.read_4b).to eq(898_921)         # relative offset of local header
       expect(br.read_n(10)).to eq('directory/') # the filename
     end

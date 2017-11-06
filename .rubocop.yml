@@ -77,3 +77,6 @@ Layout/SpaceInsideHashLiteralBraces:
 
 Style/Alias:
   EnforcedStyle: prefer_alias_method
+
+Style/ZeroLengthPredicate:
+  Enabled: false # Does not work for StringIOs

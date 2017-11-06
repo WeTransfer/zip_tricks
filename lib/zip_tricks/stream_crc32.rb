@@ -2,18 +2,21 @@
 
 # A simple stateful class for keeping track of a CRC32 value through multiple writes
 class ZipTricks::StreamCRC32
+  BUFFER_SIZE = 1024 * 1024 * 5
+
   # Compute a CRC32 value from an IO object. The object should respond to `read` and `eof?`
   #
   # @param io[IO] the IO to read the data from
   # @return [Fixnum] the computed CRC32 value
   def self.from_io(io)
     crc = new
-    crc << io.read(1024 * 512) until io.eof?
+    crc << io.read(BUFFER_SIZE) until io.eof?
     crc.to_i
   end
 
   # Creates a new streaming CRC32 calculator
   def initialize
+    @buf = StringIO.new
     @crc = Zlib.crc32('')
   end
 
@@ -22,7 +25,8 @@ class ZipTricks::StreamCRC32
   # @param blob[String] the string to compute the CRC32 from
   # @return [self]
   def <<(blob)
-    @crc = Zlib.crc32_combine(@crc, Zlib.crc32(blob), blob.bytesize)
+    @buf << blob
+    buf_flush if @buf.size > BUFFER_SIZE
     self
   end
 
@@ -30,6 +34,7 @@ class ZipTricks::StreamCRC32
   #
   # @return [Fixnum] the updated CRC32 value for all the blobs so far
   def to_i
+    buf_flush if @buf.size > 0
     @crc
   end
 
@@ -40,6 +45,15 @@ class ZipTricks::StreamCRC32
   # @param blob_size[Fixnum] the size of the daata the `crc32` is computed from
   # @return [Fixnum] the updated CRC32 value for all the blobs so far
   def append(crc32, blob_size)
+    buf_flush if @buf.size > 0
     @crc = Zlib.crc32_combine(@crc, crc32, blob_size)
+  end
+
+  private
+
+  def buf_flush
+    @crc = Zlib.crc32_combine(@crc, Zlib.crc32(@buf.string), @buf.size)
+    @buf.truncate(0)
+    @buf.rewind
   end
 end

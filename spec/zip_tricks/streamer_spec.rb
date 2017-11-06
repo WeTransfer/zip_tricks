@@ -25,8 +25,6 @@ describe ZipTricks::Streamer do
 
     def write_central_directory_file_header(*);   end
 
-    def write_central_directory_file_header(*);   end
-
     def write_end_of_central_directory(*);        end
   end
 

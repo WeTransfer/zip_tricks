@@ -47,7 +47,7 @@ class ZipTricks::ZipWriter
     # Applies permissions to an empty directory.
     unix_perms = 0o755
     file_type_dir = 0o04
-    external_attrs = (file_type_file << 12 | (unix_perms & 0o7777)) << 16
+    external_attrs = (file_type_dir << 12 | (unix_perms & 0o7777)) << 16
   end
   MADE_BY_SIGNATURE = begin
     # A combination of the VERSION_MADE_BY low byte and the OS type high byte

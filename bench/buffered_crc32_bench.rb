@@ -69,59 +69,43 @@ Single-byte <<-writes of 5242880 using a 2097152 byte buffer
                          1.000  i/100ms
 Calculating -------------------------------------
 Single-byte <<-writes of 5242880 using a 1 byte buffer
-                          0.056  (± 0.0%) i/s -      1.000  in  17.757238s
+                          0.054  (± 0.0%) i/s -      1.000  in  18.383019s
 Single-byte <<-writes of 5242880 using a 256 byte buffer
-                          0.125  (± 0.0%) i/s -      1.000  in   7.990842s
+                          0.121  (± 0.0%) i/s -      1.000  in   8.286061s
 Single-byte <<-writes of 5242880 using a 512 byte buffer
-                          0.129  (± 0.0%) i/s -      1.000  in   7.723896s
+                          0.124  (± 0.0%) i/s -      1.000  in   8.038112s
 Single-byte <<-writes of 5242880 using a 1024 byte buffer
-                          0.131  (± 0.0%) i/s -      1.000  in   7.634909s
+                          0.128  (± 0.0%) i/s -      1.000  in   7.828562s
 Single-byte <<-writes of 5242880 using a 8192 byte buffer
-                          0.134  (± 0.0%) i/s -      1.000  in   7.458469s
+                          0.123  (± 0.0%) i/s -      1.000  in   8.121586s
 Single-byte <<-writes of 5242880 using a 16384 byte buffer
-                          0.134  (± 0.0%) i/s -      1.000  in   7.455839s
+                          0.127  (± 0.0%) i/s -      1.000  in   7.872240s
 Single-byte <<-writes of 5242880 using a 32768 byte buffer
-                          0.134  (± 0.0%) i/s -      1.000  in   7.484182s
+                          0.126  (± 0.0%) i/s -      1.000  in   7.911816s
 Single-byte <<-writes of 5242880 using a 65536 byte buffer
-                          0.136  (± 0.0%) i/s -      1.000  in   7.340512s
+                          0.126  (± 0.0%) i/s -      1.000  in   7.917318s
 Single-byte <<-writes of 5242880 using a 131072 byte buffer
-                          0.137  (± 0.0%) i/s -      1.000  in   7.314390s
+                          0.127  (± 0.0%) i/s -      1.000  in   7.897223s
 Single-byte <<-writes of 5242880 using a 262144 byte buffer
-                          0.133  (± 0.0%) i/s -      1.000  in   7.496164s
+                          0.130  (± 0.0%) i/s -      1.000  in   7.675608s
 Single-byte <<-writes of 5242880 using a 524288 byte buffer
-                          0.135  (± 0.0%) i/s -      1.000  in   7.417235s
+                          0.130  (± 0.0%) i/s -      1.000  in   7.679886s
 Single-byte <<-writes of 5242880 using a 1048576 byte buffer
-                          0.136  (± 0.0%) i/s -      1.000  in   7.355934s
+                          0.128  (± 0.0%) i/s -      1.000  in   7.788439s
 Single-byte <<-writes of 5242880 using a 2097152 byte buffer
-                          0.135  (± 0.0%) i/s -      1.000  in   7.389307s
+                          0.128  (± 0.0%) i/s -      1.000  in   7.797839s
 
 Comparison:
-<<<<<<< HEAD
-Single-bute writes of 5242880 using a 65536 byte buffer:        0.4 i/s
-Single-bute writes of 5242880 using a 32768 byte buffer:        0.4 i/s - 1.00x  slower
-Single-bute writes of 5242880 using a 131072 byte buffer:        0.4 i/s - 1.01x  slower
-Single-bute writes of 5242880 using a 16384 byte buffer:        0.4 i/s - 1.01x  slower
-Single-bute writes of 5242880 using a 8192 byte buffer:        0.4 i/s - 1.02x  slower
-Single-bute writes of 5242880 using a 524288 byte buffer:        0.4 i/s - 1.03x  slower
-Single-bute writes of 5242880 using a 262144 byte buffer:        0.4 i/s - 1.03x  slower
-Single-bute writes of 5242880 using a 1048576 byte buffer:        0.4 i/s - 1.03x  slower
-Single-bute writes of 5242880 using a 2097152 byte buffer:        0.4 i/s - 1.04x  slower
-Single-bute writes of 5242880 using a 1024 byte buffer:        0.3 i/s - 1.11x  slower
-Single-bute writes of 5242880 using a 512 byte buffer:        0.3 i/s - 1.18x  slower
-Single-bute writes of 5242880 using a 256 byte buffer:        0.3 i/s - 1.28x  slower
-Single-bute writes of 5242880 using a 1 byte buffer:        0.1 i/s - 7.16x  slower
-=======
-Single-byte <<-writes of 5242880 using a 131072 byte buffer:        0.1 i/s
-Single-byte <<-writes of 5242880 using a 65536 byte buffer:        0.1 i/s - 1.00x  slower
+Single-byte <<-writes of 5242880 using a 262144 byte buffer:        0.1 i/s
+Single-byte <<-writes of 5242880 using a 524288 byte buffer:        0.1 i/s - 1.00x  slower
 Single-byte <<-writes of 5242880 using a 1048576 byte buffer:        0.1 i/s - 1.01x  slower
-Single-byte <<-writes of 5242880 using a 2097152 byte buffer:        0.1 i/s - 1.01x  slower
-Single-byte <<-writes of 5242880 using a 524288 byte buffer:        0.1 i/s - 1.01x  slower
-Single-byte <<-writes of 5242880 using a 16384 byte buffer:        0.1 i/s - 1.02x  slower
-Single-byte <<-writes of 5242880 using a 8192 byte buffer:        0.1 i/s - 1.02x  slower
-Single-byte <<-writes of 5242880 using a 32768 byte buffer:        0.1 i/s - 1.02x  slower
-Single-byte <<-writes of 5242880 using a 262144 byte buffer:        0.1 i/s - 1.02x  slower
-Single-byte <<-writes of 5242880 using a 1024 byte buffer:        0.1 i/s - 1.04x  slower
-Single-byte <<-writes of 5242880 using a 512 byte buffer:        0.1 i/s - 1.06x  slower
-Single-byte <<-writes of 5242880 using a 256 byte buffer:        0.1 i/s - 1.09x  slower
-Single-byte <<-writes of 5242880 using a 1 byte buffer:        0.1 i/s - 2.43x  slower
->>>>>>> When we say "byte" it should be a byte
+Single-byte <<-writes of 5242880 using a 2097152 byte buffer:        0.1 i/s - 1.02x  slower
+Single-byte <<-writes of 5242880 using a 1024 byte buffer:        0.1 i/s - 1.02x  slower
+Single-byte <<-writes of 5242880 using a 16384 byte buffer:        0.1 i/s - 1.03x  slower
+Single-byte <<-writes of 5242880 using a 131072 byte buffer:        0.1 i/s - 1.03x  slower
+Single-byte <<-writes of 5242880 using a 32768 byte buffer:        0.1 i/s - 1.03x  slower
+Single-byte <<-writes of 5242880 using a 65536 byte buffer:        0.1 i/s - 1.03x  slower
+Single-byte <<-writes of 5242880 using a 512 byte buffer:        0.1 i/s - 1.05x  slower
+Single-byte <<-writes of 5242880 using a 8192 byte buffer:        0.1 i/s - 1.06x  slower
+Single-byte <<-writes of 5242880 using a 256 byte buffer:        0.1 i/s - 1.08x  slower
+Single-byte <<-writes of 5242880 using a 1 byte buffer:        0.1 i/s - 2.39x  slower

@@ -12,7 +12,6 @@ class ZipTricks::Streamer::StoredWriter
 
   def initialize(io)
     @io = ZipTricks::WriteAndTell.new(io)
-    @started_at = @io.tell
     @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
   end
 

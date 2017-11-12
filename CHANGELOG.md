@@ -1,3 +1,5 @@
+* Reduce the size of the CRC32 buffer to sub-1MB size (backed by a benchmark), extract buffering into a wrapper proxy
+
 ## 4.5.2
 
 * Replace the incorrectly used `file` type for empty directory entries with the appropriate `directory` type

@@ -28,9 +28,6 @@ The issue tracker is the preferred channel for [bug reports](#bug-reports),
 [features requests](#feature-requests) and [submitting pull
 requests](#pull-requests), but please respect the following restrictions:
 
-* Please **do not** use the issue tracker for personal support requests (use
-  [Stack Overflow](http://stackoverflow.com)).
-
 * Please **do not** derail or troll issues. Keep the discussion on topic and
   respect the opinions of others.
 
@@ -98,6 +95,8 @@ project's developers might not want to merge into the project.
 Please adhere to the coding conventions used throughout a project (indentation,
 accurate comments, etc.) and any other requirements (such as test coverage).
 
+The project uses Rubocop which can be run using `bundle exec rubocop -c .rubocop.yml`.
+
 Follow this process if you'd like your work considered for inclusion in the
 project:
 
@@ -106,11 +105,11 @@ project:
 
    ```bash
    # Clone your fork of the repo into the current directory
-   git clone git@github.com:WeTransfer/eslint-config-wetransfer.git
+   git clone git@github.com:WeTransfer/zip_tricks.git
    # Navigate to the newly cloned directory
-   cd eslint-config-wetransfer
+   cd zip_tricks
    # Assign the original repo to a remote called "upstream"
-   git remote add upstream git@github.com:WeTransfer/eslint-config-wetransfer.git
+   git remote add upstream git@github.com:WeTransfer/zip_tricks.git
    ```
 
 2. If you cloned a while ago, get the latest changes from upstream:
@@ -127,10 +126,9 @@ project:
    git checkout -b <topic-branch-name>
    ```
 
-4. Commit your changes in logical chunks. Please adhere to these [AngularJS Git Commit Message Conventions](https://docs.google.com/document/d/1QrDFcIiPjSLDn3EL15IJygNPiHORgU1_OOAqWjiDU5Y)
-   or your code is unlikely be merged into the main project. Use Git's
-   [interactive rebase](https://help.github.com/articles/interactive-rebase)
-   feature to tidy up your commits before making them public.
+4. Commit your changes in logical chunks and/or squash them for readability and
+   conciseness. Check out [this post](https://chris.beams.io/posts/git-commit/) or
+   [this other post](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html) for some tips re: writing good commit messages.
 
 5. Locally merge (or rebase) the upstream development branch into your topic branch:
 
@@ -146,27 +144,6 @@ project:
 
 7. [Open a Pull Request](https://help.github.com/articles/using-pull-requests/)
     with a clear title and description.
-
-## Conventions of commit messages
-
-Adding features on repo
-
-```bash
-git commit -m "feat: message about this feature"
-```
-
-Fixing features on repo
-
-```bash
-git commit -m "fix: message about this update"
-```
-
-Removing features on repo
-
-```bash
-git commit -m "refactor: message about this" -m "BREAKING CHANGE: message about the breaking change"
-```
-
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owner to
 license your work under the same license as that used by the project.

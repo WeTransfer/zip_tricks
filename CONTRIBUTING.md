@@ -10,32 +10,30 @@ patches and features.
 
 ## What do I need to know to help?
 
-If you are looking to help to with a code contribution, the project uses Ruby. If you don't feel ready to make a code contribution yet, no problem -- keep an eye out on the issues page for issues tagged "good-first-issue" or "documentation-issue" -- or submit your own!
+If you are already familiar with the [Ruby Programming Language](https://www.ruby-lang.org/) you can start contributing code right away, otherwise look for issues labeled with *documentation* or *good first issue* to get started.
 
-If you are interested in making a code contribution and would like to learn more about the technologies that we use, check out the (non-exhaustive) list below. You can also get in touch with us via an issue or email and we can provide additional resources and information.
+If you are interested in contributing code and would like to learn more about the technologies that we use, check out the (non-exhaustive) list below. You can also get in touch with us via an issue or email to get additional information.
 
- - [ruby](https://ruby-doc.org/stdlib-2.4.1/) (currently tested to 2.4.1)
+ - [ruby](https://ruby-doc.org)
  - [rubyzip](https://github.com/rubyzip/rubyzip)
  - [rspec](http://rspec.info/) (for testing)
  - [zip files](https://en.wikipedia.org/wiki/Zip_(file_format))
 
-
-# How do I made a contribution?
+# How do I make a contribution?
 
 ## Using the issue tracker
 
 The issue tracker is the preferred channel for [bug reports](#bug-reports),
-[features requests](#feature-requests) and [submitting pull
+[feature requests](#feature-requests) and [submitting pull
 requests](#pull-requests), but please respect the following restrictions:
 
-* Please **do not** derail or troll issues. Keep the discussion on topic and
-  respect the opinions of others.
-
+* Please **do not** derail or troll issues. Keep the discussion on topic and respect the opinions of others. Adhere to the principles set out in the [Code of Conduct](https://github.com/WeTransfer/zip_tricks/blob/master/CODE_OF_CONDUCT.md).
 
 ## Bug reports
 
-A bug is a _demonstrable problem_ that is caused by the code in the repository.
-Good bug reports are extremely helpful - thank you!
+A bug is a _demonstrable problem_ that is caused by code in the repository.
+
+Good bug reports are extremely helpful-thank you!
 
 Guidelines for bug reports:
 
@@ -43,14 +41,14 @@ Guidelines for bug reports:
    reported.
 
 2. **Check if the issue has been fixed** &mdash; try to reproduce it using the
-   latest `master` or development branch in the repository.
+   latest `master` branch in the repository.
 
 3. **Isolate the problem** &mdash; create a [reduced test
    case](http://css-tricks.com/reduced-test-cases/) and a live example.
 
 A good bug report shouldn't leave others needing to chase you up for more
 information. Please try to be as detailed as possible in your report. What is
-your environment? What steps will reproduce the issue? What browser(s) and OS
+your environment? What steps will reproduce the issue? What tool(s) or OS will
 experience the problem? What would you expect to be the outcome? All these
 details will help people to fix any potential bugs.
 
@@ -65,7 +63,7 @@ Example:
 > 2. This is the second step
 > 3. Further steps, etc.
 >
-> `<url>` - a link to the reduced test case, if possible
+> `<url>` - a link to the reduced test case, if possible. Feel free to use a [Gist](https://gist.github.com).
 >
 > Any other information you want to share that is relevant to the issue being
 > reported. This might include the lines of code that you have identified as
@@ -83,7 +81,7 @@ provide as much detail and context as possible.
 
 ## Pull requests
 
-Good pull requests - patches, improvements, new features - are a fantastic
+Good pull requests-patches, improvements, new features-are a fantastic
 help. They should remain focused in scope and avoid containing unrelated
 commits.
 
@@ -92,10 +90,13 @@ implementing features, refactoring code, porting to a different language),
 otherwise you risk spending a lot of time working on something that the
 project's developers might not want to merge into the project.
 
-Please adhere to the coding conventions used throughout a project (indentation,
+Please adhere to the coding conventions used throughout the project (indentation,
 accurate comments, etc.) and any other requirements (such as test coverage).
 
-The project uses Rubocop which can be run using `bundle exec rubocop -c .rubocop.yml`.
+The project uses Rubocop which can be run using `bundle exec rubocop`. The test
+suite can be run with `bundle exec rspec`. You are also encouraged to use the
+script in the `testing` directory to create test files that you can then verify
+with various zip/unzip utilities. Further instructions are [here](https://github.com/WeTransfer/zip_tricks/blob/master/testing/README_TESTING.md).  
 
 Follow this process if you'd like your work considered for inclusion in the
 project:
@@ -146,4 +147,5 @@ project:
     with a clear title and description.
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owner to
-license your work under the same license as that used by the project.
+license your work under the same license as that used by the project, which you
+can see by clicking [here](https://github.com/WeTransfer/zip_tricks/blob/master/LICENSE.txt). 

@@ -1,7 +1,6 @@
 # rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/StringLiterals
 
 require_relative '../spec_helper'
-require_relative '../../testing/support'
 
 describe ZipTricks::ZipWriter do
   class ByteReader < Struct.new(:io)

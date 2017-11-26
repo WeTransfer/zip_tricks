@@ -48,7 +48,7 @@ Metrics/AbcSize:
     - lib/zip_tricks/file_reader.rb
     - lib/zip_tricks/remote_io.rb
     - lib/zip_tricks/streamer.rb
-    - testing/support.rb
+    - qa/support.rb
 
 Metrics/BlockLength:
   Exclude:
@@ -64,8 +64,8 @@ Metrics/ParameterLists:
 
 Style/GlobalVars:
   Exclude:
-    - testing/generate_test_files.rb
-    - testing/support.rb
+    - qa/generate_test_files.rb
+    - qa/support.rb
 
 # The advice this cop gives varies depending on the Ruby version,
 # so no - I will not be following two conflicting recommendations.

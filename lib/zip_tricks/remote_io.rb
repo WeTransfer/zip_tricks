@@ -54,9 +54,7 @@ class ZipTricks::RemoteIO
     n_bytes = clamp(0, n_bytes, maximum_avaialable)
 
     read_n_bytes_from_remote(@pos, n_bytes).tap do |data|
-      if data.bytesize != n_bytes
-        raise "Remote read returned #{data.bytesize} bytes instead of #{n_bytes} as requested"
-      end
+      raise "Remote read returned #{data.bytesize} bytes instead of #{n_bytes} as requested" if data.bytesize != n_bytes
       @pos = clamp(0, @pos + data.bytesize, @remote_size)
     end
   end

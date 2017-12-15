@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/RedundantParentheses, Metrics/PerceivedComplexity, Layout/MultilineOperationIndentation, Layout/AlignParameters, Style/ConditionalAssignment, Layout/ExtraSpacing, Metrics/CyclomaticComplexity, Lint/UselessAssignment, Metrics/ParameterLists, Layout/LeadingCommentSpace, Naming/ConstantName
-#
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.
 #
@@ -29,7 +27,7 @@
 class ZipTricks::ZipWriter
   FOUR_BYTE_MAX_UINT = 0xFFFFFFFF
   TWO_BYTE_MAX_UINT = 0xFFFF
-  ZIP_TRICKS_COMMENT = 'Written using ZipTricks %s' % ZipTricks::VERSION
+  ZIP_TRICKS_COMMENT = 'Written using ZipTricks %<version>s' % {version: ZipTricks::VERSION}
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45

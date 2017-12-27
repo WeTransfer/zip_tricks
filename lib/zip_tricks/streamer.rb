@@ -399,9 +399,7 @@ class ZipTricks::Streamer
     filename = remove_backslash(filename)
     filename = uniquify_name(filename) if @filenames_set.include?(filename)
 
-    unless [STORED, DEFLATED].include?(storage_mode)
-      raise UnknownMode, "Unknown compression mode #{storage_mode}"
-    end
+    raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
 
     raise Overflow, 'Filename is too long' if filename.bytesize > 0xFFFF
 

@@ -53,7 +53,7 @@ class ZipDownload
 
     # Add a Content-Disposition so that the download has a .zip extension
     # (this will not work well with UTF-8 filenames on Windows, but hey!)
-    content_disposition = format('attachment; filename=%s.zip', filename)
+    content_disposition = 'attachment; filename=%<filename>s.zip' % {filename: filename}
 
     # and return the response, adding the Content-Length we have computed earlier
     [

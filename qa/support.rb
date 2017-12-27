@@ -40,9 +40,9 @@ def build_test(test_description)
   $tests_performed += 1
 
   test_file_base = test_description.downcase.delete('-').gsub(/[\s\:]+/, '_')
-  filename = format('%02d-%s.zip', $tests_performed, test_file_base)
+  filename = '%<tests_performed>02d-%<test_file>s.zip' % {tests_number: $tests_performed, test_file: test_file_base}
 
-  puts format('Test %02d: %s', $tests_performed, test_description)
+  puts 'Test %<tests_number>02d: %<description>s' % {tests_number: $tests_performed, description: test_description}
   puts filename
   puts ''
 
@@ -75,7 +75,7 @@ def prepare_test_protocol
       f.puts ''
       table = Terminal::Table.new title: platform_name, headings: %w[Test Outcome]
       $test_descs.each_with_index do |desc, i|
-        test_name = [desc.filename, format('%s', desc.title)].join("\n")
+        test_name = [desc.filename, '%<title>s' % {title: desc.title}].join("\n")
         outcome = ' ' * 64
         table << [test_name, outcome]
         table << :separator if i < ($test_descs.length - 1)

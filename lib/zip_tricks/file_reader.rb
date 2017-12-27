@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable Naming/ConstantName
-
 require 'stringio'
 
 # A very barebones ZIP file reader. Is made for maximum interoperability, but at the same
@@ -146,8 +144,8 @@ class ZipTricks::FileReader
       when 0
         StoredReader.new(from_io, compressed_size)
       else
-        raise UnsupportedFeature, format('Unsupported storage mode for reading - %d',
-                                         storage_mode)
+        raise UnsupportedFeature, 'Unsupported storage mode for reading - %<storage_mode>d' %
+          {storage_mode: storage_mode}
       end
     end
 
@@ -208,7 +206,10 @@ class ZipTricks::FileReader
         num_files_and_central_directory_offset(io, eocd_offset)
       end
 
-    log { format('Located the central directory start at %d', cdir_location) }
+    log do
+      'Located the central directory start at %<location>d' %
+        {location: cdir_location}
+    end
     seek(io, cdir_location)
 
     # Read the entire central directory AND anything behind it, in one fell swoop.
@@ -227,15 +228,15 @@ class ZipTricks::FileReader
     central_directory_str = io.read # and not read_n(io, cdir_size), see above
     central_directory_io = StringIO.new(central_directory_str)
     log do
-      format('Read %d bytes with central directory + EOCD record and locator',
-             central_directory_str.bytesize)
+      'Read %<byte_size>d bytes with central directory + EOCD record and locator' %
+        {byte_size: central_directory_str.bytesize}
     end
 
     entries = (0...num_files).map do |entry_n|
       offset_location = cdir_location + central_directory_io.tell
       log do
-        format('Reading the central directory entry %d starting at offset %d',
-               entry_n, offset_location)
+        'Reading the central directory entry %<entry_n>d starting at offset %<offset>d' %
+          {entry_n: entry_n, offset: offset_location}
       end
       read_cdir_entry(central_directory_io)
     end
@@ -272,16 +273,16 @@ class ZipTricks::FileReader
       entries << entry
       next_local_header_offset = entry.compressed_data_offset + entry.compressed_size
       log do
-        format('Recovered a local file file header at offset %d, seeking to the next at %d',
-               cur_offset, next_local_header_offset)
+        'Recovered a local file file header at offset %<cur_offset>d, seeking to the next at %<header_offset>d' %
+          {cur_offset: cur_offset, header_offset: next_local_header_offset}
       end
       seek(io, next_local_header_offset) # Seek to the next entry, and raise if seek is impossible
     end
     entries
   rescue ReadError
     log do
-      format('Got a read/seek error after reaching %d, no more entries can be recovered',
-             cur_offset)
+      'Got a read/seek error after reaching %<cur_offset>d, no more entries can be recovered' %
+        {cur_offset: cur_offset}
     end
     entries
   end
@@ -332,8 +333,8 @@ class ZipTricks::FileReader
       # the values fetched from the conventional header
       zip64_extra = StringIO.new(zip64_extra_contents)
       log do
-        format('Will read Zip64 extra data from local header field for %s, %d bytes',
-               e.filename, zip64_extra.size)
+        'Will read Zip64 extra data from local header field for %<filename>s, %<size>d bytes' %
+               {filename: e.filename, size: zip64_extra.size}
       end
       # Now here be dragons. The APPNOTE specifies that
       #
@@ -396,8 +397,8 @@ class ZipTricks::FileReader
   def read_local_headers(entries, io)
     entries.each_with_index do |entry, i|
       log do
-        format('Reading the local header for entry %d at offset %d',
-               i, entry.local_file_header_offset)
+        'Reading the local header for entry %<index>d at offset %<offset>d' %
+               {index: i, offset: entry.local_file_header_offset}
       end
       off = get_compressed_data_offset(io: io,
                                        local_file_header_offset: entry.local_file_header_offset)
@@ -510,8 +511,8 @@ class ZipTricks::FileReader
         # the values fetched from the conventional header
         zip64_extra = StringIO.new(zip64_extra_contents)
         log do
-          format('Will read Zip64 extra data for %s, %d bytes',
-                 e.filename, zip64_extra.size)
+          'Will read Zip64 extra data for %<filename>s, %<size>d bytes' %
+            {filename: e.filename, size: zip64_extra.size}
         end
         # Now here be dragons. The APPNOTE specifies that
         #
@@ -523,15 +524,9 @@ class ZipTricks::FileReader
         # It means that before we read this stuff we need to check if the previously-read
         # values are at overflow, and only _then_ proceed to read them. Bah.
         # Rubocop: convention: Line is too long.
-        if e.uncompressed_size == 0xFFFFFFFF
-          e.uncompressed_size = read_8b(zip64_extra)
-        end
-        if e.compressed_size == 0xFFFFFFFF
-          e.compressed_size = read_8b(zip64_extra)
-        end
-        if e.local_file_header_offset == 0xFFFFFFFF
-          e.local_file_header_offset = read_8b(zip64_extra)
-        end
+        e.uncompressed_size = read_8b(zip64_extra) if e.uncompressed_size == 0xFFFFFFFF
+        e.compressed_size = read_8b(zip64_extra) if e.compressed_size == 0xFFFFFFFF
+        e.local_file_header_offset = read_8b(zip64_extra) if e.local_file_header_offset == 0xFFFFFFFF
         # Disk number comes last and we can skip it anyway, since we do
         # not support multi-disk archives
       end
@@ -553,7 +548,9 @@ class ZipTricks::FileReader
     raise MissingEOCD unless eocd_idx_in_buf
 
     eocd_offset = implied_position_of_eocd_record + eocd_idx_in_buf
-    log { format('Found EOCD signature at offset %d', eocd_offset) }
+    log do
+      'Found EOCD signature at offset %<offset>d' % {offset: eocd_offset}
+    end
 
     eocd_offset
   end
@@ -591,8 +588,8 @@ class ZipTricks::FileReader
         # if the comment size is where we should be at - we found our EOCD
         return assumed_eocd_location if assumed_eocd_location == window_location
       end
-
-      end_location -= 1 # Shift the window back, by one byte, and try again.
+      # Shift the window back, by one byte, and try again.
+      end_location -= 1
     end
   end
 
@@ -609,8 +606,8 @@ class ZipTricks::FileReader
     zip64_eocd_loc_offset -= 4 # Total number of disks
 
     log do
-      format('Will look for the Zip64 EOCD locator signature at offset %d',
-             zip64_eocd_loc_offset)
+      'Will look for the Zip64 EOCD locator signature at offset %<offset>d' %
+        {offset: zip64_eocd_loc_offset}
     end
 
     # If the offset is negative there is certainly no Zip64 EOCD locator here
@@ -619,7 +616,9 @@ class ZipTricks::FileReader
     file_io.seek(zip64_eocd_loc_offset, IO::SEEK_SET)
     assert_signature(file_io, 0x07064b50)
 
-    log { format('Found Zip64 EOCD locator at offset %d', zip64_eocd_loc_offset) }
+    log do
+      'Found Zip64 EOCD locator at offset %<offset>d' % {offset: zip64_eocd_loc_offset}
+    end
 
     disk_num = read_4b(file_io) # number of the disk
     raise UnsupportedFeature, 'The archive spans multiple disks' if disk_num != 0
@@ -644,20 +643,16 @@ class ZipTricks::FileReader
 
     disk_n = read_4b(zip64_eocdr) # number of this disk
     disk_n_with_eocdr = read_4b(zip64_eocdr) # number of the disk with the EOCDR
-    if disk_n != disk_n_with_eocdr
-      raise UnsupportedFeature, 'The archive spans multiple disks'
-    end
+    raise UnsupportedFeature, 'The archive spans multiple disks' if disk_n != disk_n_with_eocdr
 
     num_files_this_disk = read_8b(zip64_eocdr) # number of files on this disk
     num_files_total     = read_8b(zip64_eocdr) # files total in the central directory
 
-    if num_files_this_disk != num_files_total
-      raise UnsupportedFeature, 'The archive spans multiple disks'
-    end
+    raise UnsupportedFeature, 'The archive spans multiple disks' if num_files_this_disk != num_files_total
 
     log do
-      format('Zip64 EOCD record states there are %d files in the archive',
-             num_files_total)
+      'Zip64 EOCD record states there are %<amount>d files in the archive' %
+        {amount: num_files_total}
     end
 
     central_dir_size    = read_8b(zip64_eocdr) # Size of the central directory

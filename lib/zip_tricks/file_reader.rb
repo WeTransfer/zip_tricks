@@ -430,12 +430,11 @@ class ZipTricks::FileReader
 
   def assert_signature(io, signature_magic_number)
     readback = read_4b(io)
-    # Rubocop: Use a guard clause instead of wrapping the code inside a conditional expression
-    if readback != signature_magic_number
-      expected = '0x0' + signature_magic_number.to_s(16)
-      actual = '0x0' + readback.to_s(16)
-      raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
-    end
+    return if readback == signature_magic_number
+
+    expected = '0x0' + signature_magic_number.to_s(16)
+    actual = '0x0' + readback.to_s(16)
+    raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
   end
 
   def skip_ahead_n(io, n)

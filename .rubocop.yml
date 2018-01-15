@@ -135,10 +135,6 @@ Style/Documentation:
     - lib/zip_tricks/block_write.rb
     - lib/zip_tricks/file_reader.rb
 
-Style/GuardClause:
-  Exclude:
-    - lib/zip_tricks/file_reader.rb    
-
 Style/StructInheritance:
   Exclude:
     - lib/zip_tricks/streamer/entry.rb

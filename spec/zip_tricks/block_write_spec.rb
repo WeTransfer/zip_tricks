@@ -35,7 +35,7 @@ describe ZipTricks::BlockWrite do
   end
 
   it 'can be closed' do
-    expect(described_class.new {}.close).to be_nil
+    expect(described_class.new{}.close).to be_nil
   end
 
   it 'forces the written strings to binary encoding' do

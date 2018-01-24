@@ -14,8 +14,8 @@ describe ZipTricks::SizeEstimator do
       estimator.add_stored_entry(filename: 'second-file.bin', size: raw_file_two.size)
 
       r = estimator.add_deflated_entry(filename: 'second-file.bin',
-                                         compressed_size: raw_file_three.size,
-                                         uncompressed_size: raw_file_two.size)
+                                       compressed_size: raw_file_three.size,
+                                       uncompressed_size: raw_file_two.size)
       expect(r).to eq(estimator), 'add_deflated_entry should return self'
 
       r = estimator.add_stored_entry(filename: 'first-file-with-descriptor.bin',
@@ -24,9 +24,9 @@ describe ZipTricks::SizeEstimator do
       expect(r).to eq(estimator), 'add_stored_entry should return self'
 
       r = estimator.add_deflated_entry(filename: 'second-file-with-descriptor.bin',
-                                         compressed_size: raw_file_three.size,
-                                         uncompressed_size: raw_file_two.size,
-                                         use_data_descriptor: true)
+                                       compressed_size: raw_file_three.size,
+                                       uncompressed_size: raw_file_two.size,
+                                       use_data_descriptor: true)
       expect(r).to eq(estimator), 'add_deflated_entry should return self'
 
       r = estimator.add_empty_directory_entry(dirname: 'empty-directory/')
@@ -42,5 +42,4 @@ describe ZipTricks::SizeEstimator do
     end
     expect(predicted_size).to be > 0
   end
-
 end

@@ -11,14 +11,14 @@ describe ZipTricks::Streamer::Writable do
       expect(buf.string).to eq('hello!')
       expect(result).to eq(subject)
     end
-    
+
     it 'raises if the write is attempted after closing' do
       fake_deflater = double(finish: {})
-      fake_streamer = double(:update_last_entry_and_write_data_descriptor => 0)
+      fake_streamer = double(update_last_entry_and_write_data_descriptor: 0)
       subject = described_class.new(fake_streamer, fake_deflater)
 
       subject.close
-      expect { subject << "foo" }.to raise_error(/closed/)
+      expect { subject << 'foo' }.to raise_error(/closed/)
     end
   end
 
@@ -35,7 +35,8 @@ describe ZipTricks::Streamer::Writable do
     end
 
     it 'does not write the data descriptor twice' do
-      streamer, deflater = double(), double()
+      streamer = double
+      deflater = double
       expect(streamer).to receive(:update_last_entry_and_write_data_descriptor).once
       expect(deflater).to receive(:finish).once.and_return({})
 

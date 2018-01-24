@@ -28,9 +28,9 @@ describe ZipTricks::WriteAndTell do
 
   it 'is able to write into a null writer or a blackhole maintaining offsets' do
     writer = described_class.new(ZipTricks::NullWriter)
-    writer << "Hello"
-    writer << "Goodbye"
-    writer << "What a day!"
+    writer << 'Hello'
+    writer << 'Goodbye'
+    writer << 'What a day!'
     writer.advance_position_by(10)
     expect(writer.tell).to eq(33)
   end

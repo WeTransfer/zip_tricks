@@ -68,9 +68,9 @@ describe ZipTricks::Streamer do
     io = StringIO.new
     zip = described_class.new(io)
     pos = zip.add_deflated_entry(filename: 'file.jpg',
-                                   uncompressed_size: 182_919,
-                                   compressed_size: 8_912,
-                                   crc32: 8_912)
+                                 uncompressed_size: 182_919,
+                                 compressed_size: 8_912,
+                                 crc32: 8_912)
     expect(pos).to eq(io.tell)
     expect(pos).to eq(47)
 
@@ -113,9 +113,9 @@ describe ZipTricks::Streamer do
 
     described_class.open(zip_file) do |zip|
       zip.add_deflated_entry(filename: 'compressed-file.bin',
-                               uncompressed_size: f.size,
-                               crc32: crc,
-                               compressed_size: compressed_blockwise.size)
+                             uncompressed_size: f.size,
+                             crc32: crc,
+                             compressed_size: compressed_blockwise.size)
       zip << compressed_blockwise.read
     end
     zip_file.flush
@@ -170,8 +170,8 @@ describe ZipTricks::Streamer do
     expect(fake_w).to receive(:write_central_directory_file_header)
     expect(fake_w).to receive(:write_end_of_central_directory)
 
-    file_contents = "Some data from file"
-    crc = Zlib.crc32("Some data from file")
+    file_contents = 'Some data from file'
+    crc = Zlib.crc32('Some data from file')
 
     ZipTricks::Streamer.open(out, writer: fake_w) do |zip|
       zip.add_stored_entry(filename: 'somefile.txt', use_data_descriptor: true)
@@ -204,7 +204,7 @@ describe ZipTricks::Streamer do
 
       # Add this file compressed...
       zip.add_deflated_entry(filename: 'war-and-peace.txt', uncompressed_size: source_f.size,
-                               crc32: crc32, compressed_size: compressed_buffer.size)
+                             crc32: crc32, compressed_size: compressed_buffer.size)
       zip << compressed_buffer.string
 
       # ...and stored.
@@ -334,27 +334,27 @@ describe ZipTricks::Streamer do
   it 'writes the correct archive elements when using data descriptors' do
     out = StringIO.new
     fake_w = double('Writer')
-    expect(fake_w).to receive(:write_local_file_header) {|**kwargs|
+    expect(fake_w).to receive(:write_local_file_header) { |**kwargs|
       expect(kwargs[:storage_mode]).to eq(8)
       expect(kwargs[:crc32]).to be_zero
       expect(kwargs[:filename]).to eq('somefile.txt')
     }
-    expect(fake_w).to receive(:write_data_descriptor) {|**kwargs|
+    expect(fake_w).to receive(:write_data_descriptor) { |**kwargs|
       expect(kwargs[:crc32]).to eq(2729945713)
       expect(kwargs[:compressed_size]).to eq(19)
       expect(kwargs[:uncompressed_size]).to eq(17)
     }
-    expect(fake_w).to receive(:write_local_file_header) {|**kwargs|
+    expect(fake_w).to receive(:write_local_file_header) { |**kwargs|
       expect(kwargs[:storage_mode]).to eq(0)
       expect(kwargs[:crc32]).to be_zero
       expect(kwargs[:filename]).to eq('uncompressed.txt')
     }
-    expect(fake_w).to receive(:write_data_descriptor) {|**kwargs|
+    expect(fake_w).to receive(:write_data_descriptor) { |**kwargs|
       expect(kwargs[:crc32]).to eq(1550572917)
       expect(kwargs[:compressed_size]).to eq(22)
       expect(kwargs[:uncompressed_size]).to eq(22)
     }
-    expect(fake_w).to receive(:write_central_directory_file_header) {|**kwargs|
+    expect(fake_w).to receive(:write_central_directory_file_header) { |**kwargs|
       expect(kwargs[:local_file_header_location]).to eq(0)
       expect(kwargs[:filename]).to eq('somefile.txt')
       expect(kwargs[:gp_flags]).to eq(8)
@@ -362,9 +362,9 @@ describe ZipTricks::Streamer do
       expect(kwargs[:compressed_size]).to eq(19)
       expect(kwargs[:uncompressed_size]).to eq(17)
       expect(kwargs[:crc32]).to eq(2729945713)
-      kwargs[:io] << "fake"
+      kwargs[:io] << 'fake'
     }
-    expect(fake_w).to receive(:write_central_directory_file_header) {|**kwargs|
+    expect(fake_w).to receive(:write_central_directory_file_header) { |**kwargs|
       expect(kwargs[:local_file_header_location]).to eq(19)
       expect(kwargs[:filename]).to eq('uncompressed.txt')
       expect(kwargs[:gp_flags]).to eq(8)
@@ -372,9 +372,9 @@ describe ZipTricks::Streamer do
       expect(kwargs[:compressed_size]).to eq(22)
       expect(kwargs[:uncompressed_size]).to eq(22)
       expect(kwargs[:crc32]).to eq(1550572917)
-      kwargs[:io] << "fake"
+      kwargs[:io] << 'fake'
     }
-    expect(fake_w).to receive(:write_end_of_central_directory) {|**kwargs|
+    expect(fake_w).to receive(:write_end_of_central_directory) { |**kwargs|
       expect(kwargs[:start_of_central_directory_location]).to be > 0
       expect(kwargs[:central_directory_size]).to be > 0
       expect(kwargs[:num_files_in_archive]).to eq(2)
@@ -382,10 +382,10 @@ describe ZipTricks::Streamer do
 
     ZipTricks::Streamer.open(out, writer: fake_w) do |z|
       z.write_deflated_file('somefile.txt') do |out|
-        out << "Experimental data"
+        out << 'Experimental data'
       end
       z.write_stored_file('uncompressed.txt') do |out|
-        out << "Some uncompressed data"
+        out << 'Some uncompressed data'
       end
     end
   end
@@ -420,11 +420,11 @@ describe ZipTricks::Streamer do
 
     ZipTricks::Streamer.open(out, writer: fake_w) do |z|
       out = z.write_deflated_file('somefile.txt')
-      out << "Experimental data"
+      out << 'Experimental data'
       out.close
 
       out = z.write_stored_file('uncompressed.txt')
-      out << "Some uncompressed data"
+      out << 'Some uncompressed data'
       out.close
     end
   end
@@ -480,8 +480,10 @@ describe ZipTricks::Streamer do
   end
 
   it 'prevents duplicates in the stored files' do
-    files = ['README', 'README', 'file.one\\two.jpg', 'file_one.jpg', 'file_one (1).jpg',
-             'file\\one.jpg', 'My.Super.file.txt.zip', 'My.Super.file.txt.zip']
+    files = [
+      'README', 'README', 'file.one\\two.jpg', 'file_one.jpg', 'file_one (1).jpg',
+      'file\\one.jpg', 'My.Super.file.txt.zip', 'My.Super.file.txt.zip'
+    ]
     fake_writer = double('Writer').as_null_object
     seen_filenames = []
     allow(fake_writer).to receive(:write_local_file_header) { |filename:, **_others|
@@ -491,8 +493,10 @@ describe ZipTricks::Streamer do
     files.each do |fn|
       zip_streamer.add_stored_entry(filename: fn, size: 1_024, crc32: 0xCC)
     end
-    expect(seen_filenames).to eq(['README', 'README (1)', 'file.one_two.jpg', 'file_one.jpg',
-                                  'file_one (1).jpg', 'file_one (2).jpg', 'My.Super.file.txt.zip',
-                                  'My.Super.file (1).txt.zip'])
+    expect(seen_filenames).to eq([
+      'README', 'README (1)', 'file.one_two.jpg', 'file_one.jpg',
+      'file_one (1).jpg', 'file_one (2).jpg', 'My.Super.file.txt.zip',
+      'My.Super.file (1).txt.zip'
+    ])
   end
 end

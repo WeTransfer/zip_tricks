@@ -145,7 +145,7 @@ class ZipTricks::FileReader
         StoredReader.new(from_io, compressed_size)
       else
         raise UnsupportedFeature, 'Unsupported storage mode for reading - %<storage_mode>d' %
-          {storage_mode: storage_mode}
+                                  {storage_mode: storage_mode}
       end
     end
 
@@ -334,7 +334,7 @@ class ZipTricks::FileReader
       zip64_extra = StringIO.new(zip64_extra_contents)
       log do
         'Will read Zip64 extra data from local header field for %<filename>s, %<size>d bytes' %
-               {filename: e.filename, size: zip64_extra.size}
+          {filename: e.filename, size: zip64_extra.size}
       end
       # Now here be dragons. The APPNOTE specifies that
       #
@@ -398,7 +398,7 @@ class ZipTricks::FileReader
     entries.each_with_index do |entry, i|
       log do
         'Reading the local header for entry %<index>d at offset %<offset>d' %
-               {index: i, offset: entry.local_file_header_offset}
+          {index: i, offset: entry.local_file_header_offset}
       end
       off = get_compressed_data_offset(io: io,
                                        local_file_header_offset: entry.local_file_header_offset)
@@ -668,6 +668,7 @@ class ZipTricks::FileReader
   # central directory record upfront (all the fixed fields + at most 0xFFFF
   # bytes of the archive comment)
   MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE =
+    # rubocop:disable Layout/MultilineOperationIndentation
     begin
       4 + # Offset of the start of central directory
       4 + # Size of the central directory
@@ -679,11 +680,13 @@ class ZipTricks::FileReader
       2 + # The comment size
       0xFFFF # Maximum comment size
     end
+    # rubocop:enable Layout/MultilineOperationIndentation
 
   # To prevent too many tiny reads, read the maximum possible size of the local file header upfront.
   # The maximum size is all the usual items, plus the maximum size
   # of the filename (0xFFFF bytes) and the maximum size of the extras (0xFFFF bytes)
   MAX_LOCAL_HEADER_SIZE =
+    # rubocop:disable Layout/MultilineOperationIndentation
     begin
       4 + # signature
       2 + # Version needed to extract
@@ -699,8 +702,10 @@ class ZipTricks::FileReader
       0xFFFF + # Maximum filename size
       0xFFFF   # Maximum extra fields size
     end
+    # rubocop:enable Layout/MultilineOperationIndentation
 
   SIZE_OF_USABLE_EOCD_RECORD =
+    # rubocop:disable Layout/MultilineOperationIndentation
     begin
       4 + # Signature
       2 + # Number of this disk
@@ -710,6 +715,7 @@ class ZipTricks::FileReader
       4 + # Size of the central directory
       4   # Start of the central directory offset
     end
+    # rubocop:enable Layout/MultilineOperationIndentation
 
   # Rubocop: convention: Method has too many lines. [11/10]
   def num_files_and_central_directory_offset(file_io, eocd_offset)

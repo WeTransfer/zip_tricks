@@ -44,7 +44,7 @@ class ZipTricks::RemoteIO
     @remote_size ||= request_object_size
 
     # If the resource is empty there is nothing to read
-    return nil if @remote_size.zero?
+    return if @remote_size.zero?
 
     maximum_avaialable = @remote_size - @pos
     n_bytes ||= maximum_avaialable # nil == read to the end of file

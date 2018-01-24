@@ -142,7 +142,7 @@ class ZipTricks::ZipWriter
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
     # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
     add_zip64 = (local_file_header_location > FOUR_BYTE_MAX_UINT) ||
-        (compressed_size > FOUR_BYTE_MAX_UINT) || (uncompressed_size > FOUR_BYTE_MAX_UINT)
+                (compressed_size > FOUR_BYTE_MAX_UINT) || (uncompressed_size > FOUR_BYTE_MAX_UINT)
 
     io << [0x02014b50].pack(C_V)                        # central file header signature   4 bytes  (0x02014b50)
     io << MADE_BY_SIGNATURE                             # version made by                 2 bytes
@@ -206,7 +206,7 @@ class ZipTricks::ZipWriter
     end
     io << filename                                     # file name (variable size)
     io << extra_fields.string                          # extra field (variable size)
-    #(empty)                                           # file comment (variable size)
+    # (empty)                                          # file comment (variable size)
   end
 
   # Writes the data descriptor following the file data for a file whose local file header
@@ -246,9 +246,9 @@ class ZipTricks::ZipWriter
     zip64_eocdr_offset = start_of_central_directory_location + central_directory_size
 
     zip64_required = central_directory_size > FOUR_BYTE_MAX_UINT ||
-      start_of_central_directory_location > FOUR_BYTE_MAX_UINT ||
-      zip64_eocdr_offset > FOUR_BYTE_MAX_UINT ||
-      num_files_in_archive > TWO_BYTE_MAX_UINT
+                     start_of_central_directory_location > FOUR_BYTE_MAX_UINT ||
+                     zip64_eocdr_offset > FOUR_BYTE_MAX_UINT ||
+                     num_files_in_archive > TWO_BYTE_MAX_UINT
 
     # Then, if zip64 is used
     if zip64_required
@@ -404,7 +404,7 @@ class ZipTricks::ZipWriter
   end
 
   def to_binary_dos_date(t)
-    (t.day) + (t.month << 5) + ((t.year - 1980) << 9)
+    t.day + (t.month << 5) + ((t.year - 1980) << 9)
   end
 
   # Unzips a given array of tuples of "numeric value, pack specifier" and then packs all the odd

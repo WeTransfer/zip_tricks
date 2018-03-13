@@ -431,11 +431,11 @@ class ZipTricks::FileReader
 
   def assert_signature(io, signature_magic_number)
     readback = read_4b(io)
-    return if readback == signature_magic_number
-
-    expected = '0x0' + signature_magic_number.to_s(16)
-    actual = '0x0' + readback.to_s(16)
-    raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
+    if readback != signature_magic_number
+      expected = '0x0' + signature_magic_number.to_s(16)
+      actual = '0x0' + readback.to_s(16)
+      raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
+    end
   end
 
   def skip_ahead_n(io, n)
@@ -473,12 +473,9 @@ class ZipTricks::FileReader
   end
 
   def read_cdir_entry(io)
-    # Rubocop:  convention: Assignment Branch Condition size for
     # read_cdir_entry is too high. [45.66/15]
-    # Rubocop: convention: Method has too many lines. [30/10]
     assert_signature(io, 0x02014b50)
     ZipEntry.new.tap do |e|
-      # Rubocop: convention: Block has too many lines. [27/25]
       e.made_by = read_2b(io)
       e.version_needed_to_extract = read_2b(io)
       e.gp_flags = read_2b(io)
@@ -523,7 +520,6 @@ class ZipTricks::FileReader
         #
         # It means that before we read this stuff we need to check if the previously-read
         # values are at overflow, and only _then_ proceed to read them. Bah.
-        # Rubocop: convention: Line is too long.
         e.uncompressed_size = read_8b(zip64_extra) if e.uncompressed_size == 0xFFFFFFFF
         e.compressed_size = read_8b(zip64_extra) if e.compressed_size == 0xFFFFFFFF
         e.local_file_header_offset = read_8b(zip64_extra) if e.local_file_header_offset == 0xFFFFFFFF
@@ -562,9 +558,7 @@ class ZipTricks::FileReader
   # that size, eof].
   # The only way I could find to do this was with a sliding window, but
   # there probably is a better way.
-  # Rubocop:  convention: Assignment Branch Condition size for
   # locate_eocd_signature is too high. [17.49/15]
-  # Rubocop:  convention: Method has too many lines. [14/10]
   def locate_eocd_signature(in_str)
     # We have to scan from the _very_ tail. We read the very minimum size
     # the EOCD record can have (up to and including the comment size), using
@@ -595,9 +589,7 @@ class ZipTricks::FileReader
 
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the
   # EOCD record in the archive by fixed offsets
-  # Rubocop: convention: Assignment Branch Condition size for
   #          get_zip64_eocd_location is too high. [15.17/15]
-  # Rubocop: convention: Method has too many lines. [15/10]
   def get_zip64_eocd_location(file_io, eocd_offset)
     zip64_eocd_loc_offset = eocd_offset
     zip64_eocd_loc_offset -= 4 # The signature
@@ -627,9 +619,7 @@ class ZipTricks::FileReader
     nil
   end
 
-  # Rubocop: convention: Assignment Branch Condition size for
   #          num_files_and_central_directory_offset_zip64 is too high. [21.12/15]
-  # Rubocop: convention: Method has too many lines. [17/10]
   def num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
     seek(io, zip64_end_of_cdir_location)
 
@@ -718,7 +708,6 @@ class ZipTricks::FileReader
     end
   # rubocop:enable Layout/MultilineOperationIndentation
 
-  # Rubocop: convention: Method has too many lines. [11/10]
   def num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)
 

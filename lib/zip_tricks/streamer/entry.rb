@@ -8,7 +8,6 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
   def initialize(*)
     super
     filename.force_encoding(Encoding::UTF_8)
-    # Rubocop: convention: Avoid using rescue in its modifier form.
     @requires_efs_flag = !(begin
                              filename.encode(Encoding::ASCII)
                            rescue

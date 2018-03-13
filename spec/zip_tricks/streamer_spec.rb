@@ -162,7 +162,6 @@ describe ZipTricks::Streamer do
   end
 
   it 'can write the data descriptor and updates the last entry as well' do
-    fake_out = StringIO.new
     out = StringIO.new
     fake_w = double('Writer')
     expect(fake_w).to receive(:write_local_file_header)

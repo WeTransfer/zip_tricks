@@ -1,2 +1,6 @@
 inherit_gem:
   wetransfer_style: ruby/default.yml
+Style/GlobalVars:
+  Exclude:
+      - qa/*.rb
+      - spec/spec_helper.rb

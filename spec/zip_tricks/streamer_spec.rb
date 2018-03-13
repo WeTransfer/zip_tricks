@@ -429,8 +429,7 @@ describe ZipTricks::Streamer do
     end
   end
 
-  it 'creates an archive with data descriptors that can be opened by Rubyzip, \
-      with a small number of very tiny text files' do
+  it 'creates an archive with data descriptors that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     # Rubocop: warning: Useless assignment to variable - z
     z = described_class.open(tf) do |zip|

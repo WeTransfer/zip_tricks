@@ -400,8 +400,9 @@ class ZipTricks::FileReader
         'Reading the local header for entry %<index>d at offset %<offset>d' %
           {index: i, offset: entry.local_file_header_offset}
       end
-      off = get_compressed_data_offset(io: io,
-                                       local_file_header_offset: entry.local_file_header_offset)
+      off = get_compressed_data_offset(
+        io: io,
+        local_file_header_offset: entry.local_file_header_offset)
       entry.compressed_data_offset = off
     end
   end
@@ -460,15 +461,15 @@ class ZipTricks::FileReader
   end
 
   def read_2b(io)
-    read_n(io, 2).unpack(C_v).shift
+    read_n(io, 2).unpack(C_UINT2).shift
   end
 
   def read_4b(io)
-    read_n(io, 4).unpack(C_V).shift
+    read_n(io, 4).unpack(C_UINT4).shift
   end
 
   def read_8b(io)
-    read_n(io, 8).unpack(C_Qe).shift
+    read_n(io, 8).unpack(C_UINT8).shift
   end
 
   def read_cdir_entry(io)
@@ -660,9 +661,9 @@ class ZipTricks::FileReader
     [num_files_total, central_dir_offset, central_dir_size]
   end
 
-  C_V = 'V'
-  C_v = 'v'
-  C_Qe = 'Q<'
+  C_UINT4 = 'V'
+  C_UINT2 = 'v'
+  C_UINT8 = 'Q<'
 
   # To prevent too many tiny reads, read the maximum possible size of end of
   # central directory record upfront (all the fixed fields + at most 0xFFFF
@@ -680,7 +681,7 @@ class ZipTricks::FileReader
       2 + # The comment size
       0xFFFF # Maximum comment size
     end
-    # rubocop:enable Layout/MultilineOperationIndentation
+  # rubocop:enable Layout/MultilineOperationIndentation
 
   # To prevent too many tiny reads, read the maximum possible size of the local file header upfront.
   # The maximum size is all the usual items, plus the maximum size
@@ -702,7 +703,7 @@ class ZipTricks::FileReader
       0xFFFF + # Maximum filename size
       0xFFFF   # Maximum extra fields size
     end
-    # rubocop:enable Layout/MultilineOperationIndentation
+  # rubocop:enable Layout/MultilineOperationIndentation
 
   SIZE_OF_USABLE_EOCD_RECORD =
     # rubocop:disable Layout/MultilineOperationIndentation
@@ -715,7 +716,7 @@ class ZipTricks::FileReader
       4 + # Size of the central directory
       4   # Start of the central directory offset
     end
-    # rubocop:enable Layout/MultilineOperationIndentation
+  # rubocop:enable Layout/MultilineOperationIndentation
 
   # Rubocop: convention: Method has too many lines. [11/10]
   def num_files_and_central_directory_offset(file_io, eocd_offset)
@@ -735,7 +736,7 @@ class ZipTricks::FileReader
     [num_files, cdir_offset, cdir_size]
   end
 
-  private_constant :C_V, :C_v, :C_Qe, :MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE,
+  private_constant :C_UINT4, :C_UINT2, :C_UINT8, :MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE,
                    :MAX_LOCAL_HEADER_SIZE, :SIZE_OF_USABLE_EOCD_RECORD
 
   # Is provided as a stub to be overridden in a subclass if you need it. Will report

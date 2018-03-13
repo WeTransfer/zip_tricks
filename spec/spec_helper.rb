@@ -36,7 +36,8 @@ class ManagedTempfile < Tempfile
       # Rubocop: convention: Avoid using rescue in its modifier form.
       # Rubocop: convention: Do not use semicolons to terminate expressions.
       begin
-        (tf.close; tf.unlink)
+        tf.close
+        tf.unlink
       rescue
         nil
       end

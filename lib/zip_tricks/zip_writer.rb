@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# rubocop:disable Layout/CommentIndentation
 
 # A low-level ZIP file data writer. You can use it to write out various headers and central directory elements
 # separately. The class handles the actual encoding of the data according to the ZIP format APPNOTE document.

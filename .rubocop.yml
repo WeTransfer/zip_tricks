@@ -1,5 +1,9 @@
 inherit_gem:
   wetransfer_style: ruby/default.yml
+Layout/FirstMethodArgumentLineBreak:
+  Enabled: false
+Layout/FirstMethodParameterLineBreak:
+  Enabled: false
 Style/GlobalVars:
   Exclude:
       - qa/*.rb

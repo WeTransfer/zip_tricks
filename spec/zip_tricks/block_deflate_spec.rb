@@ -38,8 +38,7 @@ describe ZipTricks::BlockDeflate do
       deflater = Zlib::Deflate.new
       expect(Zlib::Deflate).to receive(:new).with(2) { deflater }
       blob = 'compressible' * 1024 * 4
-      compressed = described_class.deflate_chunk(blob, level: 2)
-      # Rubocop: Useless assignment to variable - compressed.
+      described_class.deflate_chunk(blob, level: 2)
     end
   end
 

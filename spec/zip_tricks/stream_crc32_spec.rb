@@ -29,9 +29,6 @@ describe ZipTricks::StreamCRC32 do
   end
 
   it 'allows in-place update with a known value' do
-    # Rubocop: Useless assignment to variable - crc
-    crc = Zlib.crc32
-
     stream_crc = described_class.new
     stream_crc << 'This is some data'
     stream_crc.append(45_678, 12_910)

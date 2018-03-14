@@ -1,5 +1,3 @@
-# rubocop:disable Layout/CommentIndentation, Metrics/LineLength, Metrics/AbcSize, Style/StringLiterals
-
 require_relative '../spec_helper'
 
 describe ZipTricks::ZipWriter do
@@ -234,7 +232,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(820)             # version made by
       expect(br.read_2b).to eq(20)              # version need to extract
       expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
-                                                # set to bogus value to ensure we pass it through)
+      # set to bogus value to ensure we pass it through)
       expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
       expect(br.read_2b).to eq(28_672)          # last mod file time
       expect(br.read_2b).to eq(18_498)          # last mod file date
@@ -245,7 +243,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(9)               # extra field length
       expect(br.read_2b).to eq(0)               # file comment
       expect(br.read_2b).to eq(0)               # disk number, must be blanked to the
-                                                # maximum value because of The Unarchiver bug
+      # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(2_175_008_768)   # external file attributes
       expect(br.read_4b).to eq(898_921)         # relative offset of local header
@@ -270,7 +268,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(820)             # version made by
       expect(br.read_2b).to eq(20)              # version need to extract
       expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
-                                                # set to bogus value to ensure we pass it through)
+      # set to bogus value to ensure we pass it through)
       expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
       expect(br.read_2b).to eq(28_672)          # last mod file time
       expect(br.read_2b).to eq(18_498)          # last mod file date
@@ -281,7 +279,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(9)               # extra field length
       expect(br.read_2b).to eq(0)               # file comment
       expect(br.read_2b).to eq(0)               # disk number, must be blanked to the
-                                                # maximum value because of The Unarchiver bug
+      # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(1_106_051_072)   # external file attributes
       expect(br.read_4b).to eq(898_921)         # relative offset of local header
@@ -307,10 +305,10 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(820)             # version made by
       expect(br.read_2b).to eq(45)              # version need to extract
       expect(br.read_2b).to eq(555)             # general purpose bit flag
-                                                # (explicitly set to bogus value
-                                                # to ensure we pass it through)
+      # (explicitly set to bogus value
+      # to ensure we pass it through)
       expect(br.read_2b).to eq(23)              # compression method (explicitly
-                                                # set to bogus value)
+      # set to bogus value)
       expect(br.read_2b).to eq(28_672)          # last mod file time
       expect(br.read_2b).to eq(18_498)          # last mod file date
       expect(br.read_4b).to eq(89_765)          # crc32
@@ -320,8 +318,8 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(41)              # extra field length
       expect(br.read_2b).to eq(0)               # file comment
       expect(br.read_2b).to eq(0xFFFF)          # disk number, must be blanked
-                                                # to the maximum value because
-                                                # of The Unarchiver bug
+      # to the maximum value because
+      # of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(2_175_008_768)   # external file attributes
       expect(br.read_4b).to eq(0xFFFFFFFF)      # relative offset of local header
@@ -355,7 +353,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(820)             # version made by
       expect(br.read_2b).to eq(45)              # version need to extract
       expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
-                                                # set to bogus value to ensure we pass it through)
+      # set to bogus value to ensure we pass it through)
       expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
       expect(br.read_2b).to eq(28_672)          # last mod file time
       expect(br.read_2b).to eq(18_498)          # last mod file date
@@ -366,7 +364,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(41)              # extra field length
       expect(br.read_2b).to eq(0)               # file comment
       expect(br.read_2b).to eq(0xFFFF)          # disk number, must be blanked to the
-                                                # maximum value because of The Unarchiver bug
+      # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(2_175_008_768)   # external file attributes
       expect(br.read_4b).to eq(0xFFFFFFFF)      # relative offset of local header
@@ -400,7 +398,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(820)             # version made by
       expect(br.read_2b).to eq(45)              # version need to extract
       expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
-                                                # set to bogus value to ensure we pass it through)
+      # set to bogus value to ensure we pass it through)
       expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
       expect(br.read_2b).to eq(28_672)          # last mod file time
       expect(br.read_2b).to eq(18_498)          # last mod file date
@@ -411,7 +409,7 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(41)              # extra field length
       expect(br.read_2b).to eq(0)               # file comment
       expect(br.read_2b).to eq(0xFFFF)          # disk number, must be blanked to the
-                                                # maximum value because of The Unarchiver bug
+      # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(2_175_008_768)   # external file attributes
       expect(br.read_4b).to eq(0xFFFFFFFF)      # relative offset of local header
@@ -442,10 +440,10 @@ describe ZipTricks::ZipWriter do
       expect(br.read_2b).to eq(0)         # number of the disk with the EOCD record
       expect(br.read_2b).to eq(num_files) # number of files on this disk
       expect(br.read_2b).to eq(num_files) # number of files in central directory
-                                          # total (for all disks)
+      # total (for all disks)
       expect(br.read_4b).to eq(9_091) # size of the central directory (cdir records for all files)
       expect(br.read_4b).to eq(9_091_211) # start of central directory offset from
-                                          # the beginning of file/disk
+      # the beginning of file/disk
 
       comment_length = br.read_2b
       expect(comment_length).not_to be_zero
@@ -486,9 +484,9 @@ describe ZipTricks::ZipWriter do
       expect(br.read_4b).to eq(0)               # Number of this disk
       expect(br.read_4b).to eq(0)               # Number of the disk with the Zip64 EOCD record
       expect(br.read_8b).to eq(num_files)       # Number of entries in the central
-                                                # directory of this disk
+      # directory of this disk
       expect(br.read_8b).to eq(num_files)       # Number of entries in the central
-                                                # directories of all disks
+      # directories of all disks
       expect(br.read_8b).to eq(9_091)           # Central directory size
       expect(br.read_8b).to eq(0xFFFFFFFF + 3)  # Start of central directory location
 
@@ -497,17 +495,17 @@ describe ZipTricks::ZipWriter do
       expect(br.read_8b).to eq((0xFFFFFFFF + 3) + 9_091) # Where the Zip64 EOCD record starts
       expect(br.read_4b).to eq(1)           # Total number of disks
 
-                                            # Then the usual EOCD record
+      # Then the usual EOCD record
       expect(br.read_4b).to eq(0x06054b50)  # EOCD signature
       expect(br.read_2b).to eq(0)           # number of this disk
       expect(br.read_2b).to eq(0)           # number of the disk with the EOCD record
       expect(br.read_2b).to eq(0xFFFF)      # number of files on this disk
       expect(br.read_2b).to eq(0xFFFF)      # number of files in central directory
-                                            # total (for all disks)
+      # total (for all disks)
       expect(br.read_4b).to eq(0xFFFFFFFF)  # size of the central directory
-                                            # (cdir records for all files)
+      # (cdir records for all files)
       expect(br.read_4b).to eq(0xFFFFFFFF)  # start of central directory offset
-                                            # from the beginning of file/disk
+      # from the beginning of file/disk
 
       comment_length = br.read_2b
       expect(comment_length).not_to be_zero

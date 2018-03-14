@@ -657,55 +657,40 @@ class ZipTricks::FileReader
   # To prevent too many tiny reads, read the maximum possible size of end of
   # central directory record upfront (all the fixed fields + at most 0xFFFF
   # bytes of the archive comment)
-  MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE =
-    # rubocop:disable Layout/MultilineOperationIndentation
-    begin
-      4 + # Offset of the start of central directory
-      4 + # Size of the central directory
-      2 + # Number of files in the cdir
-      4 + # End-of-central-directory signature
-      2 + # Number of this disk
-      2 + # Number of disk with the start of cdir
-      2 + # Number of files in the cdir of this disk
-      2 + # The comment size
-      0xFFFF # Maximum comment size
-    end
-  # rubocop:enable Layout/MultilineOperationIndentation
+  MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE = 4 + # Offset of the start of central directory
+                                             4 + # Size of the central directory
+                                             2 + # Number of files in the cdir
+                                             4 + # End-of-central-directory signature
+                                             2 + # Number of this disk
+                                             2 + # Number of disk with the start of cdir
+                                             2 + # Number of files in the cdir of this disk
+                                             2 + # The comment size
+                                             0xFFFF # Maximum comment size
 
   # To prevent too many tiny reads, read the maximum possible size of the local file header upfront.
   # The maximum size is all the usual items, plus the maximum size
   # of the filename (0xFFFF bytes) and the maximum size of the extras (0xFFFF bytes)
-  MAX_LOCAL_HEADER_SIZE =
-    # rubocop:disable Layout/MultilineOperationIndentation
-    begin
-      4 + # signature
-      2 + # Version needed to extract
-      2 + # gp flags
-      2 + # storage mode
-      2 + # dos time
-      2 + # dos date
-      4 + # CRC32
-      4 + # Comp size
-      4 + # Uncomp size
-      2 + # Filename size
-      2 + # Extra fields size
-      0xFFFF + # Maximum filename size
-      0xFFFF   # Maximum extra fields size
-    end
-  # rubocop:enable Layout/MultilineOperationIndentation
+  MAX_LOCAL_HEADER_SIZE = 4 + # signature
+                          2 + # Version needed to extract
+                          2 + # gp flags
+                          2 + # storage mode
+                          2 + # dos time
+                          2 + # dos date
+                          4 + # CRC32
+                          4 + # Comp size
+                          4 + # Uncomp size
+                          2 + # Filename size
+                          2 + # Extra fields size
+                          0xFFFF + # Maximum filename size
+                          0xFFFF   # Maximum extra fields size
 
-  SIZE_OF_USABLE_EOCD_RECORD =
-    # rubocop:disable Layout/MultilineOperationIndentation
-    begin
-      4 + # Signature
-      2 + # Number of this disk
-      2 + # Number of the disk with the EOCD record
-      2 + # Number of entries in the central directory of this disk
-      2 + # Number of entries in the central directory total
-      4 + # Size of the central directory
-      4   # Start of the central directory offset
-    end
-  # rubocop:enable Layout/MultilineOperationIndentation
+  SIZE_OF_USABLE_EOCD_RECORD = 4 + # Signature
+                               2 + # Number of this disk
+                               2 + # Number of the disk with the EOCD record
+                               2 + # Number of entries in the central directory of this disk
+                               2 + # Number of entries in the central directory total
+                               4 + # Size of the central directory
+                               4   # Start of the central directory offset
 
   def num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)

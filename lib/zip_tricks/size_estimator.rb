@@ -37,11 +37,10 @@ class ZipTricks::SizeEstimator
   # data descriptor to specify size
   # @return self
   def add_stored_entry(filename:, size:, use_data_descriptor: false)
-    @streamer.add_stored_entry(
-      filename: filename,
-      crc32: 0,
-      size: size,
-      use_data_descriptor: use_data_descriptor)
+    @streamer.add_stored_entry(filename: filename,
+                               crc32: 0,
+                               size: size,
+                               use_data_descriptor: use_data_descriptor)
     @streamer.simulate_write(size)
     if use_data_descriptor
       @streamer.update_last_entry_and_write_data_descriptor(crc32: 0, compressed_size: size, uncompressed_size: size)
@@ -58,19 +57,17 @@ class ZipTricks::SizeEstimator
   #                                     descriptor to specify size
   # @return self
   def add_deflated_entry(filename:, uncompressed_size:, compressed_size:, use_data_descriptor: false)
-    @streamer.add_deflated_entry(
-      filename: filename,
-      crc32: 0,
-      compressed_size: compressed_size,
-      uncompressed_size: uncompressed_size,
-      use_data_descriptor: use_data_descriptor)
+    @streamer.add_deflated_entry(filename: filename,
+                                 crc32: 0,
+                                 compressed_size: compressed_size,
+                                 uncompressed_size: uncompressed_size,
+                                 use_data_descriptor: use_data_descriptor)
 
     @streamer.simulate_write(compressed_size)
     if use_data_descriptor
-      @streamer.update_last_entry_and_write_data_descriptor(
-        crc32: 0,
-        compressed_size: compressed_size,
-        uncompressed_size: uncompressed_size)
+      @streamer.update_last_entry_and_write_data_descriptor(crc32: 0,
+                                                            compressed_size: compressed_size,
+                                                            uncompressed_size: uncompressed_size)
     end
     self
   end

@@ -400,9 +400,8 @@ class ZipTricks::FileReader
         'Reading the local header for entry %<index>d at offset %<offset>d' %
           {index: i, offset: entry.local_file_header_offset}
       end
-      off = get_compressed_data_offset(
-        io: io,
-        local_file_header_offset: entry.local_file_header_offset)
+      off = get_compressed_data_offset(io: io,
+                                       local_file_header_offset: entry.local_file_header_offset)
       entry.compressed_data_offset = off
     end
   end

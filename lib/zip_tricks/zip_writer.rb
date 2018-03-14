@@ -137,8 +137,7 @@ class ZipTricks::ZipWriter
   # @param mtime[Time]  the modification time to be recorded in the ZIP
   # @param gp_flags[Fixnum] bit-packed general purpose flags
   # @return [void]
-  def write_central_directory_file_header(
-                                          io:,
+  def write_central_directory_file_header(io:,
                                           local_file_header_location:,
                                           gp_flags:,
                                           storage_mode:,
@@ -179,10 +178,9 @@ class ZipTricks::ZipWriter
 
     extra_fields = StringIO.new
     if add_zip64
-      extra_fields << zip_64_extra_for_central_directory_file_header(
-        local_file_header_location: local_file_header_location,
-        compressed_size: compressed_size,
-        uncompressed_size: uncompressed_size)
+      extra_fields << zip_64_extra_for_central_directory_file_header(local_file_header_location: local_file_header_location,
+                                                                     compressed_size: compressed_size,
+                                                                     uncompressed_size: uncompressed_size)
     end
     extra_fields << timestamp_extra(mtime)
 

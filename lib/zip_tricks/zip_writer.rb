@@ -204,13 +204,14 @@ class ZipTricks::ZipWriter
       [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_UINT4)
     else
       [DEFAULT_EXTERNAL_ATTRS].pack(C_UINT4)           # external file attributes        4 bytes
-          end
+    end
 
     io << if add_zip64                                 # relative offset of local header 4 bytes
       [FOUR_BYTE_MAX_UINT].pack(C_UINT4)
     else
       [local_file_header_location].pack(C_UINT4)
-          end
+    end
+
     io << filename                                     # file name (variable size)
     io << extra_fields.string                          # extra field (variable size)
     # (empty)                                          # file comment (variable size)

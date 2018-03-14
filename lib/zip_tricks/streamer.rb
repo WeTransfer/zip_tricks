@@ -388,12 +388,13 @@ class ZipTricks::Streamer
 
   private
 
-  def add_file_and_write_local_header(filename:,
-                                      crc32:,
-                                      storage_mode:,
-                                      compressed_size:,
-                                      uncompressed_size:,
-                                      use_data_descriptor:)
+  def add_file_and_write_local_header(
+filename:,
+crc32:,
+storage_mode:,
+compressed_size:,
+uncompressed_size:,
+use_data_descriptor:)
 
     # Clean backslashes and uniqify filenames if there are duplicates
     filename = remove_backslash(filename)
@@ -414,11 +415,13 @@ class ZipTricks::Streamer
                   compressed_size,
                   uncompressed_size,
                   storage_mode,
-                  mtime = Time.now.utc,
+                  Time.now.utc,
                   use_data_descriptor)
+
     @files << e
     @filenames_set << e.filename
     @local_header_offsets << @out.tell
+
     @writer.write_local_file_header(io: @out,
                                     gp_flags: e.gp_flags,
                                     crc32: e.crc32,

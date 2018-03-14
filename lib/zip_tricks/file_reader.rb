@@ -145,7 +145,7 @@ class ZipTricks::FileReader
         StoredReader.new(from_io, compressed_size)
       else
         raise UnsupportedFeature, 'Unsupported storage mode for reading - %<storage_mode>d' %
-          {storage_mode: storage_mode}
+                                  {storage_mode: storage_mode}
       end
     end
 
@@ -334,7 +334,7 @@ class ZipTricks::FileReader
       zip64_extra = StringIO.new(zip64_extra_contents)
       log do
         'Will read Zip64 extra data from local header field for %<filename>s, %<size>d bytes' %
-               {filename: e.filename, size: zip64_extra.size}
+          {filename: e.filename, size: zip64_extra.size}
       end
       # Now here be dragons. The APPNOTE specifies that
       #
@@ -398,7 +398,7 @@ class ZipTricks::FileReader
     entries.each_with_index do |entry, i|
       log do
         'Reading the local header for entry %<index>d at offset %<offset>d' %
-               {index: i, offset: entry.local_file_header_offset}
+          {index: i, offset: entry.local_file_header_offset}
       end
       off = get_compressed_data_offset(io: io,
                                        local_file_header_offset: entry.local_file_header_offset)
@@ -430,11 +430,11 @@ class ZipTricks::FileReader
 
   def assert_signature(io, signature_magic_number)
     readback = read_4b(io)
-    return if readback == signature_magic_number
-
-    expected = '0x0' + signature_magic_number.to_s(16)
-    actual = '0x0' + readback.to_s(16)
-    raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
+    if readback != signature_magic_number
+      expected = '0x0' + signature_magic_number.to_s(16)
+      actual = '0x0' + readback.to_s(16)
+      raise InvalidStructure, "Expected signature #{expected}, but read #{actual}"
+    end
   end
 
   def skip_ahead_n(io, n)
@@ -460,24 +460,21 @@ class ZipTricks::FileReader
   end
 
   def read_2b(io)
-    read_n(io, 2).unpack(C_v).shift
+    read_n(io, 2).unpack(C_UINT2).shift
   end
 
   def read_4b(io)
-    read_n(io, 4).unpack(C_V).shift
+    read_n(io, 4).unpack(C_UINT4).shift
   end
 
   def read_8b(io)
-    read_n(io, 8).unpack(C_Qe).shift
+    read_n(io, 8).unpack(C_UINT8).shift
   end
 
   def read_cdir_entry(io)
-    # Rubocop:  convention: Assignment Branch Condition size for
     # read_cdir_entry is too high. [45.66/15]
-    # Rubocop: convention: Method has too many lines. [30/10]
     assert_signature(io, 0x02014b50)
     ZipEntry.new.tap do |e|
-      # Rubocop: convention: Block has too many lines. [27/25]
       e.made_by = read_2b(io)
       e.version_needed_to_extract = read_2b(io)
       e.gp_flags = read_2b(io)
@@ -522,7 +519,6 @@ class ZipTricks::FileReader
         #
         # It means that before we read this stuff we need to check if the previously-read
         # values are at overflow, and only _then_ proceed to read them. Bah.
-        # Rubocop: convention: Line is too long.
         e.uncompressed_size = read_8b(zip64_extra) if e.uncompressed_size == 0xFFFFFFFF
         e.compressed_size = read_8b(zip64_extra) if e.compressed_size == 0xFFFFFFFF
         e.local_file_header_offset = read_8b(zip64_extra) if e.local_file_header_offset == 0xFFFFFFFF
@@ -561,9 +557,7 @@ class ZipTricks::FileReader
   # that size, eof].
   # The only way I could find to do this was with a sliding window, but
   # there probably is a better way.
-  # Rubocop:  convention: Assignment Branch Condition size for
   # locate_eocd_signature is too high. [17.49/15]
-  # Rubocop:  convention: Method has too many lines. [14/10]
   def locate_eocd_signature(in_str)
     # We have to scan from the _very_ tail. We read the very minimum size
     # the EOCD record can have (up to and including the comment size), using
@@ -594,9 +588,7 @@ class ZipTricks::FileReader
 
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the
   # EOCD record in the archive by fixed offsets
-  # Rubocop: convention: Assignment Branch Condition size for
   #          get_zip64_eocd_location is too high. [15.17/15]
-  # Rubocop: convention: Method has too many lines. [15/10]
   def get_zip64_eocd_location(file_io, eocd_offset)
     zip64_eocd_loc_offset = eocd_offset
     zip64_eocd_loc_offset -= 4 # The signature
@@ -626,9 +618,7 @@ class ZipTricks::FileReader
     nil
   end
 
-  # Rubocop: convention: Assignment Branch Condition size for
   #          num_files_and_central_directory_offset_zip64 is too high. [21.12/15]
-  # Rubocop: convention: Method has too many lines. [17/10]
   def num_files_and_central_directory_offset_zip64(io, zip64_end_of_cdir_location)
     seek(io, zip64_end_of_cdir_location)
 
@@ -660,58 +650,48 @@ class ZipTricks::FileReader
     [num_files_total, central_dir_offset, central_dir_size]
   end
 
-  C_V = 'V'
-  C_v = 'v'
-  C_Qe = 'Q<'
+  C_UINT4 = 'V'
+  C_UINT2 = 'v'
+  C_UINT8 = 'Q<'
 
   # To prevent too many tiny reads, read the maximum possible size of end of
   # central directory record upfront (all the fixed fields + at most 0xFFFF
   # bytes of the archive comment)
-  MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE =
-    begin
-      4 + # Offset of the start of central directory
-      4 + # Size of the central directory
-      2 + # Number of files in the cdir
-      4 + # End-of-central-directory signature
-      2 + # Number of this disk
-      2 + # Number of disk with the start of cdir
-      2 + # Number of files in the cdir of this disk
-      2 + # The comment size
-      0xFFFF # Maximum comment size
-    end
+  MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE = 4 + # Offset of the start of central directory
+                                             4 + # Size of the central directory
+                                             2 + # Number of files in the cdir
+                                             4 + # End-of-central-directory signature
+                                             2 + # Number of this disk
+                                             2 + # Number of disk with the start of cdir
+                                             2 + # Number of files in the cdir of this disk
+                                             2 + # The comment size
+                                             0xFFFF # Maximum comment size
 
   # To prevent too many tiny reads, read the maximum possible size of the local file header upfront.
   # The maximum size is all the usual items, plus the maximum size
   # of the filename (0xFFFF bytes) and the maximum size of the extras (0xFFFF bytes)
-  MAX_LOCAL_HEADER_SIZE =
-    begin
-      4 + # signature
-      2 + # Version needed to extract
-      2 + # gp flags
-      2 + # storage mode
-      2 + # dos time
-      2 + # dos date
-      4 + # CRC32
-      4 + # Comp size
-      4 + # Uncomp size
-      2 + # Filename size
-      2 + # Extra fields size
-      0xFFFF + # Maximum filename size
-      0xFFFF   # Maximum extra fields size
-    end
+  MAX_LOCAL_HEADER_SIZE = 4 + # signature
+                          2 + # Version needed to extract
+                          2 + # gp flags
+                          2 + # storage mode
+                          2 + # dos time
+                          2 + # dos date
+                          4 + # CRC32
+                          4 + # Comp size
+                          4 + # Uncomp size
+                          2 + # Filename size
+                          2 + # Extra fields size
+                          0xFFFF + # Maximum filename size
+                          0xFFFF   # Maximum extra fields size
 
-  SIZE_OF_USABLE_EOCD_RECORD =
-    begin
-      4 + # Signature
-      2 + # Number of this disk
-      2 + # Number of the disk with the EOCD record
-      2 + # Number of entries in the central directory of this disk
-      2 + # Number of entries in the central directory total
-      4 + # Size of the central directory
-      4   # Start of the central directory offset
-    end
+  SIZE_OF_USABLE_EOCD_RECORD = 4 + # Signature
+                               2 + # Number of this disk
+                               2 + # Number of the disk with the EOCD record
+                               2 + # Number of entries in the central directory of this disk
+                               2 + # Number of entries in the central directory total
+                               4 + # Size of the central directory
+                               4   # Start of the central directory offset
 
-  # Rubocop: convention: Method has too many lines. [11/10]
   def num_files_and_central_directory_offset(file_io, eocd_offset)
     seek(file_io, eocd_offset)
 
@@ -729,7 +709,7 @@ class ZipTricks::FileReader
     [num_files, cdir_offset, cdir_size]
   end
 
-  private_constant :C_V, :C_v, :C_Qe, :MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE,
+  private_constant :C_UINT4, :C_UINT2, :C_UINT8, :MAX_END_OF_CENTRAL_DIRECTORY_RECORD_SIZE,
                    :MAX_LOCAL_HEADER_SIZE, :SIZE_OF_USABLE_EOCD_RECORD
 
   # Is provided as a stub to be overridden in a subclass if you need it. Will report

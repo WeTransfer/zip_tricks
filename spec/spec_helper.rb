@@ -23,7 +23,6 @@ class ReadMonitor < SimpleDelegator
 end
 
 class ManagedTempfile < Tempfile
-  # Rubocop: convention: Replace class var @@managed_tempfiles with a class instance var.
   @@managed_tempfiles = []
 
   def initialize(*)
@@ -33,10 +32,9 @@ class ManagedTempfile < Tempfile
 
   def self.prune!
     @@managed_tempfiles.each do |tf|
-      # Rubocop: convention: Avoid using rescue in its modifier form.
-      # Rubocop: convention: Do not use semicolons to terminate expressions.
       begin
-        (tf.close; tf.unlink)
+        tf.close
+        tf.unlink
       rescue
         nil
       end
@@ -48,7 +46,6 @@ end
 module ZipInspection
   def inspect_zip_with_external_tool(path_to_zip)
     zipinfo_path = 'zipinfo'
-    # Rubocop: convention: Do not introduce global variables.
     $zip_inspection_buf ||= StringIO.new
     $zip_inspection_buf.puts "\n"
     # The only way to get at the RSpec example without using the block argument

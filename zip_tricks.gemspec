@@ -1,5 +1,3 @@
-# coding: utf-8
-
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'zip_tricks/version'
@@ -43,5 +41,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'coderay'
   spec.add_development_dependency 'benchmark-ips'
   spec.add_development_dependency 'yard', '~> 0.9'
-  spec.add_development_dependency 'rubocop', '0.52.0' # No conforming to arbitrary rules that _change_ underneath you
+  spec.add_development_dependency 'wetransfer_style', '0.5.0'
 end

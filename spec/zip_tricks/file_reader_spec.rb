@@ -160,8 +160,7 @@ describe ZipTricks::FileReader do
       zipfile.rewind
 
       read_monitor = ReadMonitor.new(zipfile)
-      entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
-      # Rubocop: warning: Useless assignment to variable - entries.
+      _entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
       expect(read_monitor.num_reads).to eq(44)
     end
 

@@ -79,8 +79,6 @@ describe ZipTricks::RemoteUncap, webmock: true do
     payload2.rewind
 
     payload1_crc = Zlib.crc32(payload1.read).tap { payload1.rewind }
-    # Rubocop: warning: Useless assignment to variable - payload2_crc.
-    payload2_crc = Zlib.crc32(payload2.read).tap { payload2.rewind }
 
     readable_zip = Tempfile.new 'somezip'
     ZipTricks::Streamer.open(readable_zip) do |zip|

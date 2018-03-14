@@ -12,7 +12,7 @@ describe ZipTricks::WriteBuffer do
 
     expect(sink).to receive(:<<).with('quick brown fox ')
     expect(sink).to receive(:<<).with('jumps over the')
-    
+
     adapter = described_class.new(sink, 'quick brown fox'.bytesize)
     'quick brown fox jumps over the'.split(//).each do |char|
       adapter << char
@@ -27,7 +27,7 @@ describe ZipTricks::WriteBuffer do
     expect(sink).to receive(:<<).with('quick brown fox ')
     expect(sink).to receive(:to_i).and_return(123)
 
-    adapter = described_class.new(sink, 64*1024)
+    adapter = described_class.new(sink, 64 * 1024)
     'quick brown fox '.split(//).each do |char|
       adapter << char
     end

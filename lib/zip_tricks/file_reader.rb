@@ -577,7 +577,10 @@ class ZipTricks::FileReader
     indices.each do |check_at|
       maybe_record = in_str[check_at..str_size]
       # If the record is smaller than the minimum - we will never recover anything
-      return if maybe_record.bytesize < minimum_record_size
+      break if maybe_record.bytesize < minimum_record_size
+      # If the record is larger or the same size as the minimum check if the
+      # size of the block immediately following it is the same as the declared
+      # size of the comment, which is the last unpacked value
       signature, *_rest, comment_size = maybe_record.unpack(unpack_pattern)
       if signature == 0x06054b50 && (maybe_record.bytesize - minimum_record_size) == comment_size
         return check_at # Found the EOCD marker location

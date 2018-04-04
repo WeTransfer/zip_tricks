@@ -560,20 +560,20 @@ class ZipTricks::FileReader
     found_at_indices
   end
 
-  # This is tricky. Essentially, we have to scan the maximum possible number
-  # of bytes (that the EOCD can theoretically occupy including the comment),
+  # We have to scan the maximum possible number
+  # of bytes that the EOCD can theoretically occupy including the comment after it,
   # and we have to find a combination of:
-  #   [EOCD signature, <some ZIP medatata>, comment byte size, the comment of
-  # that size, eof].
-  # The only way I could find to do this was with a sliding window, but
-  # there probably is a better way.
-  # locate_eocd_signature is too high. [17.49/15]
+  #   [EOCD signature, <some ZIP medatata>, comment byte size, comment of size]
+  # at the end. To do so, we first find all indices of the signature in the trailer
+  # string, and then check whether the bytestring starting at the signature and
+  # ending at the end of string satisfies that given pattern.
   def locate_eocd_signature(in_str)
-    eocd_signature = [0x06054b50].pack('V')
+    eocd_signature = 0x06054b50
+    eocd_signature_str = [eocd_signature].pack('V')
     unpack_pattern = 'VvvvvVVv'
     minimum_record_size = 22
     str_size = in_str.bytesize
-    indices = all_indices_of_substr_in_str(eocd_signature, in_str)
+    indices = all_indices_of_substr_in_str(eocd_signature_str, in_str)
     indices.each do |check_at|
       maybe_record = in_str[check_at..str_size]
       # If the record is smaller than the minimum - we will never recover anything
@@ -581,8 +581,8 @@ class ZipTricks::FileReader
       # If the record is larger or the same size as the minimum check if the
       # size of the block immediately following it is the same as the declared
       # size of the comment, which is the last unpacked value
-      signature, *_rest, comment_size = maybe_record.unpack(unpack_pattern)
-      if signature == 0x06054b50 && (maybe_record.bytesize - minimum_record_size) == comment_size
+      maybe_signature, *_unused, comment_size = maybe_record.unpack(unpack_pattern)
+      if maybe_signature == 0x06054b50 && (maybe_record.bytesize - minimum_record_size) == comment_size
         return check_at # Found the EOCD marker location
       end
     end

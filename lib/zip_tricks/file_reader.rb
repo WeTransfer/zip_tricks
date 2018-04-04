@@ -578,11 +578,11 @@ class ZipTricks::FileReader
       maybe_record = in_str[check_at..str_size]
       # If the record is smaller than the minimum - we will never recover anything
       break if maybe_record.bytesize < minimum_record_size
-      # If the record is larger or the same size as the minimum check if the
-      # size of the block immediately following it is the same as the declared
-      # size of the comment, which is the last unpacked value
-      maybe_signature, *_unused, comment_size = maybe_record.unpack(unpack_pattern)
-      if maybe_signature == 0x06054b50 && (maybe_record.bytesize - minimum_record_size) == comment_size
+      # Now we check if the record ends with the combination
+      # of the comment size and an arbitrary byte string of that size.
+      # If it does - we found our match
+      *_unused, comment_size = maybe_record.unpack(unpack_pattern)
+      if (maybe_record.bytesize - minimum_record_size) == comment_size
         return check_at # Found the EOCD marker location
       end
     end

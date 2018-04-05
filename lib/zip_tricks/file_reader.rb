@@ -550,40 +550,44 @@ class ZipTricks::FileReader
     eocd_offset
   end
 
-  # This is tricky. Essentially, we have to scan the maximum possible number
-  # of bytes (that the EOCD can theoretically occupy including the comment),
+  def all_indices_of_substr_in_str(of_substring, in_string)
+    last_i = 0
+    found_at_indices = []
+    while last_i = in_string.index(of_substring, last_i)
+      found_at_indices << last_i
+      last_i += of_substring.bytesize
+    end
+    found_at_indices
+  end
+
+  # We have to scan the maximum possible number
+  # of bytes that the EOCD can theoretically occupy including the comment after it,
   # and we have to find a combination of:
-  #   [EOCD signature, <some ZIP medatata>, comment byte size, the comment of
-  # that size, eof].
-  # The only way I could find to do this was with a sliding window, but
-  # there probably is a better way.
-  # locate_eocd_signature is too high. [17.49/15]
+  #   [EOCD signature, <some ZIP medatata>, comment byte size, comment of size]
+  # at the end. To do so, we first find all indices of the signature in the trailer
+  # string, and then check whether the bytestring starting at the signature and
+  # ending at the end of string satisfies that given pattern.
   def locate_eocd_signature(in_str)
-    # We have to scan from the _very_ tail. We read the very minimum size
-    # the EOCD record can have (up to and including the comment size), using
-    # a sliding window. Once our end offset matches the comment size we found our
-    # EOCD marker.
+    eocd_signature = 0x06054b50
+    eocd_signature_str = [eocd_signature].pack('V')
     unpack_pattern = 'VvvvvVVv'
     minimum_record_size = 22
-    end_location = minimum_record_size * -1
-    loop do
-      # If the window is nil, we have rolled off the start of the string, nothing to do here.
-      # We use negative values because if we used positive slice indices
-      # we would have to detect the rollover ourselves
-      break unless window = in_str[end_location, minimum_record_size]
-
-      window_location = in_str.bytesize + end_location
-      unpacked = window.unpack(unpack_pattern)
-      # If we found the signarue, pick up the comment size, and check if the size of the window
-      # plus that comment size is where we are in the string. If we are - bingo.
-      if unpacked[0] == 0x06054b50 && comment_size = unpacked[-1]
-        assumed_eocd_location = in_str.bytesize - comment_size - minimum_record_size
-        # if the comment size is where we should be at - we found our EOCD
-        return assumed_eocd_location if assumed_eocd_location == window_location
+    str_size = in_str.bytesize
+    indices = all_indices_of_substr_in_str(eocd_signature_str, in_str)
+    indices.each do |check_at|
+      maybe_record = in_str[check_at..str_size]
+      # If the record is smaller than the minimum - we will never recover anything
+      break if maybe_record.bytesize < minimum_record_size
+      # Now we check if the record ends with the combination
+      # of the comment size and an arbitrary byte string of that size.
+      # If it does - we found our match
+      *_unused, comment_size = maybe_record.unpack(unpack_pattern)
+      if (maybe_record.bytesize - minimum_record_size) == comment_size
+        return check_at # Found the EOCD marker location
       end
-      # Shift the window back, by one byte, and try again.
-      end_location -= 1
     end
+    # If we haven't caught anything, return nil deliberately instead of returning the last statement
+    nil
   end
 
   # Find the Zip64 EOCD locator segment offset. Do this by seeking backwards from the

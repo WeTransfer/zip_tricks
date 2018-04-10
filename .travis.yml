@@ -9,7 +9,7 @@ sudo: false
 cache: bundler
 before_install:
   - gem update --system
-  - bundle update
+  - gem install bundler # https://github.com/travis-ci/travis-ci/issues/9333
 matrix:
   allow_failures:
     - rvm: jruby-9.0

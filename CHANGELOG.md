@@ -1,4 +1,10 @@
-* Reduce the size of the CRC32 buffer to sub-1MB size (backed by a benchmark), extract buffering into a wrapper proxy
+## 4.6.0
+
+* Add `mtime:` option to all Streamer methods for adding files and directories, to permit setting modification time per-entry
+* Optimize EOCD signature lookup when reading archives
+* Reformat using the [we_transfer_style](https://rubygems.org/gems/we_transfer_style) Rubocop rules and conventions 
+* Add code of conduct and contribution guidelines
+* Reduce the size of the CRC32 buffer to 64KB (backed by a benchmark), extract buffering into a wrapper proxy
 
 ## 4.5.2
 

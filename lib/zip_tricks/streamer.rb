@@ -99,11 +99,41 @@ class ZipTricks::Streamer
   # directory of the archive to the output.
   #
   # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
+  # @param kwargs_for_new [Hash] keyword arguments for {Streamer.new}
   # @yield [Streamer] the streamer that can be written to
   def self.open(stream, **kwargs_for_new)
     archive = new(stream, **kwargs_for_new)
     yield(archive)
     archive.close
+  end
+
+  # Creates a new Streamer that writes to a buffer. The buffer can be read from using `each`,
+  # and the creation of the ZIP is in lockstep with the caller calling `each` on the returned
+  # output enumerator object. This can be used when the calling program wants to stream the
+  # output of the ZIP archive and throttle that output, or split it into chunks, or use it
+  # as a generator.
+  #
+  # For example:
+  #
+  #     # The block given to {output_enum} won't be executed immediately - rather it
+  #     # will only start to execute when the caller starts to read from the output
+  #     # by calling `each`
+  #     body = ZipTricks::Streamer.output_enum(writer: CustomWriter) do |zip|
+  #       streamer.add_stored_entry(filename: 'large.tif', size: 1289894, crc32: 198210)
+  #       streamer << large_file.read(1024*1024) until large_file.eof?
+  #       ...
+  #     end
+  #
+  #     body.each do |bin_string|
+  #       # Send the output somewhere, buffer it in a file etc.
+  #       ...
+  #     end
+  #
+  # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
+  # @param kwargs_for_new [Hash] keyword arguments for {Streamer.new}
+  # @yield [Streamer] the streamer that can be written to
+  def self.output_enum(**kwargs_for_new, &zip_streamer_block)
+    ZipTricks::OutputEnumerator.new(**kwargs_for_new, &zip_streamer_block)
   end
 
   # Creates a new Streamer on top of the given IO-ish object.

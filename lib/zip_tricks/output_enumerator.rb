@@ -15,7 +15,7 @@ class ZipTricks::OutputEnumerator
   #       estimator.add_stored_entry(filename: 'large.tif', size: 1289894)
   #     end
   #
-  #     # Prepare the response body. 
+  #     # Prepare the response body.
   #     # The block will only be called when the
   #     # response starts to be written.
   #     body = ZipTricks::OutputEnumerator.new do | streamer |
@@ -36,7 +36,7 @@ class ZipTricks::OutputEnumerator
   # to "take" output of the ZIP piecewise.
   def each
     if block_given?
-      block_write = ZipTricks::BlockWrite.new {|chunk| yield(chunk) }
+      block_write = ZipTricks::BlockWrite.new { |chunk| yield(chunk) }
       ZipTricks::Streamer.open(block_write, **@streamer_options, &@archiving_block)
     else
       enum_for(:each)

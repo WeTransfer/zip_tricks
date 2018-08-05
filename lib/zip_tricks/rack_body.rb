@@ -4,4 +4,3 @@
 class ZipTricks::RackBody < ZipTricks::OutputEnumerator
   def close; end
 end
-

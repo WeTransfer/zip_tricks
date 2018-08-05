@@ -20,7 +20,7 @@ iterable = ZipTricks::Streamer.output_enum do |zip|
   end
 end
 
-$stderr.puts "\n\nOutput using #each"
+warn "\n\nOutput using #each"
 
 # Now we can treat the iterable as any Ruby enumerable object, since
 # it supports #each yielding every binary string output by the Streamer.
@@ -32,7 +32,7 @@ iterable.each do |_binary_string|
   $stderr << '.'
 end
 
-$stderr.puts "\n\nOutput Enumerator returned from #each"
+warn "\n\nOutput Enumerator returned from #each"
 
 # We now have output the entire archive, so using each() again
 # will restart the block we gave it. For example, we can user
@@ -46,7 +46,7 @@ end
 
 # ... or a Fiber
 
-$stderr.puts "\n\nOutput using a Fiber"
+warn "\n\nOutput using a Fiber"
 fib = Fiber.new do
   iterable.each do |binary_string|
     $stderr << '•'

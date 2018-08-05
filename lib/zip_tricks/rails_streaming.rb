@@ -8,7 +8,10 @@ module ZipTricks::RailsStreaming
   # the Rails response stream is going to be closed automatically.
   # @yield [Streamer] the streamer that can be written to
   def zip_tricks_stream
+    # Set a reasonable content type
     response.headers['Content-Type'] = 'application/zip'
+    # Make sure nginx buffering is suppressed - see https://github.com/WeTransfer/zip_tricks/issues/48
+    response.headers['X-Accel-Buffering'] = 'no'
     # Create a wrapper for the write call that quacks like something you
     # can << to, used by ZipTricks
     w = ZipTricks::BlockWrite.new { |chunk| response.stream.write(chunk) }

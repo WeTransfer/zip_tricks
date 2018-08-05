@@ -65,5 +65,4 @@ describe ZipTricks::OutputEnumerator do
     expect(per_filename).to have_key('A file')
     expect(per_filename['A file'].bytesize).to eq(file_body.bytesize)
   end
-
 end

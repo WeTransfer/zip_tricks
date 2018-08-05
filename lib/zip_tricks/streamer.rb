@@ -129,9 +129,8 @@ class ZipTricks::Streamer
   #       ...
   #     end
   #
-  # @param stream [IO] the destination IO for the ZIP (should respond to `tell` and `<<`)
   # @param kwargs_for_new [Hash] keyword arguments for {Streamer.new}
-  # @yield [Streamer] the streamer that can be written to
+  # @return [Enumerator] the enumerator you can read bytestrings of the ZIP from using `each`
   def self.output_enum(**kwargs_for_new, &zip_streamer_block)
     ZipTricks::OutputEnumerator.new(**kwargs_for_new, &zip_streamer_block)
   end

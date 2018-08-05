@@ -16,7 +16,6 @@ describe ZipTricks::RackBody do
     body.each do |some_data|
       output_buf << some_data
     end
-    body.close
 
     output_buf.rewind
     expect(output_buf.size).to eq(1_057_714)

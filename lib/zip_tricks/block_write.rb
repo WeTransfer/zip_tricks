@@ -39,9 +39,4 @@ class ZipTricks::BlockWrite
     @block.call(encoded)
     self
   end
-
-  # Does nothing
-  def close
-    nil
-  end
 end

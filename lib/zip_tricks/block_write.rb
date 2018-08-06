@@ -20,7 +20,8 @@ class ZipTricks::BlockWrite
   # Every time this object gets written to, call the Rack body each() block
   # with the bytes given instead.
   def <<(buf)
-    return if buf.nil?
+    # Zero-size output has a special meaning  when using chunked encoding
+    return if buf.nil? || buf.bytesize.zero?
 
     # Ensure we ALWAYS write in binary encoding.
     encoded =
@@ -35,16 +36,7 @@ class ZipTricks::BlockWrite
         buf
       end
 
-    #  buf.dup.force_encoding(Encoding::BINARY)
-    # Zero-size output has a special meaning  when using chunked encoding
-    return if encoded.bytesize.zero?
-
     @block.call(encoded)
     self
-  end
-
-  # Does nothing
-  def close
-    nil
   end
 end

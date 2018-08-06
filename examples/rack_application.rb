@@ -36,7 +36,7 @@ class ZipDownload
 
     # Create a suitable Rack response body, that will support each(),
     # close() and all the other methods. We can then return it up the stack.
-    zip_response_body = ZipTricks::RackBody.new do |zip|
+    zip_response_body = ZipTricks::Streamer.output_enum do |zip|
       begin
         # We are adding only one file to the ZIP here, but you could do that
         # with an arbitrary number of files of course.

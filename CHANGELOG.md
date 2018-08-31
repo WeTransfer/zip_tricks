@@ -1,3 +1,9 @@
+## 4.7.0
+
+* Replace `RackBody` with `OutputEnumerator` since we want to provide a generic way of deferring ZIP output, also when using enumerators.
+* Remove `RackBody#close` since we got nothing to close 🤷‍♂️
+* Hint nginx that response buffering should be disabled when using Rails zip streaming
+
 ## 4.6.0
 
 * Add `mtime:` option to all Streamer methods for adding files and directories, to permit setting modification time per-entry

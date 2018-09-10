@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
 
   spec.add_development_dependency 'bundler', '~> 1'
-  spec.add_development_dependency 'rubyzip', '~> 1.1'
+  spec.add_development_dependency 'rubyzip', '>= 1.2.2'
   spec.add_development_dependency 'terminal-table'
   spec.add_development_dependency 'range_utils'
 

@@ -1,3 +1,7 @@
+## 4.7.1
+
+* Bump rubyzip to 1.2.2 to mitigate CVE-2018-1000544
+
 ## 4.7.0
 
 * Replace `RackBody` with `OutputEnumerator` since we want to provide a generic way of deferring ZIP output, also when using enumerators.
@@ -8,7 +12,7 @@
 
 * Add `mtime:` option to all Streamer methods for adding files and directories, to permit setting modification time per-entry
 * Optimize EOCD signature lookup when reading archives
-* Reformat using the [we_transfer_style](https://rubygems.org/gems/we_transfer_style) Rubocop rules and conventions 
+* Reformat using the [we_transfer_style](https://rubygems.org/gems/we_transfer_style) Rubocop rules and conventions
 * Add code of conduct and contribution guidelines
 * Reduce the size of the CRC32 buffer to 64KB (backed by a benchmark), extract buffering into a wrapper proxy
 

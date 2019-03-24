@@ -1,3 +1,7 @@
+## 4.7.2
+
+* Relax bundler dependency so that both 1.x and 2.x are supported cleanly
+
 ## 4.7.1
 
 * Bump rubyzip to 1.2.2 to mitigate CVE-2018-1000544

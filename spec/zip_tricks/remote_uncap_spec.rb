@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'net/http'
 
 describe ZipTricks::RemoteUncap, webmock: true do
   let(:uri) { URI.parse('http://example.com/file.zip') }
@@ -110,5 +111,19 @@ describe ZipTricks::RemoteUncap, webmock: true do
     expect(second.uncompressed_size).to eq(payload2.size)
     readable_zip.seek(second.compressed_data_offset, IO::SEEK_SET)
     expect(readable_zip.read(12)).to eq(payload2.read(12))
+  end
+
+  describe '#request_object_size' do
+    let(:net_http) { double }
+
+    before do
+      allow(Net::HTTP).to receive(:start).and_return(net_http)
+    end
+
+    it 'makes a HEAD request for the uri' do
+      subject = described_class.new(uri)
+      expect(net_http).to receive(:request_head).with(a_kind_of(URI)).and_return("Content-Length" => "100")
+      subject.request_object_size
+    end
   end
 end

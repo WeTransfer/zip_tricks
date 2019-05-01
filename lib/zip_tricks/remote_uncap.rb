@@ -43,6 +43,6 @@ class ZipTricks::RemoteUncap
   # @return [Fixnum] the byte size of the ranged request
   def request_object_size
     http = Net::HTTP.start(@uri.hostname, @uri.port)
-    http.request_head(uri)['Content-Length'].to_i
+    http.request_head(@uri)['Content-Length'].to_i
   end
 end

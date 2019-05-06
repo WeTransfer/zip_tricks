@@ -1,3 +1,7 @@
+## 4.7.3
+
+* Fix RemoteUncap#request_object_size to function correctly
+
 ## 4.7.2
 
 * Relax bundler dependency so that both 1.x and 2.x are supported cleanly

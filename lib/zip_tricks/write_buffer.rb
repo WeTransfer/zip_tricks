@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Some operations (such as CRC32) benefit when they are performed
 # on larger chunks of data. In certain use cases, it is possible that
 # the consumer of ZipTricks is going to be writing small chunks

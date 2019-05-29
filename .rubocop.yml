@@ -8,3 +8,4 @@ Style/GlobalVars:
   Exclude:
       - qa/*.rb
       - spec/spec_helper.rb
+      - spec/support/zip_inspection.rb

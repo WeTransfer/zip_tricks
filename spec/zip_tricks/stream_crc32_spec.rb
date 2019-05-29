@@ -9,6 +9,11 @@ describe ZipTricks::StreamCRC32 do
     expect(via_from_io).to eq(crc)
   end
 
+  it 'when computing the CRC32 from an IO only allocates one String' do
+    raw = StringIO.new(Random.new.bytes(45 * 1024 * 1024))
+    expect { described_class.from_io(raw) }.to allocate_under(3).objects
+  end
+
   it 'allows in-place updates' do
     raw = StringIO.new(Random.new.bytes(45 * 1024 * 1024))
     crc = Zlib.crc32(raw.string)

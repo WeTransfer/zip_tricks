@@ -22,8 +22,8 @@ module ZipInspection
     # ArchiveUtility sometimes puts the stuff it unarchives in ~/Downloads etc. so do
     # not perform any checks on the files since we do not really know where they are on disk.
     # Visual inspection should show whether the unarchiving is handled correctly.
-    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/ \
-              Contents/MacOS/Archive Utility'
+    au_path = '/System/Library/CoreServices/Applications/Archive Utility.app/' \
+              'Contents/MacOS/Archive Utility'
     open_with_external_app(au_path, path_to_zip, skip_if_missing)
   end
 end

@@ -1,3 +1,7 @@
+## 4.7.4
+
+* Use a single fixed capacity string in StreamCRC32.from_io to avoid unnecessary allocations
+
 ## 4.7.3
 
 * Fix RemoteUncap#request_object_size to function correctly

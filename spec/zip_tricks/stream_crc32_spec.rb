@@ -9,6 +9,16 @@ describe ZipTricks::StreamCRC32 do
     expect(via_from_io).to eq(crc)
   end
 
+  it 'when computing the CRC32 from an IO only allocates one String' do
+    raw = StringIO.new(Random.new.bytes(45 * 1024 * 1024))
+    # The number of objects allocated depends on the MRI version, but in
+    # all cases there is only one String allocated. We work in blocks
+    # of 512KB so if we allocate a String for each read() - which is
+    # what this spec tries to prevent - we would certainly go over
+    # 90 allocations.
+    expect { described_class.from_io(raw) }.to allocate_under(10).objects
+  end
+
   it 'allows in-place updates' do
     raw = StringIO.new(Random.new.bytes(45 * 1024 * 1024))
     crc = Zlib.crc32(raw.string)

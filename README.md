@@ -30,7 +30,7 @@ The easiest is to use the Rails' built-in streaming feature:
 class ZipsController < ActionController::Base
   include ActionController::Live # required for streaming
   include ZipTricks::RailsStreaming
-  
+
   def download
     zip_tricks_stream do |zip|
       zip.write_deflated_file('report1.csv') do |sink|
@@ -122,10 +122,10 @@ ZipTricks::Streamer.open(io) do | zip |
   # raw_file is written "as is" (STORED mode).
   # Write the local file header first..
   zip.add_stored_entry(filename: "first-file.bin", size: raw_file.size, crc32: raw_file_crc32)
-  
+
   # then send the actual file contents bypassing the Streamer interface
   io.sendfile(my_temp_file)
-  
+
   # ...and then adjust the ZIP offsets within the Streamer
   zip.simulate_write(my_temp_file.size)
 end
@@ -143,13 +143,19 @@ It is slightly more convenient for the purpose than using the raw Zlib library f
 
 ```ruby
 crc = ZipTricks::StreamCRC32.new
-crc << large_file.read(1024 * 12) until large_file.eof?
+crc << next_chunk_of_data
 ...
 
 crc.to_i # Returns the actual CRC32 value computed so far
 ...
 # Append a known CRC32 value that has been computed previosuly
 crc.append(precomputed_crc32, size_of_the_blob_computed_from)
+```
+
+You can also compute the CRC32 for an entire IO object if it responds to `#eof?`:
+
+```ruby
+crc = ZipTricks::StreamCRC32.from_io(file) # Returns an Integer
 ```
 
 ## Reading ZIP files
@@ -160,7 +166,7 @@ as such it performs it's function quite well. Please beware of the security impl
 that have not been formally verified (ours hasn't been).
 
 ## Contributing to zip_tricks
- 
+
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
 * Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it.
 * Fork the project.

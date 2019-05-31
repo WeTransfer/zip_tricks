@@ -431,23 +431,21 @@ describe ZipTricks::Streamer do
   it 'creates an archive with data descriptors that can be opened by Rubyzip, with a small number of very tiny text files' do
     tf = ManagedTempfile.new('zip')
     described_class.open(tf) do |zip|
-      zip.write_stored_file('deflated.txt') do |sink|
-        sink << File.read(__dir__ + '/war-and-peace.txt')
+      zip.write_stored_file('stored.txt') do |sink|
+        sink << File.binread(__dir__ + '/war-and-peace.txt')
       end
-      zip.write_deflated_file('stored.txt') do |sink|
-        sink << File.read(__dir__ + '/war-and-peace.txt')
+      zip.write_deflated_file('deflated.txt') do |sink|
+        sink << File.binread(__dir__ + '/war-and-peace.txt')
       end
     end
     tf.flush
-
-    pending 'https://github.com/rubyzip/rubyzip/issues/295'
 
     Zip::File.foreach(tf.path) do |entry|
       # Make sure it is tagged as UNIX
       expect(entry.fstype).to eq(3)
 
       # The CRC
-      expect(entry.crc).to eq(Zlib.crc32(File.read(__dir__ + '/war-and-peace.txt')))
+      expect(entry.crc).to eq(Zlib.crc32(File.binread(__dir__ + '/war-and-peace.txt')))
 
       # Check the name
       expect(entry.name).to match(/\.txt$/)
@@ -458,7 +456,7 @@ describe ZipTricks::Streamer do
       # Check the file contents
       readback = entry.get_input_stream.read
       readback.force_encoding(Encoding::BINARY)
-      expect(readback[0..10]).to eq(File.read(__dir__ + '/war-and-peace.txt')[0..10])
+      expect(readback[0..10]).to eq(File.binread(__dir__ + '/war-and-peace.txt')[0..10])
     end
 
     inspect_zip_with_external_tool(tf.path)

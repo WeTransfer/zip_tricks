@@ -178,4 +178,4 @@ that have not been formally verified (ours hasn't been).
 
 ## Copyright
 
-Copyright (c) 2016 WeTransfer. See LICENSE.txt for further details.
+Copyright (c) 2019 WeTransfer. See LICENSE.txt for further details.

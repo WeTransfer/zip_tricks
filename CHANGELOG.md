@@ -1,6 +1,7 @@
 ## 4.7.4
 
 * Use a single fixed capacity string in StreamCRC32.from_io to avoid unnecessary allocations
+* Fix a few tests that were calling out to external binaries
 
 ## 4.7.3
 

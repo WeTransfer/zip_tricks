@@ -140,13 +140,19 @@ class ZipTricks::Streamer
   # @param stream[IO] the destination IO for the ZIP. Anything that responds to `<<` can be used.
   # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
-  def initialize(stream, writer: create_writer)
+  # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
+  #    should be suffixed with (1), (2) etc. Default value is `true` since it
+  #    used to be the default behavior.
+  #
+  # **DEPRECATION NOTICE** In ZipTricks version 5 `auto_rename_duplicate_filenames` will default to `false`
+  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: true)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
+    @dedupe_filenames = auto_rename_duplicate_filenames
     @out = ZipTricks::WriteAndTell.new(stream)
     @files = []
     @local_header_offsets = []
-    @filenames_set = Set.new
+    @path_set = ZipTricks::PathSet.new
     @writer = writer
   end
 
@@ -387,7 +393,7 @@ class ZipTricks::Streamer
 
     # Clear the files so that GC will not have to trace all the way to here to deallocate them
     @files.clear
-    @filenames_set.clear
+    @path_set.clear
 
     # and return the final offset
     @out.tell
@@ -429,21 +435,30 @@ class ZipTricks::Streamer
   private
 
   def add_file_and_write_local_header(
-filename:,
-modification_time:,
-crc32:,
-storage_mode:,
-compressed_size:,
-uncompressed_size:,
-use_data_descriptor:)
+      filename:,
+      modification_time:,
+      crc32:,
+      storage_mode:,
+      compressed_size:,
+      uncompressed_size:,
+      use_data_descriptor:)
 
-    # Clean backslashes and uniqify filenames if there are duplicates
+    # Clean backslashes
     filename = remove_backslash(filename)
-    filename = uniquify_name(filename) if @filenames_set.include?(filename)
-
     raise UnknownMode, "Unknown compression mode #{storage_mode}" unless [STORED, DEFLATED].include?(storage_mode)
-
     raise Overflow, 'Filename is too long' if filename.bytesize > 0xFFFF
+
+    # If we need to massage filenames to enforce uniqueness,
+    # do so before we check for file/directory conflicts
+    filename = ZipTricks::UniquifyFilename.call(filename, @path_set) if @dedupe_filenames
+
+    # Make sure there is no file/directory clobbering (conflicts), or - if deduping is disabled -
+    # no duplicate filenames/paths
+    if filename.end_with?('/')
+      @path_set.add_directory_path(filename)
+    else
+      @path_set.add_file_path(filename)
+    end
 
     if use_data_descriptor
       crc32 = 0
@@ -460,7 +475,6 @@ use_data_descriptor:)
                   use_data_descriptor)
 
     @files << e
-    @filenames_set << e.filename
     @local_header_offsets << @out.tell
 
     @writer.write_local_file_header(io: @out,
@@ -475,29 +489,5 @@ use_data_descriptor:)
 
   def remove_backslash(filename)
     filename.tr('\\', '_')
-  end
-
-  def uniquify_name(filename)
-    # we add (1), (2), (n) at the end of a filename if there is a duplicate
-    copy_pattern = /\((\d+)\)$/
-    parts = filename.split('.')
-    ext = if parts.last =~ /gz|zip/ && parts.size > 2
-            parts.pop(2)
-          elsif parts.size > 1
-            parts.pop
-          end
-    fn_last_part = parts.pop
-
-    duplicate_counter = 1
-    loop do
-      fn_last_part = if fn_last_part =~ copy_pattern
-                       fn_last_part.sub(copy_pattern, "(#{duplicate_counter})")
-                     else
-                       "#{fn_last_part} (#{duplicate_counter})"
-                     end
-      new_filename = (parts + [fn_last_part, ext]).compact.join('.')
-      return new_filename unless @filenames_set.include?(new_filename)
-      duplicate_counter += 1
-    end
   end
 end

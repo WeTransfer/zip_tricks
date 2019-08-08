@@ -36,6 +36,21 @@ describe ZipTricks::SizeEstimator do
     expect(predicted_size).to eq(2_690_321)
   end
 
+  it 'passes the keyword arguments to Streamer#new' do
+    expect {
+      described_class.estimate(auto_rename_duplicate_filenames: false) do |estimator|
+        estimator.add_stored_entry(filename: 'first-file.bin', size: 123)
+        estimator.add_stored_entry(filename: 'first-file.bin', size: 123)
+      end
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    size = described_class.estimate(auto_rename_duplicate_filenames: true) do |estimator|
+      estimator.add_stored_entry(filename: 'first-file.bin', size: 123)
+      estimator.add_stored_entry(filename: 'first-file.bin', size: 123)
+    end
+    expect(size).to eq(549)
+  end
+
   it 'still supports #add_compressed_entry (to be removed in v.5)' do
     predicted_size = described_class.estimate do |zip|
       zip.add_compressed_entry(filename: 'foo.bar', compressed_size: 123, uncompressed_size: 456)

@@ -484,7 +484,7 @@ describe ZipTricks::Streamer do
     allow(fake_writer).to receive(:write_local_file_header) { |filename:, **_others|
       seen_filenames << filename
     }
-    zip_streamer = described_class.new(StringIO.new, writer: fake_writer)
+    zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: true)
     files.each do |fn|
       zip_streamer.add_stored_entry(filename: fn, size: 1_024, crc32: 0xCC)
     end
@@ -493,6 +493,80 @@ describe ZipTricks::Streamer do
       'file_one (1).jpg', 'file_one (2).jpg', 'My.Super.file.txt.zip',
       'My.Super.file (1).txt.zip'
     ])
+  end
+
+  it 'raises when a file would clobber a directory or vice versa (without automatic deduping)' do
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_empty_directory(dirname: 'foo/bar/baz')
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_empty_directory(dirname: 'foo/bar/baz')
+      zip_streamer.add_deflated_entry(filename: 'foo/bar/baz', compressed_size: 1_024, uncompressed_size: 12548, crc32: 0xCC)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_empty_directory(dirname: 'foo/bar/baz')
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz/bad', size: 1_024, crc32: 0xCC)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_stored_entry(filename: 'a/b', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_empty_directory(dirname: 'a/b/c')
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_empty_directory(dirname: 'a/b/c')
+      zip_streamer.add_stored_entry(filename: 'a/b', size: 1_024, crc32: 0xCC)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+  end
+
+  it 'raises when a file would clobber another file (without automatic deduping)' do
+    fake_writer = double('Writer').as_null_object
+    expect {
+      zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 14, crc32: 0x0C)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    expect {
+      zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: false)
+      zip_streamer.add_stored_entry(filename: 'foo', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_stored_entry(filename: 'foo', size: 14, crc32: 0x0C)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+  end
+
+  it 'raises when a file would clobber a directory or vice versa (when automatic filename deduplication is enabled)' do
+    fake_writer = double('Writer').as_null_object
+    expect {
+      zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: true)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz/bad', size: 1_024, crc32: 0xCC)
+    }.to raise_error(ZipTricks::PathSet::Conflict)
+
+    # Contrary to what one would think, the order in which entries get added in this instance matters.
+    # When the "outer" file with a conflicting name gets created first, and the file which is inside
+    # that path gets created later, the "shorter" path will be deduplicated (the last element will be
+    # changed to "baz (1)" to avoid conflict). This is certainly usable, but is _magic_ behavior -
+    # which is one of the reasons why automatically fixing non-unique filenames is a bad idea,
+    # and we are going to make it optional - it can lead to very non-intuitive behavior
+    expect {
+      zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: true)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz/bad', size: 1_024, crc32: 0xCC)
+      zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+    }.not_to raise_error(ZipTricks::PathSet::Conflict)
   end
 
   it 'writes the specified modification time' do

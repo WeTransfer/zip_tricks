@@ -1,3 +1,13 @@
+## 4.8.0
+
+* Make sure that when directories clobber files and vice versa we raise a clear error. Add `PathSet` which keeps track of entries
+  and all the directories needed to create them, document `PathSet`
+* Move the `uniquify_filenames` function into a module for easier removal later
+* Add the `auto_rename_duplicate_filenames` parameter to `Streamer` constructor. We need to make this optional
+  because making filenames unique can be very tricky when subdirectories are involved, and strictly
+  speaking we should not be applying this transformation at all - there should be no output of
+  duplicate filenames by the caller. So making the filenames should be available, but optional.
+
 ## 4.7.4
 
 * Use a single fixed capacity string in StreamCRC32.from_io to avoid unnecessary allocations

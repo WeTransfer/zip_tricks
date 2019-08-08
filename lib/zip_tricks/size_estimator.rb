@@ -20,10 +20,11 @@ class ZipTricks::SizeEstimator
   #               uncompressed_size: 89281911, compressed_size: 121908)
   #     end
   #
+  # @param kwargs_for_streamer_new Any options to pass to Streamer, see {Streamer#initialize}
   # @return [Integer] the size of the resulting archive, in bytes
   # @yield [SizeEstimator] the estimator
-  def self.estimate
-    streamer = ZipTricks::Streamer.new(ZipTricks::NullWriter)
+  def self.estimate(**kwargs_for_streamer_new)
+    streamer = ZipTricks::Streamer.new(ZipTricks::NullWriter, **kwargs_for_streamer_new)
     estimator = new(streamer)
     yield(estimator)
     streamer.close # Returns the .tell of the contained IO

@@ -178,4 +178,5 @@ that have not been formally verified (ours hasn't been).
 
 ## Copyright
 
-Copyright (c) 2019 WeTransfer. See LICENSE.txt for further details.
+Copyright (c) 2019 WeTransfer. `zip_tricks` is distributed under the conditions of the [Hippocratic License](https://firstdonoharm.dev/version/1/2/license.html)
+ - See LICENSE.txt for further details.

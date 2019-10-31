@@ -1,3 +1,7 @@
+## 5.0.0
+
+* Adopt [Hippocratic license v. 1.2](https://firstdonoharm.dev/version/1/2/license.html)
+
 ## 4.8.0
 
 * Make sure that when directories clobber files and vice versa we raise a clear error. Add `PathSet` which keeps track of entries

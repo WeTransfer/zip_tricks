@@ -8,6 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors        = ['Julik Tarkhanov']
   spec.email          = ['me@julik.nl']
 
+  s.licenses          = ['MIT (Hippocratic)']
   spec.summary        = 'Stream out ZIP files from Ruby'
   spec.description    = 'Stream out ZIP files from Ruby'
   spec.homepage       = 'http://github.com/wetransfer/zip_tricks'

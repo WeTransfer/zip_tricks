@@ -5,10 +5,10 @@ require 'zip_tricks/version'
 Gem::Specification.new do |spec|
   spec.name           = 'zip_tricks'
   spec.version        = ZipTricks::VERSION
-  spec.authors        = ['Julik Tarkhanov']
+  spec.authors        = ['Julik Tarkhanov', 'Noah Berman', 'Dmitry Tymchuk', 'David Bosveld']
   spec.email          = ['me@julik.nl']
 
-  spec.licenses          = ['MIT (Hippocratic)']
+  spec.licenses       = ['MIT (Hippocratic)']
   spec.summary        = 'Stream out ZIP files from Ruby'
   spec.description    = 'Stream out ZIP files from Ruby'
   spec.homepage       = 'http://github.com/wetransfer/zip_tricks'

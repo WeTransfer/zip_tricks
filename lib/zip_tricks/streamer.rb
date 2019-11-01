@@ -141,11 +141,9 @@ class ZipTricks::Streamer
   # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
-  #    should be suffixed with (1), (2) etc. Default value is `true` since it
-  #    used to be the default behavior.
-  #
-  # **DEPRECATION NOTICE** In ZipTricks version 5 `auto_rename_duplicate_filenames` will default to `false`
-  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: true)
+  #    should be suffixed with (1), (2) etc. Default value is `false` - if
+  #    dupliate names are used an exception will be raised
+  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
     @dedupe_filenames = auto_rename_duplicate_filenames

@@ -7,12 +7,13 @@ describe ZipTricks::SizeEstimator do
     raw_file_two = Random.new.bytes(1_024 * 128)
     raw_file_three = Random.new.bytes(1_258_695)
 
-    predicted_size = described_class.estimate do |estimator|
+    predicted_size = described_class.estimate(auto_rename_duplicate_filenames: true) do |estimator|
       r = estimator.add_stored_entry(filename: 'first-file.bin', size: raw_file_one.size)
       expect(r).to eq(estimator), 'add_stored_entry should return self'
 
       estimator.add_stored_entry(filename: 'second-file.bin', size: raw_file_two.size)
 
+      # This filename will be deduplicated and will therefore grow in size
       r = estimator.add_deflated_entry(filename: 'second-file.bin',
                                        compressed_size: raw_file_three.size,
                                        uncompressed_size: raw_file_two.size)

@@ -1,5 +1,8 @@
 ## 5.0.0
 
+* Disable automatic filename deduplication by default, because it does not play nice with file/directory
+  clobbering. The option can still be enabled by passing `auto_rename_duplicate_filenames: true` to the Streamer
+  and all modules that use it
 * Adopt [Hippocratic license v. 1.2](https://firstdonoharm.dev/version/1/2/license.html)
   Note that this might make the license conditions unacceptable for your project. If that is the case,
   you can use the 4.x branch of the library which stays under the original, exact MIT license.

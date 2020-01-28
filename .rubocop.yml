@@ -6,6 +6,8 @@ Layout/FirstMethodArgumentLineBreak:
   Enabled: false
 Layout/FirstMethodParameterLineBreak:
   Enabled: false
+Layout/HeredocIndentation:
+  Enabled: false # Newer rubocop enforces heredocs that are only available in 2.3+
 Style/GlobalVars:
   Exclude:
       - qa/*.rb

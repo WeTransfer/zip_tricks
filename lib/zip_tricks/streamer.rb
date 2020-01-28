@@ -433,13 +433,13 @@ class ZipTricks::Streamer
   private
 
   def add_file_and_write_local_header(
-      filename:,
-      modification_time:,
-      crc32:,
-      storage_mode:,
-      compressed_size:,
-      uncompressed_size:,
-      use_data_descriptor:)
+    filename:,
+    modification_time:,
+    crc32:,
+    storage_mode:,
+    compressed_size:,
+    uncompressed_size:,
+    use_data_descriptor:)
 
     # Clean backslashes
     filename = remove_backslash(filename)

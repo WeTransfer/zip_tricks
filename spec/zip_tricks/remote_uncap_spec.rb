@@ -1,8 +1,18 @@
 require 'spec_helper'
 require 'net/http'
 
-describe ZipTricks::RemoteUncap, webmock: true do
-  let(:uri) { URI.parse('http://example.com/file.zip') }
+describe ZipTricks::RemoteUncap do
+  before :all do
+    rack_app = File.expand_path(__dir__ + '/remote_uncap_rack_app.ru')
+    command = 'bundle exec puma --port 9393 %s' % rack_app
+    @server_pid = spawn(command)
+    sleep 2 # Give the server time to come up
+  end
+
+  after :all do
+    Process.kill("TERM", @server_pid)
+    Process.wait(@server_pid)
+  end
 
   after :each do
     begin
@@ -33,22 +43,7 @@ describe ZipTricks::RemoteUncap, webmock: true do
     payload1.rewind
     payload2.rewind
 
-    expect(File).to be_exist('temp.zip')
-
-    allow_any_instance_of(described_class).to receive(:request_object_size) {
-      File.size('temp.zip')
-    }
-    allow_any_instance_of(described_class).to receive(:request_range) { |_instance, range|
-      File.open('temp.zip', 'rb') do |f|
-        f.seek(range.begin)
-        f.read(range.end - range.begin + 1)
-      end
-    }
-
-    payload1.rewind
-    payload2.rewind
-
-    files = described_class.files_within_zip_at('http://fake.example.com')
+    files = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
     expect(files).to be_kind_of(Array)
     expect(files.length).to eq(2)
 
@@ -81,49 +76,27 @@ describe ZipTricks::RemoteUncap, webmock: true do
 
     payload1_crc = Zlib.crc32(payload1.read).tap { payload1.rewind }
 
-    readable_zip = Tempfile.new 'somezip'
-    ZipTricks::Streamer.open(readable_zip) do |zip|
-      zip.add_stored_entry(filename: 'first-file-zero-size.bin',
-                           size: payload1.size,
-                           crc32: payload1_crc)
-      zip.write_stored_file('second-file.bin') { |w| IO.copy_stream(payload2, w) }
+    File.open('temp.zip', 'wb') do |f|
+      ZipTricks::Streamer.open(f) do |zip|
+        zip.add_stored_entry(filename: 'first-file-zero-size.bin',
+                             size: payload1.size,
+                             crc32: payload1_crc)
+        zip.write_stored_file('second-file.bin') { |w| IO.copy_stream(payload2, w) }
+      end
     end
-    readable_zip.flush
-    readable_zip.rewind
-
-    allow_any_instance_of(described_class).to receive(:request_object_size) {
-      readable_zip.size
-    }
-    allow_any_instance_of(described_class).to receive(:request_range) { |_instance, range|
-      readable_zip.seek(range.begin, IO::SEEK_SET)
-      readable_zip.read(range.end - range.begin + 1)
-    }
-
     payload1.rewind
     payload2.rewind
 
-    first, second = described_class.files_within_zip_at('http://fake.example.com')
+    first, second = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
 
     expect(first.filename).to eq('first-file-zero-size.bin')
     expect(first.compressed_size).to be_zero
 
     expect(second.filename).to eq('second-file.bin')
     expect(second.uncompressed_size).to eq(payload2.size)
-    readable_zip.seek(second.compressed_data_offset, IO::SEEK_SET)
-    expect(readable_zip.read(12)).to eq(payload2.read(12))
-  end
-
-  describe '#request_object_size' do
-    let(:net_http) { double }
-
-    before do
-      allow(Net::HTTP).to receive(:start).and_return(net_http)
-    end
-
-    it 'makes a HEAD request for the uri' do
-      subject = described_class.new(uri)
-      expect(net_http).to receive(:request_head).with(a_kind_of(URI)).and_return("Content-Length" => "100")
-      subject.request_object_size
+    File.open('temp.zip', 'rb') do |source_zip|
+      source_zip.seek(second.compressed_data_offset, IO::SEEK_SET)
+      expect(source_zip.read(12)).to eq(payload2.read(12))
     end
   end
 end

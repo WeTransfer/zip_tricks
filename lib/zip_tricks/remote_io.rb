@@ -9,10 +9,10 @@
 # available.
 class ZipTricks::RemoteIO
   # @param fetcher[#request_object_size, #request_range] an object that perform fetches
-  def initialize(fetcher = :NOT_SET)
+  def initialize(url)
     @pos = 0
-    @fetcher = fetcher
-    @remote_size = false
+    @uri = URI(url)
+    @remote_size = nil
   end
 
   # Emulates IO#seek
@@ -39,21 +39,20 @@ class ZipTricks::RemoteIO
   # @param n_bytes[Fixnum, nil] how many bytes to read, or `nil` to read all the way to the end
   # @return [String] the read bytes
   def read(n_bytes = nil)
-    @remote_size ||= request_object_size
-
     # If the resource is empty there is nothing to read
-    return if @remote_size.zero?
+    return if size.zero?
 
-    maximum_avaialable = @remote_size - @pos
+    maximum_avaialable = size - @pos
     n_bytes ||= maximum_avaialable # nil == read to the end of file
     return '' if n_bytes.zero?
     raise ArgumentError, "No negative reads(#{n_bytes})" if n_bytes < 0
 
     n_bytes = clamp(0, n_bytes, maximum_avaialable)
 
-    read_n_bytes_from_remote(@pos, n_bytes).tap do |data|
+    http_range = (@pos..(@pos + n_bytes - 1))
+    request_range(http_range).tap do |data|
       raise "Remote read returned #{data.bytesize} bytes instead of #{n_bytes} as requested" if data.bytesize != n_bytes
-      @pos = clamp(0, @pos + data.bytesize, @remote_size)
+      @pos = clamp(0, @pos + data.bytesize, size)
     end
   end
 
@@ -67,22 +66,40 @@ class ZipTricks::RemoteIO
   protected
 
   def request_range(range)
-    @fetcher.request_range(range)
+    http = Net::HTTP.start(@uri.hostname, @uri.port)
+    request = Net::HTTP::Get.new(@uri)
+    request.range = range
+    response = http.request(request)
+    case response.code
+    when "206", "200"
+      response.body
+    else
+      raise "Remote at #{@uri} replied with code #{response.code}"
+    end
   end
 
+  # For working with S3 it is a better idea to perform a GET request for one byte, since doing a HEAD
+  # request needs a different permission - and standard GET presigned URLs are not allowed to perform it
   def request_object_size
-    @fetcher.request_object_size
+    http = Net::HTTP.start(@uri.hostname, @uri.port)
+    request = Net::HTTP::Get.new(@uri)
+    request.range = 0..0
+    response = http.request(request)
+    case response.code
+    when "206"
+      content_range_header_value = response['Content-Range']
+      content_range_header_value.split('/').last.to_i
+    when "200"
+      response['Content-Length'].to_i
+    else
+      raise "Remote at #{@uri} replied with code #{response.code}"
+    end
   end
 
   # Reads N bytes at offset from remote
   def read_n_bytes_from_remote(start_at, n_bytes)
     range = (start_at..(start_at + n_bytes - 1))
     request_range(range)
-  end
-
-  # Reads the Content-Length and caches it
-  def remote_size
-    @remote_size ||= request_object_size
   end
 
   private

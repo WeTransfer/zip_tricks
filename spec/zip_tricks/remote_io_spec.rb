@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe ZipTricks::RemoteIO do
-  let (:subject) { described_class.new('http://host.example/some.bin') }
+  let(:subject) { described_class.new('http://host.example/some.bin') }
 
   context 'when it internally addresses a remote resource' do
     it 'requests the size of the resource once via #request_object_size and \

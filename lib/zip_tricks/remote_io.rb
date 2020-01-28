@@ -65,6 +65,10 @@ class ZipTricks::RemoteIO
 
   protected
 
+  # Only used internally when reading the remote ZIP.
+  #
+  # @param range[Range] the HTTP range of data to fetch from remote
+  # @return [String] the response body of the ranged request
   def request_range(range)
     http = Net::HTTP.start(@uri.hostname, @uri.port)
     request = Net::HTTP::Get.new(@uri)
@@ -80,6 +84,8 @@ class ZipTricks::RemoteIO
 
   # For working with S3 it is a better idea to perform a GET request for one byte, since doing a HEAD
   # request needs a different permission - and standard GET presigned URLs are not allowed to perform it
+  #
+  # @return [Integer] the size of the remote resource, parsed either from Content-Length or Content-Range header
   def request_object_size
     http = Net::HTTP.start(@uri.hostname, @uri.port)
     request = Net::HTTP::Get.new(@uri)

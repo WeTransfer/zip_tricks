@@ -7,7 +7,7 @@
 #
 # Please read the security warning in `FileReader` _VERY CAREFULLY_
 # before you use this module.
-class ZipTricks::RemoteUncap
+module ZipTricks::RemoteUncap
   # @param uri[String] the HTTP(S) URL to read the ZIP footer from
   # @param reader_class[Class] which class to use for reading
   # @param options_for_zip_reader[Hash] any additional options to give to
@@ -18,28 +18,5 @@ class ZipTricks::RemoteUncap
     fake_io = ZipTricks::RemoteIO.new(uri)
     reader = reader_class.new
     reader.read_zip_structure(io: fake_io, **options_for_zip_reader)
-  end
-
-  def initialize(uri)
-    @uri = URI(uri)
-  end
-
-  # Only used internally when reading the remote ZIP.
-  #
-  # @param range[Range] the HTTP range of data to fetch from remote
-  # @return [String] the response body of the ranged request
-  def request_range(range)
-    request = Net::HTTP::Get.new(@uri)
-    request.range = range
-    http = Net::HTTP.start(@uri.hostname, @uri.port)
-    http.request(request).body
-  end
-
-  # Only used internally when reading the remote ZIP.
-  #
-  # @return [Fixnum] the byte size of the ranged request
-  def request_object_size
-    http = Net::HTTP.start(@uri.hostname, @uri.port)
-    http.request_head(@uri)['Content-Length'].to_i
   end
 end

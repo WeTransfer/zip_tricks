@@ -19,13 +19,13 @@ describe ZipTricks::Streamer do
   end
 
   class FakeZipWriter
-    def write_local_file_header(*);               end
+    def write_local_file_header(*, **);               end
 
-    def write_data_descriptor(*);                 end
+    def write_data_descriptor(*, **);                 end
 
-    def write_central_directory_file_header(*);   end
+    def write_central_directory_file_header(*, **);   end
 
-    def write_end_of_central_directory(*);        end
+    def write_end_of_central_directory(*, **);        end
   end
 
   it 'has linear performance depending on the file count' do

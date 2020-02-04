@@ -102,12 +102,6 @@ class ZipTricks::RemoteIO
     end
   end
 
-  # Reads N bytes at offset from remote
-  def read_n_bytes_from_remote(start_at, n_bytes)
-    range = (start_at..(start_at + n_bytes - 1))
-    request_range(range)
-  end
-
   private
 
   def clamp(a, b, c)

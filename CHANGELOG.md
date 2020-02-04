@@ -1,3 +1,9 @@
+## 5.1.0
+
+* Slightly rework `RemoteIO` and `RemoteUncap` and make sure they work correctly by spinning up a test webserver
+  to verify their operation. The changes to the documented API are fairly small so this is still marked as a minor
+  release.
+
 ## 5.0.0
 
 * Disable automatic filename deduplication by default, because it does not play nice with file/directory

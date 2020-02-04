@@ -6,7 +6,6 @@ describe ZipTricks::RemoteIO do
   context 'when it internally addresses a remote resource' do
     it 'requests the size of the resource once via #request_object_size and \
         does neet to read if resource is empty' do
-      subject = described_class.new('http://host.example/some.bin')
       expect(subject).to receive(:request_object_size).and_return(0)
       expect(subject.read).to be_nil
     end

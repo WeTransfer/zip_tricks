@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.require_paths  = ['lib']
 
   spec.add_development_dependency 'bundler'
-  spec.add_development_dependency 'rubyzip', '>= 1.2.2'
+  spec.add_development_dependency 'rubyzip', '~> 1', '>= 1.2.2'
   spec.add_development_dependency 'terminal-table'
   spec.add_development_dependency 'range_utils'
 
@@ -44,4 +44,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'allocation_stats', '~> 0.1.5'
   spec.add_development_dependency 'yard', '~> 0.9'
   spec.add_development_dependency 'wetransfer_style', '0.6.0'
+  spec.add_development_dependency 'puma'
 end

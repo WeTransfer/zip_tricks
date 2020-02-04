@@ -8,7 +8,7 @@
 # actual fetches over HTTP and an object that expects a handful of IO methods to be
 # available.
 class ZipTricks::RemoteIO
-  # @param fetcher[#request_object_size, #request_range] an object that perform fetches
+  # @param url[String, URI] the HTTP/HTTPS URL of the object to be retrieved
   def initialize(url)
     @pos = 0
     @uri = URI(url)
@@ -16,6 +16,8 @@ class ZipTricks::RemoteIO
   end
 
   # Emulates IO#seek
+  # @param offset[Integer] absolute offset in the remote resource to seek to
+  # @param mode[Integer] The seek mode (only SEEK_SET is supported)
   def seek(offset, mode = IO::SEEK_SET)
     raise "Unsupported read mode #{mode}" unless mode == IO::SEEK_SET
     @remote_size ||= request_object_size
@@ -25,7 +27,7 @@ class ZipTricks::RemoteIO
 
   # Emulates IO#size.
   #
-  # @return [Fixnum] the size of the remote resource
+  # @return [Integer] the size of the remote resource
   def size
     @remote_size ||= request_object_size
   end

@@ -3,7 +3,6 @@
 * Slightly rework `RemoteIO` and `RemoteUncap` and make sure they work correctly by spinning up a test webserver
   to verify their operation. The changes to the documented API are fairly small so this is still marked as a minor
   release.
-* Lock rubyzip to version 1.x.
 
 ## 5.0.0
 
@@ -35,7 +34,7 @@
 
 ## 4.7.2
 
-* Relax bundler dependency so that both rubyzip 1.x and 2.x are supported cleanly
+* Relax bundler dependency so that both bundler 1.x and 2.x are supported cleanly
 
 ## 4.7.1
 

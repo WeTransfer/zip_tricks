@@ -25,16 +25,16 @@
 
 ## 4.7.4
 
-* Use a single fixed capacity string in StreamCRC32.from_io to avoid unnecessary allocations
+* Use a single fixed capacity string in `StreamCRC32.from_io` to avoid unnecessary allocations
 * Fix a few tests that were calling out to external binaries
 
 ## 4.7.3
 
-* Fix RemoteUncap#request_object_size to function correctly
+* Fix `RemoteUncap#request_object_size` to function correctly
 
 ## 4.7.2
 
-* Relax bundler dependency so that both 1.x and 2.x are supported cleanly
+* Relax bundler dependency so that both bundler 1.x and 2.x are supported cleanly
 
 ## 4.7.1
 

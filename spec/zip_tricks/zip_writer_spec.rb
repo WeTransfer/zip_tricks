@@ -79,7 +79,7 @@ describe ZipTricks::ZipWriter do
 
       expect(br.read_2b).to eq(0x5455)       # Extended timestamp extra tag
       expect(br.read_2b).to eq(5)            # Size of the timestamp extra
-      expect(br.read_1b).to eq(128)          # The timestamp flag
+      expect(br.read_1b).to eq(1)            # The timestamp flag, with only the lowest bit set
 
       ext_mtime = br.read_4b_signed
       expect(ext_mtime).to eq(1_468_763_280) # The mtime encoded as a 4byte uint

@@ -118,7 +118,7 @@ class ZipTricks::ZipWriter
     if requires_zip64
       extra_fields << zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
     end
-    extra_fields << timestamp_extra(mtime)
+    extra_fields << timestamp_extra_for_local_file_header(mtime)
 
     io << [extra_fields.size].pack(C_UINT2)                # extra field length              2 bytes
 
@@ -182,7 +182,7 @@ class ZipTricks::ZipWriter
                                                                      compressed_size: compressed_size,
                                                                      uncompressed_size: uncompressed_size)
     end
-    extra_fields << timestamp_extra(mtime)
+    extra_fields << timestamp_extra_for_central_directory_entry(mtime)
 
     io << [extra_fields.size].pack(C_UINT2)                 # extra field length              2 bytes
 
@@ -345,12 +345,14 @@ class ZipTricks::ZipWriter
     pack_array(data_and_packspecs)
   end
 
-  # Writes the extended timestamp information field. The spec defines 2
+  # Writes the extended timestamp information field for local headers.
+  #
+  # The spec defines 2
   # different formats - the one for the local file header can also accomodate the
   # atime and ctime, whereas the one for the central directory can only take
   # the mtime - and refers the reader to the local header extra to obtain the
   # remaining times
-  def timestamp_extra(mtime)
+  def timestamp_extra_for_local_file_header(mtime)
     #         Local-header version:
     #
     #         Value         Size        Description
@@ -378,15 +380,20 @@ class ZipTricks::ZipWriter
     #       bit 1           if set, access time is present
     #       bit 2           if set, creation time is present
     #       bits 3-7        reserved for additional timestamps; not set
-    flags = 0b10000000 # Set bit 1 only to indicate only mtime is present
+    flags = 0b00000001 # Set the lowest bit only, to indicate that only mtime is present
     data_and_packspecs = [
       0x5455, C_UINT2,  # tag for this extra block type ("UT")
-      (1 + 4), C_UINT2, # the size of this block (1 byte used for the Flag + 1 long used for the timestamp)
+      (1 + 4), C_UINT2, # the size of this block (1 byte used for the Flag + 3 longs used for the timestamp)
       flags, C_CHAR,   # encode a single byte
       mtime.utc.to_i, C_INT4, # Use a signed long, not the unsigned one used by the rest of the ZIP spec.
     ]
+    # The atime and ctime can be omitted if not present
     pack_array(data_and_packspecs)
   end
+
+  # Since we do not supply atime or ctime, the contents of the two extra fields (central dir and local header)
+  # is exactly the same, so we can use a method alias.
+  alias_method :timestamp_extra_for_central_directory_entry, :timestamp_extra_for_local_file_header
 
   # Writes the Zip64 extra field for the central directory header.It differs from the extra used in the local file header because it
   # also contains the location of the local file header in the ZIP as an 8-byte int.

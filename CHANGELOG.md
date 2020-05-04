@@ -1,3 +1,9 @@
+## 4.8.1
+
+* Fix extended timestamp extra field output. The first bit of the flag would be set instead of the last bit of
+  the flag, which made it impossible for Rubyzip to read the timestamp of the entry - and it would also make
+  the extra field useless for most reading applications.
+
 ## 4.8.0
 
 * Make sure that when directories clobber files and vice versa we raise a clear error. Add `PathSet` which keeps track of entries

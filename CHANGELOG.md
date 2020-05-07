@@ -1,3 +1,9 @@
+## 5.1.1
+
+* Fix extended timestamp extra field output. The first bit of the flag would be set instead of the last bit of
+  the flag, which made it impossible for Rubyzip to read the timestamp of the entry - and it would also make
+  the extra field useless for most reading applications.
+
 ## 5.1.0
 
 * Slightly rework `RemoteIO` and `RemoteUncap` and make sure they work correctly by spinning up a test webserver

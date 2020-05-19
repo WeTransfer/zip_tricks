@@ -1,3 +1,7 @@
+## 5.2
+
+* Remove `Streamer#add_compressed_entry` and `SizeEstimator#add_compressed_entry`
+
 ## 5.1.1
 
 * Fix extended timestamp extra field output. The first bit of the flag would be set instead of the last bit of

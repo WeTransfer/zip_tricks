@@ -51,5 +51,4 @@ describe ZipTricks::SizeEstimator do
     end
     expect(size).to eq(549)
   end
-
 end

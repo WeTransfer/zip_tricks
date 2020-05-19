@@ -4,7 +4,7 @@
 # Normally you will not have to use this class directly
 class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_size,
                                               :uncompressed_size, :storage_mode, :mtime,
-                                              :use_data_descriptor)
+                                              :use_data_descriptor, :local_header_offset, :bytes_used_for_local_header, :bytes_used_for_data_descriptor)
   def initialize(*)
     super
     filename.force_encoding(Encoding::UTF_8)
@@ -13,6 +13,10 @@ class ZipTricks::Streamer::Entry < Struct.new(:filename, :crc32, :compressed_siz
                            rescue
                              false
                            end)
+  end
+
+  def total_bytes_used
+    bytes_used_for_local_header + compressed_size + bytes_used_for_data_descriptor
   end
 
   # Set the general purpose flags for the entry. We care about is the EFS

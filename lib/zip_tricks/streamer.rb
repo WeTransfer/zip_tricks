@@ -91,6 +91,7 @@ class ZipTricks::Streamer
   InvalidOutput = Class.new(ArgumentError)
   Overflow = Class.new(StandardError)
   UnknownMode = Class.new(StandardError)
+  OffsetOutOfSync = Class.new(StandardError)
 
   private_constant :DeflatedWriter, :StoredWriter, :STORED, :DEFLATED
 
@@ -149,7 +150,6 @@ class ZipTricks::Streamer
     @dedupe_filenames = auto_rename_duplicate_filenames
     @out = ZipTricks::WriteAndTell.new(stream)
     @files = []
-    @local_header_offsets = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
   end
@@ -360,14 +360,16 @@ class ZipTricks::Streamer
   #
   # @return [Integer] the offset the output IO is at after closing the archive
   def close
+    # Make sure offsets are in order
+    verify_offsets!
+
     # Record the central directory offset, so that it can be written into the EOCD record
     cdir_starts_at = @out.tell
 
     # Write out the central directory entries, one for each file
-    @files.each_with_index do |entry, i|
-      header_loc = @local_header_offsets.fetch(i)
+    @files.each do |entry|
       @writer.write_central_directory_file_header(io: @out,
-                                                  local_file_header_location: header_loc,
+                                                  local_file_header_location: entry.local_header_offset,
                                                   gp_flags: entry.gp_flags,
                                                   storage_mode: entry.storage_mode,
                                                   compressed_size: entry.compressed_size,
@@ -420,14 +422,39 @@ class ZipTricks::Streamer
     last_entry.compressed_size = compressed_size
     last_entry.uncompressed_size = uncompressed_size
 
+    offset_before_data_descriptor = @out.tell
     @writer.write_data_descriptor(io: @out,
                                   crc32: last_entry.crc32,
                                   compressed_size: last_entry.compressed_size,
                                   uncompressed_size: last_entry.uncompressed_size)
+    last_entry.bytes_used_for_data_descriptor = @out.tell - offset_before_data_descriptor
+
     @out.tell
   end
 
   private
+
+  def verify_offsets!
+    # We need to check whether the offsets noted for the entries actually make sense
+    computed_offset = @files.map(&:total_bytes_used).inject(0, &:+)
+    actual_offset = @out.tell
+    if computed_offset != actual_offset
+      message = <<-EMS
+The offset of the Streamer output IO is out of sync with the expected value. All entries written so far,
+including their compressed bodies, local headers and data descriptors, add up to a certain offset,
+but this offset does not match the actual offset of the IO.
+
+Entries add up to #{computed_offset} bytes and the IO is at #{actual_offset} bytes.
+
+This can happen if you write local headers for an entry, write the "body" of the entry directly to the IO
+object which is your destination, but do not adjust the offset known to the Streamer object. To adjust
+the offfset you need to call `Streamer#simulate_write(body_size)` after outputting the entry. Otherwise
+the local header offsets of the entries you write are going to be incorrect and some ZIP applications
+are going to have problems opening your archive.
+EMS
+      raise OffsetOutOfSync, message
+    end
+  end
 
   def add_file_and_write_local_header(
       filename:,
@@ -461,16 +488,18 @@ class ZipTricks::Streamer
       uncompressed_size = 0
     end
 
+    local_header_starts_at = @out.tell
+
     e = Entry.new(filename,
                   crc32,
                   compressed_size,
                   uncompressed_size,
                   storage_mode,
                   modification_time,
-                  use_data_descriptor)
-
-    @files << e
-    @local_header_offsets << @out.tell
+                  use_data_descriptor,
+                  _local_file_header_offset = local_header_starts_at,
+                  _bytes_used_for_local_header = 0,
+                  _bytes_used_for_data_descriptor = 0)
 
     @writer.write_local_file_header(io: @out,
                                     gp_flags: e.gp_flags,
@@ -480,6 +509,9 @@ class ZipTricks::Streamer
                                     mtime: e.mtime,
                                     filename: e.filename,
                                     storage_mode: e.storage_mode)
+    e.bytes_used_for_local_header = @out.tell - e.local_header_offset
+
+    @files << e
   end
 
   def remove_backslash(filename)

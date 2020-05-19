@@ -1,3 +1,12 @@
+## 5.3
+
+* Raise in `Streamer#close` when the IO offset of the Streamer does not match the size of the written entries. This is a situation which
+  can occur if one adds the local headers, writes the bodies of the files to the socket/output directly, and forgets to adjust the internal
+  Streamer offset. The unadjusted offset would then produce incorrect values in both the local headers which come after the missing
+  offset adjustment _and_ in the central directory headers. Some ZIP unarchivers are able to recover from this (ones that read
+  files "straight-ahead" but others aren't - if the ZIP unarchiver uses central directory entries it would be using incorrect offsets.
+  Instead of producing an invalid ZIP, raise an exception which explains what happened and how it can be resolved.
+
 ## 5.2
 
 * Remove `Streamer#add_compressed_entry` and `SizeEstimator#add_compressed_entry`

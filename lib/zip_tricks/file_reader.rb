@@ -82,7 +82,9 @@ class ZipTricks::FileReader
 
   private_constant :StoredReader, :InflatingReader
 
-  # Represents a file within the ZIP archive being read
+  # Represents a file within the ZIP archive being read. This is different from
+  # the Entry object used in Streamer for ZIP writing, since during writing more
+  # data can be kept in memory for immediate use.
   class ZipEntry
     # @return [Fixnum] bit-packed version signature of the program that made the archive
     attr_accessor :made_by

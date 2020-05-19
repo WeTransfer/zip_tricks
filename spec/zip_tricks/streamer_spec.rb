@@ -561,6 +561,14 @@ describe ZipTricks::Streamer do
     }.not_to raise_error(ZipTricks::PathSet::Conflict)
   end
 
+  it 'raises when the IO offset is out of sync with the sizes of the entries known to the Streamer' do
+    expect {
+      described_class.open(StringIO.new, auto_rename_duplicate_filenames: false) do |zip_streamer|
+        zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
+      end
+    }.to raise_error(ZipTricks::Streamer::OffsetOutOfSync, /Entries add up to \d+ bytes and the IO is at 50 bytes/)
+  end
+
   it 'writes the specified modification time' do
     fake_writer = double('Writer').as_null_object
 

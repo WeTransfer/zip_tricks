@@ -11,3 +11,5 @@ Style/GlobalVars:
       - qa/*.rb
       - spec/spec_helper.rb
       - spec/support/zip_inspection.rb
+Layout/IndentHeredoc:
+  Enabled: false

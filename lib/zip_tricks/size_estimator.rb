@@ -73,9 +73,6 @@ class ZipTricks::SizeEstimator
     self
   end
 
-  # Will be phased out in ZipTricks 5.x
-  alias_method :add_compressed_entry, :add_deflated_entry
-
   # Add an empty directory to the archive.
   #
   # @param dirname [String] the name of the directory

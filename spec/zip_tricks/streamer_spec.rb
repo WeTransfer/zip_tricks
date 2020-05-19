@@ -285,14 +285,6 @@ describe ZipTricks::Streamer do
     Dir.chdir(wd)
   end
 
-  it 'still supports #add_compressed_entry (to be removed in v.5)' do
-    out = StringIO.new
-    zip = described_class.new(out)
-    zip.add_compressed_entry(filename: 'foo.bar', compressed_size: 123, uncompressed_size: 456, crc32: 9)
-    zip.close
-    expect(out.size).to be > 0
-  end
-
   it 'sets the general-purpose flag for entries with UTF8 names' do
     zip_buf = Tempfile.new('zipp')
     zip_buf.binmode

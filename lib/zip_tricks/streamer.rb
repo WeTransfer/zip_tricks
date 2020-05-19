@@ -213,9 +213,6 @@ class ZipTricks::Streamer
     @out.tell
   end
 
-  # Will be phased out in ZipTricks 5.x
-  alias_method :add_compressed_entry, :add_deflated_entry
-
   # Writes out the local header for an entry (file in the ZIP) that is using
   # the stored storage model (is stored as-is).
   # Once this method is called, the `<<` method has to be called one or more

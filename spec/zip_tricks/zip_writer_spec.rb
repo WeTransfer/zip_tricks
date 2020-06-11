@@ -23,7 +23,7 @@ describe ZipTricks::ZipWriter do
     end
 
     def read_4b_signed
-      read_n(4).unpack('N').first
+      read_n(4).unpack('l<').first
     end
 
     def read_8b

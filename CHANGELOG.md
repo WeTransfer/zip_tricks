@@ -1,3 +1,7 @@
+## 4.8.2
+
+* Fix extended timestamp timestamp value encoding. Previously we would use an incorrect encoding for the timestamp value, which would output correct but nonsensical timestamps. The pack specifier is now changed to output the correct value.
+
 ## 4.8.1
 
 * Fix extended timestamp extra field output. The first bit of the flag would be set instead of the last bit of

@@ -1,4 +1,8 @@
-## 5.3
+## 5.3.1
+
+* Fix extended timestamp timestamp value encoding. Previously we would use an incorrect encoding for the timestamp value, which would output correct but nonsensical timestamps. The pack specifier is now changed to output the correct value.
+
+## 5.3.0
 
 * Raise in `Streamer#close` when the IO offset of the Streamer does not match the size of the written entries. This is a situation which
   can occur if one adds the local headers, writes the bodies of the files to the socket/output directly, and forgets to adjust the internal
@@ -7,7 +11,7 @@
   files "straight-ahead" but others aren't - if the ZIP unarchiver uses central directory entries it would be using incorrect offsets.
   Instead of producing an invalid ZIP, raise an exception which explains what happened and how it can be resolved.
 
-## 5.2
+## 5.2.0
 
 * Remove `Streamer#add_compressed_entry` and `SizeEstimator#add_compressed_entry`
 

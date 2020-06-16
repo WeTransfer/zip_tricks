@@ -57,7 +57,7 @@ class ZipTricks::ZipWriter
   C_UINT2 = 'v'    # Encode a 2-byte unsigned little-endian uint
   C_UINT8 = 'Q<'  # Encode an 8-byte unsigned little-endian uint
   C_CHAR = 'C' # For bit-encoded strings
-  C_INT4 = 'N' # Encode a 4-byte signed little-endian int
+  C_INT4 = 'l<' # Encode a 4-byte signed little-endian int
 
   private_constant :FOUR_BYTE_MAX_UINT,
                    :TWO_BYTE_MAX_UINT,
@@ -385,7 +385,7 @@ class ZipTricks::ZipWriter
       0x5455, C_UINT2,  # tag for this extra block type ("UT")
       (1 + 4), C_UINT2, # the size of this block (1 byte used for the Flag + 3 longs used for the timestamp)
       flags, C_CHAR,   # encode a single byte
-      mtime.utc.to_i, C_INT4, # Use a signed long, not the unsigned one used by the rest of the ZIP spec.
+      mtime.utc.to_i, C_INT4, # Use a signed int, not the unsigned one used by the rest of the ZIP spec.
     ]
     # The atime and ctime can be omitted if not present
     pack_array(data_and_packspecs)

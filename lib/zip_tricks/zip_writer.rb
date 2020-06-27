@@ -195,7 +195,7 @@ class ZipTricks::ZipWriter
       [TWO_BYTE_MAX_UINT].pack(C_UINT2)
     else
       [0].pack(C_UINT2)
-          end
+    end
     io << [0].pack(C_UINT2)                                # internal file attributes        2 bytes
 
     # Because the add_empty_directory method will create a directory with a trailing "/",

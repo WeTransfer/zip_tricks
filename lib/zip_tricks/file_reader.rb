@@ -19,7 +19,7 @@ require 'stringio'
 # ## Usage
 #
 #     File.open('zipfile.zip', 'rb') do |f|
-#       entries = FileReader.read_zip_structure(f)
+#       entries = ZipTricks::FileReader.read_zip_structure(io: f)
 #       entries.each do |e|
 #         File.open(e.filename, 'wb') do |extracted_file|
 #           ex = e.extractor_from(f)

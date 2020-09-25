@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.licenses       = ['MIT (Hippocratic)']
   spec.summary        = 'Stream out ZIP files from Ruby'
   spec.description    = 'Stream out ZIP files from Ruby'
-  spec.homepage       = 'http://github.com/wetransfer/zip_tricks'
+  spec.homepage       = 'https://github.com/wetransfer/zip_tricks'
 
   # Prevent pushing this gem to RubyGems.org.
   # To allow pushes either set the 'allowed_push_host'

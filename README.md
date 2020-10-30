@@ -84,7 +84,7 @@ body = ZipTricks::RackBody.new do | zip |
     File.open('novel.txt', 'rb'){|source| IO.copy_stream(source, sink) }
   end
 end
-[200, {'Transfer-Encoding' => 'chunked'}, body]
+[200, {}, body]
 ```
 
 ## Send a ZIP file of known size, with correct headers

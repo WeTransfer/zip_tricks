@@ -21,6 +21,16 @@ describe ZipTricks::WriteBuffer do
     adapter.flush!
   end
 
+  it 'does not buffer with buffer size set to 0' do
+    sink = double('Writable')
+
+    expect(sink).to receive(:<<).with('a')
+    expect(sink).to receive(:<<).with('b')
+
+    adapter = described_class.new(sink, 0)
+    adapter << 'a' << 'b'
+  end
+
   it 'flushes the buffer and returns `to_i` from the contained object' do
     sink = double('Writable')
 

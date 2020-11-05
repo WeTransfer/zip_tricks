@@ -144,11 +144,15 @@ class ZipTricks::Streamer
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
   #    dupliate names are used an exception will be raised
-  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
+  # @param write_buffer_size[Integer] how much data to buffer before flushing the write into the given `stream`. By default
+  #    ZipTricks will buffer about a TCP buffer size worth of data, so that less write() calls would be performed when
+  #    outputting to a socket or file. If set to 0 buffering gets turned off.
+  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false, write_buffer_size: 65*1024)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
     @dedupe_filenames = auto_rename_duplicate_filenames
-    @out = ZipTricks::WriteAndTell.new(stream)
+    @write_buffer = ZipTricks::WriteBuffer.new(stream, write_buffer_size)
+    @out = ZipTricks::WriteAndTell.new(@write_buffer) # Offsets need to be counted unbuffered
     @files = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
@@ -387,6 +391,9 @@ class ZipTricks::Streamer
                                            start_of_central_directory_location: cdir_starts_at,
                                            central_directory_size: cdir_size,
                                            num_files_in_archive: @files.length)
+
+    # Flush any pending writes
+    @write_buffer.flush!
 
     # Clear the files so that GC will not have to trace all the way to here to deallocate them
     @files.clear

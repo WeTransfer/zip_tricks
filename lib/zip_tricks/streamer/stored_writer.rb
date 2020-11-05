@@ -28,7 +28,6 @@ class ZipTricks::Streamer::StoredWriter
   # Returns the amount of data written and the CRC32 checksum. The return value
   # can be directly used as the argument to {Streamer#update_last_entry_and_write_data_descriptor}
   #
-  # @param data[String] data to be written
   # @return [Hash] a hash of `{crc32, compressed_size, uncompressed_size}`
   def finish
     {crc32: @crc.to_i, compressed_size: @io.tell, uncompressed_size: @io.tell}

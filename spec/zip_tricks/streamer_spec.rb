@@ -558,7 +558,9 @@ describe ZipTricks::Streamer do
       zip_streamer = described_class.new(StringIO.new, writer: fake_writer, auto_rename_duplicate_filenames: true)
       zip_streamer.add_stored_entry(filename: 'foo/bar/baz/bad', size: 1_024, crc32: 0xCC)
       zip_streamer.add_stored_entry(filename: 'foo/bar/baz', size: 1_024, crc32: 0xCC)
-    }.not_to raise_error(ZipTricks::PathSet::Conflict)
+      # The error raised would be ZipTricks::PathSet::Conflict but RSpec reasonably advises not using
+      # not_to raise_error(ZipTricks::PathSet::Conflict) due to the semantics of raise_error
+    }.not_to raise_error
   end
 
   it 'raises when the IO offset is out of sync with the sizes of the entries known to the Streamer' do

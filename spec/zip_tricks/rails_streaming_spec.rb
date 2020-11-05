@@ -19,7 +19,6 @@ describe ZipTricks::RailsStreaming do
       end
     end
 
-
     ctr = FakeController.new
     ctr.stream_zip
     response = ctr.response

@@ -24,11 +24,11 @@ to [32 bit sizes.](https://github.com/jruby/jruby/issues/3817)
 
 ## Diving in: send some large CSV reports from Rails
 
-The easiest is to use the Rails' built-in streaming feature:
+The easiest is to include the `ZipTricks::RailsStreaming` module into your
+controller.
 
 ```ruby
 class ZipsController < ActionController::Base
-  include ActionController::Live # required for streaming
   include ZipTricks::RailsStreaming
 
   def download
@@ -48,6 +48,10 @@ class ZipsController < ActionController::Base
   end
 end
 ```
+
+If you want some more conveniences you can also use [zipline](https://github.com/fringd/zipline) which
+will automatically process and stream attachments (Carrierwave, Shrine, ActiveStorage) and remote objects
+via HTTP.
 
 ## Create a ZIP file without size estimation, compress on-the-fly during writes
 

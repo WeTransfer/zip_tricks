@@ -6,17 +6,16 @@ module ZipTricks::RailsStreaming
   # Opens a {ZipTricks::Streamer} and yields it to the caller. The output of the streamer
   # gets automatically forwarded to the Rails response stream. When the output completes,
   # the Rails response stream is going to be closed automatically.
+  # @param zip_streamer_options[Hash] options that will be passed to the Streamer.
+  #     See {ZipTricks::Streamer#initialize} for the full list of options.
   # @yield [Streamer] the streamer that can be written to
-  def zip_tricks_stream
+  # @return [ZipTricks::OutputEnumerator] The output enumerator assigned to the response body
+  def zip_tricks_stream(**zip_streamer_options, &zip_streaming_blk)
     # Set a reasonable content type
     response.headers['Content-Type'] = 'application/zip'
     # Make sure nginx buffering is suppressed - see https://github.com/WeTransfer/zip_tricks/issues/48
     response.headers['X-Accel-Buffering'] = 'no'
-    # Create a wrapper for the write call that quacks like something you
-    # can << to, used by ZipTricks
-    w = ZipTricks::BlockWrite.new { |chunk| response.stream.write(chunk) }
-    ZipTricks::Streamer.open(w) { |z| yield(z) }
-  ensure
-    response.stream.close
+    response.sending_file = true
+    self.response_body = ZipTricks::OutputEnumerator.new(**zip_streamer_options, &zip_streaming_blk)
   end
 end

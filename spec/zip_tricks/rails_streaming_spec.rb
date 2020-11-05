@@ -24,7 +24,6 @@ describe ZipTricks::RailsStreaming do
     response = ctr.response
     response_body = ctr.response_body
 
-
     expect(response.headers['Content-Type']).to eq('application/zip')
     expect(response.headers['X-Accel-Buffering']).to eq('no')
     expect(response.sending_file).to be(true)

@@ -27,7 +27,7 @@ class ZipTricks::StreamCRC32
 
   # Creates a new streaming CRC32 calculator
   def initialize
-    @crc = Zlib.crc32('')
+    @crc = Zlib.crc32
   end
 
   # Append data to the CRC32. Updates the contained CRC32 value in place.
@@ -35,7 +35,7 @@ class ZipTricks::StreamCRC32
   # @param blob[String] the string to compute the CRC32 from
   # @return [self]
   def <<(blob)
-    @crc = Zlib.crc32_combine(@crc, Zlib.crc32(blob), blob.bytesize)
+    @crc = Zlib.crc32(blob, @crc)
     self
   end
 

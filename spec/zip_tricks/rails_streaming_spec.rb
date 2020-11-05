@@ -5,8 +5,9 @@ describe ZipTricks::RailsStreaming do
     class FakeController
       include ZipTricks::RailsStreaming
       attr_reader :response
+      attr_accessor :response_body
       def initialize
-        @response = Struct.new(:headers, :stream).new({}, StringIO.new)
+        @response = Struct.new(:headers, :sending_file).new({})
       end
 
       def stream_zip
@@ -21,11 +22,22 @@ describe ZipTricks::RailsStreaming do
     ctr = FakeController.new
     ctr.stream_zip
     response = ctr.response
+    response_body = ctr.response_body
+
 
     expect(response.headers['Content-Type']).to eq('application/zip')
     expect(response.headers['X-Accel-Buffering']).to eq('no')
-    output_stream = response.stream
-    expect(output_stream).to be_closed
-    expect(output_stream.string).not_to be_empty
+    expect(response.sending_file).to be(true)
+
+    ref = StringIO.new('', 'wb')
+    ZipTricks::Streamer.open(ref) do |z|
+      z.write_deflated_file('hello.txt') do |f|
+        f << 'ßHello from Rails'
+      end
+    end
+
+    out = StringIO.new('', 'wb')
+    response_body.each.reduce(out, :<<)
+    expect(out.string).to eq(ref.string)
   end
 end

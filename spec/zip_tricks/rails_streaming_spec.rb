@@ -11,13 +11,14 @@ describe ZipTricks::RailsStreaming do
       end
 
       def stream_zip
-        zip_tricks_stream do |z|
+        zip_tricks_stream(auto_rename_duplicate_filenames: true) do |z|
           z.write_deflated_file('hello.txt') do |f|
             f << 'ßHello from Rails'
           end
         end
       end
     end
+
 
     ctr = FakeController.new
     ctr.stream_zip
@@ -34,6 +35,8 @@ describe ZipTricks::RailsStreaming do
         f << 'ßHello from Rails'
       end
     end
+
+    expect(ZipTricks::Streamer).to receive(:new).with(any_args, auto_rename_duplicate_filenames: true).and_call_original
 
     out = StringIO.new('', 'wb')
     response_body.each.reduce(out, :<<)

@@ -45,7 +45,6 @@ class ZipTricks::Streamer::DeflatedWriter
   # compressed data written and the CRC32 checksum. The return value
   # can be directly used as the argument to {Streamer#update_last_entry_and_write_data_descriptor}
   #
-  # @param data[String] data to be written
   # @return [Hash] a hash of `{crc32, compressed_size, uncompressed_size}`
   def finish
     @compressed_io << @deflater.finish until @deflater.finished?

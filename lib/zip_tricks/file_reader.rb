@@ -365,7 +365,7 @@ class ZipTricks::FileReader
   # (read starting at this offset to get the data).
   #
   # @param io[#seek, #read] an IO-ish object the ZIP file can be read from
-  # @param local_header_offset[Fixnum] absolute offset (0-based) where the
+  # @param local_file_header_offset[Fixnum] absolute offset (0-based) where the
   # local file header is supposed to begin @return [Fixnum] absolute offset
   # (0-based) of where the compressed data begins for this file within the ZIP
   def get_compressed_data_offset(io:, local_file_header_offset:)
@@ -377,7 +377,7 @@ class ZipTricks::FileReader
   # Parse an IO handle to a ZIP archive into an array of Entry objects, reading from the end
   # of the IO object.
   #
-  # @see {#read_zip_structure}
+  # @see #read_zip_structure
   # @param options[Hash] any options the instance method of the same name accepts
   # @return [Array<ZipEntry>] an array of entries within the ZIP being parsed
   def self.read_zip_structure(**options)
@@ -387,7 +387,7 @@ class ZipTricks::FileReader
   # Parse an IO handle to a ZIP archive into an array of Entry objects, reading from the start of
   # the file and parsing local file headers one-by-one
   #
-  # @see {#read_zip_straight_ahead}
+  # @see #read_zip_straight_ahead
   # @param options[Hash] any options the instance method of the same name accepts
   # @return [Array<ZipEntry>] an array of entries within the ZIP being parsed
   def self.read_zip_straight_ahead(**options)

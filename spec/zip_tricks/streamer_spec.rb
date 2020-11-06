@@ -71,7 +71,11 @@ describe ZipTricks::Streamer do
     # is to verify that on "full default" we do not perform a write
     # for every single operation
     n_files = 20
-    expect(io).to receive(:<<).at_most(10).times
+    # We write twice per file. 1 write is for the local file header, and another write
+    # is for the file body (which is buffered since it is small) and the data descriptor
+    # that follows it
+    expected_number_of_writes = (n_files * 2) + 1
+    expect(io).to receive(:<<).exactly(expected_number_of_writes).times
     described_class.open(io) do |zip|
       n_files.times do |n|
         zip.write_stored_file("file-#{n}") do |sink|

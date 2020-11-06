@@ -127,9 +127,7 @@ ZipTricks::Streamer.open(io) do | zip |
   # Write the local file header first..
   zip.add_stored_entry(filename: "first-file.bin", size: raw_file.size, crc32: raw_file_crc32)
 
-  # Adjust the ZIP offsets within the Streamer. It is important to do this first
-  # so that any buffered data gets flushed from the write buffer and into the IO, before
-  # the "bypassing" writes take place
+  # Adjust the ZIP offsets within the Streamer
   zip.simulate_write(my_temp_file.size)
 
   # ...and then send the actual file contents bypassing the Streamer interface

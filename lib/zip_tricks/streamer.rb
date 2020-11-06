@@ -42,19 +42,20 @@ require 'set'
 #
 #     ZipTricks::Streamer.open(socket) do | zip |
 #       zip.add_stored_entry(filename: "myfile1.bin", size: 9090821, crc32: 12485)
-#       socket.sendfile(tempfile1)
 #       zip.simulate_write(tempfile1.size)
+#       socket.sendfile(tempfile1)
 #
 #       zip.add_stored_entry(filename: "myfile2.bin", size: 458678, crc32: 89568)
-#       socket.sendfile(tempfile2)
 #       zip.simulate_write(tempfile2.size)
+#       socket.sendfile(tempfile2)
 #     end
 #
 # Note that you need to use `simulate_write` in this case. This needs to happen since Streamer
 # writes absolute offsets into the ZIP (local file header offsets and the like),
 # and it relies on the output object to tell it how many bytes have been written
 # so far. When using `sendfile` the Ruby write methods get bypassed entirely, and the
-# offsets in the IO will not be updated - which will result in an invalid ZIP.
+# offsets in the IO will not be updated - which will result in an invalid ZIP. Also, calling
+# `simulate_write` is going to flush the write buffer of the Streamer.
 #
 #
 # ## On-the-fly deflate -using the Streamer with async/suspended writes and data descriptors
@@ -143,7 +144,8 @@ class ZipTricks::Streamer
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
-  #    dupliate names are used an exception will be raised
+  #    duplicate names are used an exception will be raised. We do not recomment using automatic name
+  #    adjustment because it does not work well with folder structures inside the ZIP archive.
   # @param write_buffer_size[Integer] how much data to buffer before flushing the write into the given `stream`. By default
   #    ZipTricks will buffer about a TCP buffer size worth of data, so that less write() calls would be performed when
   #    outputting to a socket or file. If set to 0 buffering gets turned off.
@@ -183,9 +185,16 @@ class ZipTricks::Streamer
   # (like the `sendfile()` call) after writing the headers, or if you
   # just need to figure out the size of the archive.
   #
+  # **Important:** Always call this method **before** doing your "bypass"
+  # write. This is needed so that whatever is buffered in the Streamer gets
+  # flushed first, otherwise your side-write might end up halfway an incompletely
+  # written local file header for example.
+  #
   # @param num_bytes [Integer] how many bytes are going to be written bypassing the Streamer
-  # @return [Integer] position in the output stream / ZIP archive
+  # @return [Integer] byte offset in the ZIP archive that will be reached including the `num_bytes`
+  #   of the pre-announced write
   def simulate_write(num_bytes)
+    @write_buffer.flush! # Ned to do this so that a bypass write won't end up halfway something important
     @out.advance_position_by(num_bytes)
     @out.tell
   end
@@ -205,7 +214,8 @@ class ZipTricks::Streamer
   # @param uncompressed_size [Integer] the size of the entry when uncompressed, in bytes
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
-  # @return [Integer] the offset the output IO is at after writing the entry header
+  # @return [Integer] byte offset in the ZIP archive that was reached after writing.
+  #     The actual offset of the IO might be lower due to buffering
   def add_deflated_entry(filename:, modification_time: Time.now.utc, compressed_size: 0, uncompressed_size: 0, crc32: 0, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     modification_time: modification_time,
@@ -227,7 +237,8 @@ class ZipTricks::Streamer
   # @param size [Integer] the size of the file when uncompressed, in bytes
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor. When in use
-  # @return [Integer] the offset the output IO is at after writing the entry header
+  # @return [Integer] byte offset in the ZIP archive that was reached after writing.
+  #     The actual offset of the IO might be lower due to buffering
   def add_stored_entry(filename:, modification_time: Time.now.utc,  size: 0, crc32: 0, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     modification_time: modification_time,
@@ -243,7 +254,8 @@ class ZipTricks::Streamer
   #
   # @param dirname [String] the name of the directory in the archive
   # @param modification_time [Time] the modification time of the directory in the archive
-  # @return [Integer] the offset the output IO is at after writing the entry header
+  # @return [Integer] byte offset in the ZIP archive that was reached after writing.
+  #     The actual offset of the IO might be lower due to buffering
   def add_empty_directory(dirname:, modification_time: Time.now.utc)
     add_file_and_write_local_header(filename: dirname.to_s + '/',
                                     modification_time: modification_time,
@@ -362,7 +374,8 @@ class ZipTricks::Streamer
   #
   # Once this method is called, the `Streamer` should be discarded (the ZIP archive is complete).
   #
-  # @return [Integer] the offset the output IO is at after closing the archive
+  # @return [Integer] byte offset in the ZIP archive that was reached after writing the central directory.
+  #     The actual offset of the IO will match since this method will always flush the buffered writes.
   def close
     # Make sure offsets are in order
     verify_offsets!
@@ -420,7 +433,8 @@ class ZipTricks::Streamer
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param compressed_size [Integer] the size of the compressed segment within the ZIP
   # @param uncompressed_size [Integer] the size of the entry once uncompressed
-  # @return [Integer] the offset the output IO is at after writing the data descriptor
+  # @return [Integer] byte offset in the ZIP archive that was reached after writing.
+  #     The actual offset of the IO might be lower due to buffering
   def update_last_entry_and_write_data_descriptor(crc32:, compressed_size:, uncompressed_size:)
     # Save the information into the entry for when the time comes to write
     # out the central directory

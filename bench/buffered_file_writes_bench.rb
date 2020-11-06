@@ -5,38 +5,33 @@ require 'benchmark'
 require 'benchmark/ips'
 require_relative '../lib/zip_tricks'
 
-buffer_sizes = (0..128).map { |n| n * 1024 }
+buffer_sizes = (0..4).map { |n| n * 1024 }
 
 require 'benchmark/ips'
 require 'tempfile'
 
 rng = Random.new
-# For a more accurate simulation let's assume that the
-# files are being written into the ZIP piecewise, in chunks of
-# 16KB.
-blobs = (1..64).map { rng.bytes(16 * 1024) }
-n_files = 256
+n_files = 1024
+tf = Tempfile.new
+blob = rng.bytes(1024)
 
 Benchmark.ips do |x|
   x.config(time: 5, warmup: 0)
   buffer_sizes.each do |buf_size|
     x.report "Writes using a #{buf_size} byte buffer" do
-      tf = Tempfile.new
       ZipTricks::Streamer.open(tf, write_buffer_size: buf_size) do |zip|
         n_files.times do |n|
           zip.write_stored_file("file-#{n}") do |sink|
-            blobs.each do |blob_str|
-              sink << blob_str
-            end
+            8.times { sink << blob }
           end
         end
       end
-    ensure
-      tf.close
     end
   end
   x.compare!
 end
+
+tf.close
 
 __END__
 

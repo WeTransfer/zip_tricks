@@ -149,7 +149,7 @@ class ZipTricks::Streamer
   # @param write_buffer_size[Integer] how much data to buffer before flushing the write into the given `stream`. By default
   #    ZipTricks will buffer about a TCP buffer size worth of data, so that less write() calls would be performed when
   #    outputting to a socket or file. If set to 0 buffering gets turned off.
-  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false, write_buffer_size: 65*1024)
+  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false, write_buffer_size: 65 * 1024)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
     @dedupe_filenames = auto_rename_duplicate_filenames

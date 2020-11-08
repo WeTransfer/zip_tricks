@@ -35,9 +35,9 @@ class ZipsController < ActionController::Base
     zip_tricks_stream do |zip|
       zip.write_deflated_file('report1.csv') do |sink|
         CSV(sink) do |csv_write|
-          csv << Person.column_names
+          csv_write << Person.column_names
           Person.all.find_each do |person|
-            csv << person.attributes.values
+            csv_write << person.attributes.values
           end
         end
       end

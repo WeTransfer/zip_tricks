@@ -33,9 +33,11 @@ class ZipTricks::WriteBuffer
   #
   # @return self
   def flush!
-    @writable << @buf.string if @buf.size > 0
-    @buf.truncate(0)
-    @buf.rewind
+    if @buf.size > 0
+      @writable << @buf.string.dup
+      @buf.truncate(0)
+      @buf.rewind
+    end
     self
   end
 

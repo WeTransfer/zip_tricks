@@ -33,6 +33,27 @@ describe ZipTricks::OutputEnumerator do
     expect(per_filename['A file'].bytesize).to eq(file_body.bytesize)
   end
 
+  it 'buffers writes to the set boundary' do
+    file_body = Random.new.bytes(1024 * 7)
+    bufsize = 11 * 1024
+    body = described_class.new(write_buffer_size: bufsize) do |zip|
+      5.times do |n|
+        zip.add_stored_entry(filename: "file-#{n}",
+                             size: file_body.bytesize,
+                             crc32: Zlib.crc32(file_body))
+        zip << file_body
+      end
+    end
+
+    output_segments = body.each.to_a
+
+    expect(output_segments.length).to eq(3)
+    expect(output_segments[0].bytesize).to be >= bufsize
+    expect(output_segments[1].bytesize).to be >= bufsize
+    # the last segment may be smaller
+    expect(output_segments[2].bytesize).to be > 0
+  end
+
   it 'returns parts of the ZIP file when called using an Enumerator' do
     output_buf = Tempfile.new('output')
 

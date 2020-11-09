@@ -25,15 +25,22 @@
 #
 #     [200, {'Content-Type' => 'binary/octet-stream'}, iterable_zip_body]
 class ZipTricks::OutputEnumerator
+  DEFAULT_WRITE_BUFFER_SIZE = 65 * 1024
   # Creates a new OutputEnumerator.
   #
   # @param streamer_options[Hash] options for Streamer, see {ZipTricks::Streamer.new}
   #     It might be beneficial to tweak the `write_buffer_size` to your liking so that you won't be
   #     doing too many write attempts and block right after
+  # @param write_buffer_size[Integer] By default all ZipTricks writes are unbuffered. For output to sockets
+  #     it is beneficial to bulkify those writes so that they are roughly sized to a socket buffer chunk. This
+  #     object will bulkify writes for you in this way (so `each` will yield not on every call to `<<` from the Streamer
+  #     but at block size boundaries or greater). If you do S3 multipart uploading, where all the parts except the last
+  #     must be 5MB or larger, configure this write buffer size to 5 megabytes to have your output automatically segmented.
   # @param blk a block that will receive the Streamer object when executing. The block will not be executed
   #     immediately but only once `each` is called on the OutputEnumerator
-  def initialize(**streamer_options, &blk)
+  def initialize(write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE, **streamer_options, &blk)
     @streamer_options = streamer_options.to_h
+    @bufsize = write_buffer_size.to_i
     @archiving_block = blk
   end
 
@@ -46,7 +53,9 @@ class ZipTricks::OutputEnumerator
   def each
     if block_given?
       block_write = ZipTricks::BlockWrite.new { |chunk| yield(chunk) }
-      ZipTricks::Streamer.open(block_write, **@streamer_options, &@archiving_block)
+      buffer = ZipTricks::WriteBuffer.new(block_write, @bufsize)
+      ZipTricks::Streamer.open(buffer, **@streamer_options, &@archiving_block)
+      buffer.flush!
     else
       enum_for(:each)
     end

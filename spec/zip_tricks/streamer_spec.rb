@@ -64,49 +64,9 @@ describe ZipTricks::Streamer do
     end
   end
 
-  it 'buffers output and performs less writes than there are calls to the writing methods' do
-    io = StringIO.new
-    # We will use a liberal assertion here since we need to play with
-    # the buffer sizes, and might change them later. What's important
-    # is to verify that on "full default" we do not perform a write
-    # for every single operation
-    n_files = 20
-    # We write twice per file. 1 write is for the local file header, and another write
-    # is for the file body (which is buffered since it is small) and the data descriptor
-    # that follows it
-    expected_number_of_writes = (n_files * 2) + 1
-    expect(io).to receive(:<<).exactly(expected_number_of_writes).times
-    described_class.open(io) do |zip|
-      n_files.times do |n|
-        zip.write_stored_file("file-#{n}") do |sink|
-          sink << "Hello"
-        end
-      end
-    end
-  end
-
-  it 'allows buffering to be disabled using write_buffer_size of 0' do
-    io = StringIO.new
-    n_files = 20
-    expect(io).to receive(:<<).at_least(n_files).times
-    described_class.open(io, write_buffer_size: 0) do |zip|
-      n_files.times do |n|
-        zip.write_stored_file("file-#{n}") do |sink|
-          sink << "Hello"
-        end
-      end
-    end
-  end
-
   it 'returns the position in the IO at every call' do
     io = StringIO.new
-    # In this test wrote buffering needs to be disabled,
-    # because with buffering there is no guarantee that
-    # a write is going to be flushed into the destination
-    # exactly after the execution of a Streamer method.
-    # The written bytes may still be in the buffer waiting
-    # to be flushed.
-    zip = described_class.new(io, write_buffer_size: 0)
+    zip = described_class.new(io)
     pos = zip.add_deflated_entry(filename: 'file.jpg',
                                  uncompressed_size: 182_919,
                                  compressed_size: 8_912,

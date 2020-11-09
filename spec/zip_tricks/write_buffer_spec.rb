@@ -31,6 +31,8 @@ describe ZipTricks::WriteBuffer do
     adapter << 'a' << 'b'
   end
 
+  xit 'does not reuse the output string'
+
   it 'flushes the buffer and returns `to_i` from the contained object' do
     sink = double('Writable')
 

@@ -13,7 +13,9 @@ describe ZipTricks::RemoteUncap do
     command = %W[bundle exec puma --bind tcp://#{@server_addr} #{rack_app}]
     server = IO.popen(command, 'r')
     @server_pid = server.pid
-    # Wait for server to boot
+    # ensure server was sarted
+    expect(@server_pid).not_to be_nil
+    # wait for server to boot
     true while server.gets !~ /Ctrl-C/
   end
 

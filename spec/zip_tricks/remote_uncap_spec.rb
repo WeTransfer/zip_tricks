@@ -4,7 +4,13 @@ require 'net/http'
 describe ZipTricks::RemoteUncap do
   before :all do
     rack_app = File.expand_path(__dir__ + '/remote_uncap_rack_app.ru')
-    command = 'bundle exec puma --port 9393 %s' % rack_app
+    # find a free tcp port
+    tcpserver = TCPServer.new('127.0.0.1', 0)
+    port = tcpserver.addr[1]
+    addr = tcpserver.addr[3]
+    tcpserver.close
+    @server_addr = "#{addr}:#{port}"
+    command = %W[bundle exec puma --bind tcp://#{@server_addr} #{rack_app}]
     server = IO.popen(command, 'r')
     @server_pid = server.pid
     # Wait for server to boot
@@ -50,7 +56,7 @@ describe ZipTricks::RemoteUncap do
     payload1.rewind
     payload2.rewind
 
-    files = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
+    files = described_class.files_within_zip_at("http://#{@server_addr}/temp.zip")
     expect(files).to be_kind_of(Array)
     expect(files.length).to eq(2)
 
@@ -94,7 +100,7 @@ describe ZipTricks::RemoteUncap do
     payload1.rewind
     payload2.rewind
 
-    first, second = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
+    first, second = described_class.files_within_zip_at("http://#{@server_addr}/temp.zip")
 
     expect(first.filename).to eq('first-file-zero-size.bin')
     expect(first.compressed_size).to be_zero

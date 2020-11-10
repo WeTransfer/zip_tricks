@@ -5,20 +5,27 @@ describe ZipTricks::RemoteUncap do
   before :all do
     rack_app = File.expand_path(__dir__ + '/remote_uncap_rack_app.ru')
     command = 'bundle exec puma --port 9393 %s' % rack_app
-    @server_pid = spawn(command)
-    sleep 2 # Give the server time to come up
+    server = IO.popen(command, 'r')
+    @server_pid = server.pid
+    # Wait for server to boot
+    true while server.gets !~ /Ctrl-C/
   end
 
   after :all do
-    Process.kill("TERM", @server_pid)
-    Process.wait(@server_pid)
+    begin
+      Process.kill("TERM", @server_pid)
+    rescue Errno::ESRCH
+    end
+    begin
+      Process.wait(@server_pid)
+    rescue Errno::ECHILD
+    end
   end
 
   after :each do
     begin
       File.unlink('temp.zip')
-    rescue
-      Errno::ENOENT
+    rescue Errno::ENOENT
     end
   end
 

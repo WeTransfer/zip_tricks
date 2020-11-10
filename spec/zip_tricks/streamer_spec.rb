@@ -224,7 +224,9 @@ describe ZipTricks::Streamer do
       File.rename(outbuf.path, 'osx-archive-test.zip')
 
       # Mark this test as skipped if the system does not have the binary
-      open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
+      open_zip_with_archive_utility('osx-archive-test.zip',
+                                    skip_if_missing: true,
+                                    expected_content: %w[war-and-peace.txt war-and-peace-raw.txt Beatles])
     end
     FileUtils.rm_rf('osx-archive-test')
     FileUtils.rm_rf('osx-archive-test.zip')

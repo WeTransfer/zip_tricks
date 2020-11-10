@@ -4,21 +4,36 @@ require 'net/http'
 describe ZipTricks::RemoteUncap do
   before :all do
     rack_app = File.expand_path(__dir__ + '/remote_uncap_rack_app.ru')
-    command = 'bundle exec puma --port 9393 %s' % rack_app
-    @server_pid = spawn(command)
-    sleep 2 # Give the server time to come up
+    # find a free tcp port
+    tcpserver = TCPServer.new('127.0.0.1', 0)
+    port = tcpserver.addr[1]
+    addr = tcpserver.addr[3]
+    tcpserver.close
+    @server_addr = "#{addr}:#{port}"
+    command = %W[bundle exec puma --bind tcp://#{@server_addr} #{rack_app}]
+    server = IO.popen(command, 'r')
+    @server_pid = server.pid
+    # ensure server was sarted
+    expect(@server_pid).not_to be_nil
+    # wait for server to boot
+    true while server.gets !~ /Ctrl-C/
   end
 
   after :all do
-    Process.kill("TERM", @server_pid)
-    Process.wait(@server_pid)
+    begin
+      Process.kill("TERM", @server_pid)
+    rescue Errno::ESRCH
+    end
+    begin
+      Process.wait(@server_pid)
+    rescue Errno::ECHILD
+    end
   end
 
   after :each do
     begin
       File.unlink('temp.zip')
-    rescue
-      Errno::ENOENT
+    rescue Errno::ENOENT
     end
   end
 
@@ -43,7 +58,7 @@ describe ZipTricks::RemoteUncap do
     payload1.rewind
     payload2.rewind
 
-    files = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
+    files = described_class.files_within_zip_at("http://#{@server_addr}/temp.zip")
     expect(files).to be_kind_of(Array)
     expect(files.length).to eq(2)
 
@@ -87,7 +102,7 @@ describe ZipTricks::RemoteUncap do
     payload1.rewind
     payload2.rewind
 
-    first, second = described_class.files_within_zip_at('http://127.0.0.1:9393/temp.zip')
+    first, second = described_class.files_within_zip_at("http://#{@server_addr}/temp.zip")
 
     expect(first.filename).to eq('first-file-zero-size.bin')
     expect(first.compressed_size).to be_zero

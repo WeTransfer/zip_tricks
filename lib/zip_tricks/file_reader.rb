@@ -281,7 +281,7 @@ class ZipTricks::FileReader
       seek(io, next_local_header_offset) # Seek to the next entry, and raise if seek is impossible
     end
     entries
-  rescue ReadError
+  rescue ReadError, RangeError # RangeError is raised if offset exceeds int32/int64 range
     log do
       'Got a read/seek error after reaching %<cur_offset>d, no more entries can be recovered' %
         {cur_offset: cur_offset}

@@ -1,5 +1,6 @@
 require_relative '../spec_helper'
 require 'complexity_assert'
+require 'ffi-libarchive'
 
 describe ZipTricks::Streamer do
   let(:test_text_file_path) { File.join(__dir__, 'war-and-peace.txt') }
@@ -182,7 +183,7 @@ describe ZipTricks::Streamer do
   end
 
   it 'creates an archive that OSX ArchiveUtility can handle' do
-    outbuf = Tempfile.new('zip')
+    outbuf = StringIO.new
     outbuf.binmode
 
     zip = ZipTricks::Streamer.new(outbuf)
@@ -216,18 +217,20 @@ describe ZipTricks::Streamer do
       zip.close
 
       outbuf.flush
-      begin
-        File.unlink('test.zip')
-      rescue
-        nil
-      end
-      File.rename(outbuf.path, 'osx-archive-test.zip')
 
-      # Mark this test as skipped if the system does not have the binary
-      open_zip_with_archive_utility('osx-archive-test.zip', skip_if_missing: true)
+      expected = {
+        'war-and-peace.txt' => source_f.size,
+        'war-and-peace-raw.txt' => source_f.size,
+        'Beatles/' => 0,
+      }
+      extracted = {}
+      Archive::Reader.open_memory(outbuf.string) do |reader|
+        reader.each_entry do |e|
+          extracted[e.pathname] = e.size
+        end
+      end
+      expect(extracted).to eq(expected)
     end
-    FileUtils.rm_rf('osx-archive-test')
-    FileUtils.rm_rf('osx-archive-test.zip')
   end
 
   it 'archives files which can then be read using the usual means with Rubyzip' do

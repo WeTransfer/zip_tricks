@@ -1,8 +1,12 @@
 rvm:
 - 2.1.0
 - 2.6.5
-- jruby-9.0
+- jruby-9.2
 sudo: false
+addons:
+  apt:
+    packages:
+      - libarchive-dev
 cache: bundler
 script:
   - bundle exec rake

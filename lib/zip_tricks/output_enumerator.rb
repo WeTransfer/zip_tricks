@@ -25,7 +25,7 @@
 #
 #     [200, {'Content-Type' => 'binary/octet-stream'}, iterable_zip_body]
 class ZipTricks::OutputEnumerator
-  DEFAULT_WRITE_BUFFER_SIZE = 65 * 1024
+  DEFAULT_WRITE_BUFFER_SIZE = 64 * 1024
   # Creates a new OutputEnumerator.
   #
   # @param streamer_options[Hash] options for Streamer, see {ZipTricks::Streamer.new}

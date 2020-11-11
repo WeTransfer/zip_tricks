@@ -12,7 +12,7 @@ describe ZipTricks::BlockDeflate do
       compressed = described_class.deflate_chunk(blob)
       expect(compressed.bytesize).to be < blob.bytesize
       complete_deflated_segment = tag_deflated(compressed, blob)
-      expect(Zlib.inflate(complete_deflated_segment)).to eq(blob)
+      expect(Zlib::Inflate.inflate(complete_deflated_segment)).to eq(blob)
     end
 
     it 'removes the header' do

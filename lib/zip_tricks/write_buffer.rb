@@ -10,7 +10,7 @@
 class ZipTricks::WriteBuffer
   # Creates a new WriteBuffer bypassing into a given writable object
   #
-  # @param writable[#<<] An object that responds to `#<<` with string as argument
+  # @param writable[#<<] An object that responds to `#<<` with a String as argument
   # @param buffer_size[Integer] How many bytes to buffer
   def initialize(writable, buffer_size)
     @buf = StringIO.new
@@ -24,8 +24,12 @@ class ZipTricks::WriteBuffer
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    @buf << data
-    flush! if @buf.size > @buffer_size
+    if @buffer_size < 1
+      @writable << data
+    else
+      @buf << data
+      flush! if @buf.size > @buffer_size
+    end
     self
   end
 
@@ -34,8 +38,12 @@ class ZipTricks::WriteBuffer
   # @return self
   def flush!
     if @buf.size > 0
+      # A StringIO internally contains one String which it mutates in place.
+      # When the buffer is local this is not a problem, but if this string leaks
+      # to the outside of the object it might be possible that it gets referenced
+      # from elsewhere and, unexpectedly for the caller, will become an empty string...
       @writable << @buf.string.dup
-      @buf.truncate(0)
+      @buf.truncate(0) # ...because we truncate it before doing the next writes
       @buf.rewind
     end
     self

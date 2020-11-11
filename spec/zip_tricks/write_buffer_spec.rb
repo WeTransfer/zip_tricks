@@ -31,7 +31,18 @@ describe ZipTricks::WriteBuffer do
     adapter << 'a' << 'b'
   end
 
-  xit 'does not reuse the output string'
+  it 'does not reuse the output string' do
+    # It is important to ensure that when the accumulator writes into the
+    # destination it does not write the same String object over and over, as
+    # the receiving object might be retaining that String for later writes.
+    accumulator = []
+    write_buffer = described_class.new(accumulator, 2)
+    write_buffer << "a" << "b" << "c" << "d" << "e" << "and a word" << "and more"
+    write_buffer.flush!
+
+    expect(accumulator.join).to eq('abcdeand a wordand more')
+    expect(accumulator.map(&:object_id).uniq.length).to eq(accumulator.length)
+  end
 
   it 'flushes the buffer and returns `to_i` from the contained object' do
     sink = double('Writable')

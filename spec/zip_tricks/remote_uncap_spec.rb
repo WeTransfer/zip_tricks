@@ -16,12 +16,13 @@ describe ZipTricks::RemoteUncap do
     # ensure server was sarted
     expect(@server_pid).not_to be_nil
     # wait for server to boot
-    true while server.gets !~ /Ctrl-C/
+    expect { Timeout.timeout(10) { nil until server.gets =~ /Ctrl-C/ } }.not_to raise_error
   end
 
   after :all do
+    next if @server_pid.nil?
     begin
-      Process.kill("TERM", @server_pid)
+      Process.kill('TERM', @server_pid)
     rescue Errno::ESRCH
     end
     begin

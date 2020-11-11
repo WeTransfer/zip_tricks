@@ -147,11 +147,14 @@ class ZipTricks::Streamer
   def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
-    @dedupe_filenames = auto_rename_duplicate_filenames
-    @out = ZipTricks::WriteAndTell.new(stream)
+    # A small buffer used primarily to avoid too many microscopic writes. This helps a lot
+    # with serving out the data via network
+    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 0124)
+    @out = ZipTricks::WriteAndTell.new(@buf)
     @files = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
+    @dedupe_filenames = auto_rename_duplicate_filenames
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
@@ -182,6 +185,7 @@ class ZipTricks::Streamer
   # @param num_bytes [Integer] how many bytes are going to be written bypassing the Streamer
   # @return [Integer] position in the output stream / ZIP archive
   def simulate_write(num_bytes)
+    @buf.flush!
     @out.advance_position_by(num_bytes)
     @out.tell
   end
@@ -210,6 +214,7 @@ class ZipTricks::Streamer
                                     compressed_size: compressed_size,
                                     uncompressed_size: uncompressed_size,
                                     use_data_descriptor: use_data_descriptor)
+    @buf.flush!
     @out.tell
   end
 
@@ -232,6 +237,7 @@ class ZipTricks::Streamer
                                     compressed_size: size,
                                     uncompressed_size: size,
                                     use_data_descriptor: use_data_descriptor)
+    @buf.flush!
     @out.tell
   end
 
@@ -248,6 +254,7 @@ class ZipTricks::Streamer
                                     compressed_size: 0,
                                     uncompressed_size: 0,
                                     use_data_descriptor: false)
+    @buf.flush!
     @out.tell
   end
 
@@ -393,6 +400,7 @@ class ZipTricks::Streamer
     @path_set.clear
 
     # and return the final offset
+    @buf.flush!
     @out.tell
   end
 
@@ -429,6 +437,7 @@ class ZipTricks::Streamer
                                   uncompressed_size: last_entry.uncompressed_size)
     last_entry.bytes_used_for_data_descriptor = @out.tell - offset_before_data_descriptor
 
+    @buf.flush!
     @out.tell
   end
 

@@ -47,11 +47,13 @@ describe ZipTricks::OutputEnumerator do
 
     output_segments = body.each.to_a
 
-    expect(output_segments.length).to eq(3)
-    expect(output_segments[0].bytesize).to be >= bufsize
-    expect(output_segments[1].bytesize).to be >= bufsize
+    expect(output_segments.length).to eq(4)
+    expect(output_segments[0].bytesize).to eq(bufsize)
+    expect(output_segments[1].bytesize).to eq(bufsize)
+    expect(output_segments[2].bytesize).to eq(bufsize)
     # the last segment may be smaller
-    expect(output_segments[2].bytesize).to be > 0
+    expect(output_segments[3].bytesize).to be > 0
+    expect(output_segments[3].bytesize).to be < bufsize
   end
 
   it 'returns parts of the ZIP file when called using an Enumerator' do

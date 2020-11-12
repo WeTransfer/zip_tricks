@@ -14,6 +14,7 @@ class ZipTricks::WriteBuffer
   # @param buffer_size[Integer] How many bytes to buffer
   def initialize(writable, buffer_size)
     @buf = StringIO.new
+    @buf.binmode
     @buffer_size = buffer_size
     @writable = writable
   end
@@ -24,16 +25,34 @@ class ZipTricks::WriteBuffer
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    # Do a little optimization. If the data that goes through is larger than the buffer
-    # size, we know that it would be immediately written "through" on the next flush. In that
-    # case we don't need to buffer it and we don't have to manipulate the StringIO either,
-    # so we just let the data through.
-    if data.bytesize > @buffer_size
-      flush # In case anything is still buffered
-      @writable << data # ... bypass the buffering and just forward the data
-    else
-      @buf << data
-      flush if @buf.size > @buffer_size
+    data = data.to_s
+    size = data.bytesize
+    capacity = @buffer_size
+    if capacity < 1
+      @writable << data
+    elsif size > 0
+      used = @buf.size
+      if used > 0 && used + size >= capacity
+        free = capacity - used
+        size -= free
+        @buf << data.byteslice(0, free)
+        data = data.byteslice(free, size)
+        flush
+      end
+      case size <=> capacity
+      when -1 # size < capacity
+        @buf << data
+      when 0 # size == capacity
+        @writable << data
+      when 1 # size > capacity
+        remaining = size % capacity
+        if remaining > 0
+          size -= remaining
+          @buf << data.byteslice(size, remaining)
+          data = data.byteslice(0, size)
+        end
+        @writable << data
+      end
     end
     self
   end

@@ -149,7 +149,7 @@ class ZipTricks::Streamer
 
     # A small buffer used primarily to avoid too many microscopic writes. This helps a lot
     # with serving out the data via network
-    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 0124)
+    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 1024)
     @out = ZipTricks::WriteAndTell.new(@buf)
     @files = []
     @path_set = ZipTricks::PathSet.new

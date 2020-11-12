@@ -64,14 +64,14 @@ describe ZipTricks::WriteBuffer do
     write_buffer << "gh"
     expect(buf.size).to eq(2)
     write_buffer << "ijk"
-    expect(buf.size).to eq(2)
-    write_buffer << "lmno"
     expect(buf.size).to eq(0)
-    write_buffer << "p"
+    write_buffer << "lmno"
     expect(buf.size).to eq(1)
+    write_buffer << "p"
+    expect(buf.size).to eq(2)
 
     write_buffer.flush!
-    expect(accumulator).to eq(["abcdef", "ghi", "jkl", "mno", "p"])
+    expect(accumulator).to eq(["abcdef", "gh", "ijk", "lmn", "op"])
   end
 
   it 'flushes the buffer and returns `to_i` from the contained object' do

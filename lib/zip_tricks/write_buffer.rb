@@ -33,10 +33,12 @@ class ZipTricks::WriteBuffer
     elsif size > 0
       used = @buf.size
       if used > 0 && used + size >= capacity
-        free = capacity - used
-        size -= free
-        @buf << data.byteslice(0, free)
-        data = data.byteslice(free, size)
+        if size % capacity != 0
+          free = capacity - used
+          size -= free
+          @buf << data.byteslice(0, free)
+          data = data.byteslice(free, size)
+        end
         flush
       end
       case size <=> capacity

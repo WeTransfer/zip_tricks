@@ -44,6 +44,15 @@ describe ZipTricks::WriteBuffer do
     expect(accumulator.map(&:object_id).uniq.length).to eq(accumulator.length)
   end
 
+  it 'bypasses the write if it would lead to the buffer filling up on one write call' do
+    accumulator = []
+    write_buffer = described_class.new(accumulator, 3)
+    write_buffer << "a"
+    write_buffer << "bcdef"
+
+    expect(accumulator).to eq(["a", "bcdef"])
+  end
+
   it 'flushes the buffer and returns `to_i` from the contained object' do
     sink = double('Writable')
 

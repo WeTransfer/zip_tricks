@@ -361,6 +361,14 @@ class ZipTricks::Streamer
     writable
   end
 
+  # Flush write buffer.
+  #
+  # @return self
+  def flush
+    @buf.flush!
+    self
+  end
+
   # Closes the archive. Writes the central directory, and switches the writer into
   # a state where it can no longer be written to.
   #

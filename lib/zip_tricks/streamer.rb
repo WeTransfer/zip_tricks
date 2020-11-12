@@ -186,7 +186,7 @@ class ZipTricks::Streamer
   # @param num_bytes [Integer] how many bytes are going to be written bypassing the Streamer
   # @return [Integer] position in the output stream / ZIP archive
   def simulate_write(num_bytes)
-    @buf.flush!
+    @buf.flush
     @out.advance_position_by(num_bytes)
     @out.tell
   end
@@ -215,7 +215,7 @@ class ZipTricks::Streamer
                                     compressed_size: compressed_size,
                                     uncompressed_size: uncompressed_size,
                                     use_data_descriptor: use_data_descriptor)
-    @buf.flush!
+    @buf.flush
     @out.tell
   end
 
@@ -238,7 +238,7 @@ class ZipTricks::Streamer
                                     compressed_size: size,
                                     uncompressed_size: size,
                                     use_data_descriptor: use_data_descriptor)
-    @buf.flush!
+    @buf.flush
     @out.tell
   end
 
@@ -255,7 +255,7 @@ class ZipTricks::Streamer
                                     compressed_size: 0,
                                     uncompressed_size: 0,
                                     use_data_descriptor: false)
-    @buf.flush!
+    @buf.flush
     @out.tell
   end
 
@@ -401,7 +401,7 @@ class ZipTricks::Streamer
     @path_set.clear
 
     # and return the final offset
-    @buf.flush!
+    @buf.flush
     @out.tell
   end
 
@@ -438,7 +438,7 @@ class ZipTricks::Streamer
                                   uncompressed_size: last_entry.uncompressed_size)
     last_entry.bytes_used_for_data_descriptor = @out.tell - offset_before_data_descriptor
 
-    @buf.flush!
+    @buf.flush
     @out.tell
   end
 

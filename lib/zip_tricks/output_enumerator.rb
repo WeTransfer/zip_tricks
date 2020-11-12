@@ -55,7 +55,7 @@ class ZipTricks::OutputEnumerator
       block_write = ZipTricks::BlockWrite.new { |chunk| yield(chunk) }
       buffer = ZipTricks::WriteBuffer.new(block_write, @bufsize)
       ZipTricks::Streamer.open(buffer, **@streamer_options, &@archiving_block)
-      buffer.flush!
+      buffer.flush
     else
       enum_for(:each)
     end

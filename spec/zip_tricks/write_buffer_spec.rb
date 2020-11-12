@@ -18,7 +18,7 @@ describe ZipTricks::WriteBuffer do
       adapter << char
     end
 
-    adapter.flush!
+    adapter.flush
   end
 
   it 'does not buffer with buffer size set to 0' do
@@ -31,6 +31,16 @@ describe ZipTricks::WriteBuffer do
     adapter << 'a' << 'b'
   end
 
+  it 'supports flush! in addition to flush for backwards compatibility' do
+    sink = double('Writable')
+
+    expect(sink).to receive(:<<).with('a')
+
+    adapter = described_class.new(sink, 10)
+    adapter << 'a'
+    adapter.flush!
+  end
+
   it 'does not reuse the output string' do
     # It is important to ensure that when the accumulator writes into the
     # destination it does not write the same String object over and over, as
@@ -38,7 +48,7 @@ describe ZipTricks::WriteBuffer do
     accumulator = []
     write_buffer = described_class.new(accumulator, 2)
     write_buffer << "a" << "b" << "c" << "d" << "e" << "and a word" << "and more"
-    write_buffer.flush!
+    write_buffer.flush
 
     expect(accumulator.join).to eq('abcdeand a wordand more')
     expect(accumulator.map(&:object_id).uniq.length).to eq(accumulator.length)

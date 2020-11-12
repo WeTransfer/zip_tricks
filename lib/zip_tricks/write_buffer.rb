@@ -29,11 +29,11 @@ class ZipTricks::WriteBuffer
     # case we don't need to buffer it and we don't have to manipulate the StringIO either,
     # so we just let the data through.
     if data.bytesize > @buffer_size
-      flush! # In case anything is still buffered
+      flush # In case anything is still buffered
       @writable << data # ... bypass the buffering and just forward the data
     else
       @buf << data
-      flush! if @buf.size > @buffer_size
+      flush if @buf.size > @buffer_size
     end
     self
   end
@@ -41,7 +41,7 @@ class ZipTricks::WriteBuffer
   # Explicitly flushes the buffer if it contains anything
   #
   # @return self
-  def flush!
+  def flush
     if @buf.size > 0
       # A StringIO internally contains one String which it mutates in place.
       # When the buffer is local this is not a problem, but if this string leaks
@@ -54,13 +54,15 @@ class ZipTricks::WriteBuffer
     self
   end
 
+  alias_method :flush!, :flush
+
   # Flushes the buffer and returns the result of `#to_i` of the contained `writable`.
   # Primarily facilitates working with StreamCRC32 objects where you finish the
   # computation by retrieving the CRC as an integer
   #
   # @return [Integer] the return value of `writable#to_i`
   def to_i
-    flush!
+    flush
     @writable.to_i
   end
 end

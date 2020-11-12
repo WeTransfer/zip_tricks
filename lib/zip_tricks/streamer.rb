@@ -147,9 +147,10 @@ class ZipTricks::Streamer
   def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
     raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
 
-    # A small buffer used primarily to avoid too many microscopic writes. This helps a lot
-    # with serving out the data via network
-    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 1024)
+    # A small buffer used primarily to avoid too many microscopic writes when writing
+    # the ZIP metadata. This helps a lot with serving out the data via network but
+    # will also be more economical in other situations.
+    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 0124)
     @out = ZipTricks::WriteAndTell.new(@buf)
     @files = []
     @path_set = ZipTricks::PathSet.new

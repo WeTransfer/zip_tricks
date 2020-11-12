@@ -14,10 +14,10 @@
 #
 #     iterable_zip_body = ZipTricks::OutputEnumerator.new do | streamer |
 #       streamer.write_deflated_file('big.csv') do |sink|
-#         CSV(sink) do |csv_write|
-#           csv << Person.column_names
+#         CSV(sink) do |csv_writer|
+#           csv_writer << Person.column_names
 #           Person.all.find_each do |person|
-#             csv << person.attributes.values
+#             csv_writer << person.attributes.values
 #           end
 #         end
 #       end

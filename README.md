@@ -179,7 +179,11 @@ that have not been formally verified (ours hasn't been).
 * Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
 * Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
 
-## Copyright
+## Copyright and license
 
-Copyright (c) 2019 WeTransfer. `zip_tricks` is distributed under the conditions of the [Hippocratic License](https://firstdonoharm.dev/version/1/2/license.html)
- - See LICENSE.txt for further details.
+Copyright (c) 2020 WeTransfer.
+
+`zip_tricks` is distributed under the conditions of the [Hippocratic License](https://firstdonoharm.dev/version/1/2/license.html)
+See LICENSE.txt for further details. If this license is not acceptable for your use case we still maintain the 4.x version tree
+which remains under the MIT license, see https://rubygems.org/gems/zip_tricks/versions for more information.
+Note that we only backport some performance optimizations and crucial bugfixes but not the new features to that tree.

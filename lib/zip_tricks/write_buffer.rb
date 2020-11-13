@@ -13,8 +13,9 @@ class ZipTricks::WriteBuffer
   # @param writable[#<<] An object that responds to `#<<` with a String as argument
   # @param buffer_size[Integer] How many bytes to buffer
   def initialize(writable, buffer_size)
-    @buf = StringIO.new
-    @buf.binmode
+    buf = String.new("\0".b) * buffer_size
+    @buf = StringIO.new(buf)
+    @buf.truncate(0)
     @buffer_size = buffer_size
     @writable = writable
   end

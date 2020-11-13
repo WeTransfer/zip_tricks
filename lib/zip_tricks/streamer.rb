@@ -365,7 +365,7 @@ class ZipTricks::Streamer
   #
   # @return self
   def flush
-    @buf.flush!
+    @buf.flush
     self
   end
 

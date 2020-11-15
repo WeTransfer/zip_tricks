@@ -32,6 +32,10 @@
 # conflict is avoided. This is not possible to apply to directories, because when one of the
 # path components is reused in multiple filenames it means those entities should end up in
 # the same directory (subdirectory) once the archive is opened.
+#
+# The `PathSet` keeps track of entries as they get added using 2 Sets (cheap presence checks),
+# one for directories and one for files. It will raise a `Conflict` exception if there are
+# files clobbering one another, or in case files collide with directories.
 class ZipTricks::PathSet
   class Conflict < StandardError
   end

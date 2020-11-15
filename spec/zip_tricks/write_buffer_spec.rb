@@ -31,12 +31,12 @@ describe ZipTricks::WriteBuffer do
     adapter << 'a' << 'b'
   end
 
-  it 'does not reuse the output string' do
+  it 'does not reuse the output string with dup transform' do
     # It is important to ensure that when the accumulator writes into the
     # destination it does not write the same String object over and over, as
     # the receiving object might be retaining that String for later writes.
     accumulator = []
-    write_buffer = described_class.new(accumulator, 2)
+    write_buffer = described_class.new(accumulator, 2, :dup)
     write_buffer << "a" << "b" << "c" << "d" << "e" << "and a word" << "and more"
     write_buffer.flush
 
@@ -46,22 +46,21 @@ describe ZipTricks::WriteBuffer do
 
   it 'bypasses the write if it is aligned to the buffer size' do
     accumulator = []
-    write_buffer = described_class.new(accumulator, 3)
-    buf = write_buffer.instance_variable_get(:@buf)
-    expect(buf.size).to eq(0)
+    write_buffer = described_class.new(accumulator, 3, :dup)
+    expect(write_buffer.size).to eq(0)
     write_buffer << "abcdef"
-    expect(buf.size).to eq(0)
+    expect(write_buffer.size).to eq(0)
     write_buffer << "gh"
-    expect(buf.size).to eq(2)
+    expect(write_buffer.size).to eq(2)
     write_buffer << "ijk"
-    expect(buf.size).to eq(0)
+    expect(write_buffer.size).to eq(2)
     write_buffer << "lmno"
-    expect(buf.size).to eq(1)
+    expect(write_buffer.size).to eq(0)
     write_buffer << "p"
-    expect(buf.size).to eq(2)
+    expect(write_buffer.size).to eq(1)
 
     write_buffer.flush
-    expect(accumulator).to eq(["abcdef", "gh", "ijk", "lmn", "op"])
+    expect(accumulator).to eq(["abc", "def", "ghi", "jkl", "mno", "p"])
   end
 
   it 'flushes the buffer and returns `to_i` from the contained object' do

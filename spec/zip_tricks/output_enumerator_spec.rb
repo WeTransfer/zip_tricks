@@ -36,7 +36,7 @@ describe ZipTricks::OutputEnumerator do
   it 'buffers writes to the set boundary' do
     file_body = Random.new.bytes(1024 * 7)
     bufsize = 11 * 1024
-    body = described_class.new(write_buffer_size: bufsize) do |zip|
+    body = described_class.new(write_buffer_size: bufsize, write_transform: :dup) do |zip|
       5.times do |n|
         zip.add_stored_entry(filename: "file-#{n}",
                              size: file_body.bytesize,

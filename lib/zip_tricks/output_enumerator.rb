@@ -38,9 +38,10 @@ class ZipTricks::OutputEnumerator
   #     must be 5MB or larger, configure this write buffer size to 5 megabytes to have your output automatically segmented.
   # @param blk a block that will receive the Streamer object when executing. The block will not be executed
   #     immediately but only once `each` is called on the OutputEnumerator
-  def initialize(write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE, **streamer_options, &blk)
+  def initialize(write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE, write_transform: nil, **streamer_options, &blk)
     @streamer_options = streamer_options.to_h
     @bufsize = write_buffer_size.to_i
+    @buftransform = write_transform
     @archiving_block = blk
   end
 
@@ -53,7 +54,7 @@ class ZipTricks::OutputEnumerator
   def each
     if block_given?
       block_write = ZipTricks::BlockWrite.new { |chunk| yield(chunk) }
-      buffer = ZipTricks::WriteBuffer.new(block_write, @bufsize)
+      buffer = ZipTricks::WriteBuffer.new(block_write, @bufsize, @buftransform)
       ZipTricks::Streamer.open(buffer, **@streamer_options, &@archiving_block)
       buffer.flush
     else

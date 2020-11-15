@@ -12,12 +12,13 @@ class ZipTricks::WriteBuffer
   #
   # @param writable[#<<] An object that responds to `#<<` with a String as argument
   # @param buffer_size[Integer] How many bytes to buffer
-  def initialize(writable, buffer_size)
-    buf = String.new("\0".b) * buffer_size
-    @buf = StringIO.new(buf)
+  def initialize(writable, buffer_size, transform = nil)
+    @buf = StringIO.new("\0".b * buffer_size)
     @buf.truncate(0)
-    @buffer_size = buffer_size
+    @bufsize = buffer_size
     @writable = writable
+    @transform = transform || :to_s
+    @outbuf = "\0".b * buffer_size
   end
 
   # Appends the given data to the write buffer, and flushes the buffer into the
@@ -26,36 +27,37 @@ class ZipTricks::WriteBuffer
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    data = data.to_s
-    size = data.bytesize
-    capacity = @buffer_size
+    capacity = @bufsize
     if capacity < 1
-      @writable << data
-    elsif size > 0
-      used = @buf.size
-      if used > 0 && used + size >= capacity
-        if size % capacity != 0
-          free = capacity - used
-          size -= free
-          @buf << data.byteslice(0, free)
-          data = data.byteslice(free, size)
-        end
+      @writable << data.send(@transform)
+      return self
+    end
+
+    used = @buf.tell
+    data = StringIO.new(data)
+    data.binmode
+    size = data.size
+    needed = used + size
+
+    case needed <=> capacity
+    when 1 # needed > capacity
+      free = capacity - used
+      @buf << data.read(free, @outbuf)
+      flush
+      multiple, remaining = (size - free).divmod(capacity)
+      multiple.times do
+        @writable << data.read(capacity, @outbuf).send(@transform)
+      end
+      @buf << data.read(remaining, @outbuf)
+    when 0 # needed == capacity
+      if used > 0
+        @buf << data.string
         flush
+      else
+        @writable << data.string
       end
-      case size <=> capacity
-      when -1 # size < capacity
-        @buf << data
-      when 0 # size == capacity
-        @writable << data
-      when 1 # size > capacity
-        remaining = size % capacity
-        if remaining > 0
-          size -= remaining
-          @buf << data.byteslice(size, remaining)
-          data = data.byteslice(0, size)
-        end
-        @writable << data
-      end
+    when -1 # needed < capacity
+      @buf << data.string
     end
     self
   end
@@ -64,16 +66,20 @@ class ZipTricks::WriteBuffer
   #
   # @return self
   def flush
-    if @buf.size > 0
-      # A StringIO internally contains one String which it mutates in place.
-      # When the buffer is local this is not a problem, but if this string leaks
-      # to the outside of the object it might be possible that it gets referenced
-      # from elsewhere and, unexpectedly for the caller, will become an empty string...
-      @writable << @buf.string.dup
-      @buf.truncate(0) # ...because we truncate it before doing the next writes
+    size = @buf.tell
+    if size > 0
+      @buf.rewind
+      @writable << @buf.read(size, @outbuf).send(@transform)
       @buf.rewind
     end
     self
+  end
+
+  # Get current size of buffer.
+  #
+  # @return [Integer] the return value of `buffer#tell`
+  def size
+    @buf.tell
   end
 
   # Flushes the buffer and returns the result of `#to_i` of the contained `writable`.

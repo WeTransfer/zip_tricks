@@ -4,13 +4,6 @@
 # registers data passing through it in a CRC32 checksum calculator. Is made to be completely
 # interchangeable with the StoredWriter in terms of interface.
 class ZipTricks::Streamer::DeflatedWriter
-  # After how many bytes of incoming data the deflater for the
-  # contents must be flushed. This is done to prevent unreasonable
-  # memory use when archiving large files, and to ensure we write to
-  # the socket often enough while still maintaining acceptable
-  # compression
-  FLUSH_EVERY_N_BYTES = 1024 * 1024 * 5
-
   # The amount of bytes we will buffer before computing the intermediate
   # CRC32 checksums. Benchmarks show that the optimum is 64KB (see
   # `bench/buffered_crc32_bench.rb), if that is exceeded Zlib is going
@@ -18,11 +11,9 @@ class ZipTricks::Streamer::DeflatedWriter
   CRC32_BUFFER_SIZE = 64 * 1024
 
   def initialize(io)
-    @compressed_io = ZipTricks::WriteAndTell.new(io)
-    @uncompressed_size = 0
+    @compressed_io = io
     @deflater = ::Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION, -::Zlib::MAX_WBITS)
     @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
-    @bytes_since_last_flush = 0
   end
 
   # Writes the given data into the deflater, and flushes the deflater
@@ -31,13 +22,8 @@ class ZipTricks::Streamer::DeflatedWriter
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    @uncompressed_size += data.bytesize
-    @bytes_since_last_flush += data.bytesize
     @compressed_io << @deflater.deflate(data)
     @crc << data
-
-    interim_flush
-
     self
   end
 
@@ -48,14 +34,6 @@ class ZipTricks::Streamer::DeflatedWriter
   # @return [Hash] a hash of `{crc32, compressed_size, uncompressed_size}`
   def finish
     @compressed_io << @deflater.finish until @deflater.finished?
-    {crc32: @crc.to_i, compressed_size: @compressed_io.tell, uncompressed_size: @uncompressed_size}
-  end
-
-  private
-
-  def interim_flush
-    return if @bytes_since_last_flush < FLUSH_EVERY_N_BYTES
-    @compressed_io << @deflater.flush
-    @bytes_since_last_flush = 0
+    {crc32: @crc.to_i, compressed_size: @deflater.total_out, uncompressed_size: @deflater.total_in}
   end
 end

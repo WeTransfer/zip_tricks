@@ -22,7 +22,7 @@ class ZipTricks::Streamer::DeflatedWriter
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    @compressed_io << @deflater.deflate(data)
+    @deflater.deflate(data) { |chunk| @compressed_io << chunk }
     @crc << data
     self
   end

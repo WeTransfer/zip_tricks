@@ -35,5 +35,7 @@ class ZipTricks::Streamer::DeflatedWriter
   def finish
     @compressed_io << @deflater.finish until @deflater.finished?
     {crc32: @crc.to_i, compressed_size: @deflater.total_out, uncompressed_size: @deflater.total_in}
+  ensure
+    @deflater.close
   end
 end

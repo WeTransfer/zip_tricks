@@ -13,7 +13,7 @@ describe ZipTricks::FileReader do
   describe 'read_zip_straight_ahead' do
     it 'returns all the entries it can recover' do
       zipfile = StringIO.new
-      war_and_peace = File.read(__dir__ + '/war-and-peace.txt')
+      war_and_peace = File.binread(__dir__ + '/war-and-peace.txt')
       ZipTricks::Streamer.open(zipfile) do |zip|
         zip.add_stored_entry filename: 'text1.txt',
                              crc32: Zlib.crc32(war_and_peace),
@@ -209,7 +209,7 @@ describe ZipTricks::FileReader do
 
     it 'reads the file written stored with data descriptors' do
       zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
+      tolstoy = File.binread(__dir__ + '/war-and-peace.txt')
       ZipTricks::Streamer.open(zipfile) do |zip|
         zip.write_stored_file('war-and-peace.txt') do |sink|
           sink << tolstoy

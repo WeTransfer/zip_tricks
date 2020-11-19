@@ -23,20 +23,7 @@ class ZipTricks::BlockWrite
     # Zero-size output has a special meaning  when using chunked encoding
     return if buf.nil? || buf.bytesize.zero?
 
-    # Ensure we ALWAYS write in binary encoding.
-    encoded =
-      if buf.encoding != Encoding::BINARY
-        # If we got a frozen string we can't force_encoding on it
-        begin
-          buf.force_encoding(Encoding::BINARY)
-        rescue
-          buf.dup.force_encoding(Encoding::BINARY)
-        end
-      else
-        buf
-      end
-
-    @block.call(encoded)
+    @block.call(buf.b)
     self
   end
 end

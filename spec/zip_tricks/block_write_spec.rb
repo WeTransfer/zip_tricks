@@ -44,6 +44,15 @@ describe ZipTricks::BlockWrite do
     blobs.each { |s| expect(s.encoding).to eq(Encoding::BINARY) }
   end
 
+  it 'does not change the encoding of source strings' do
+    hello = 'hello'.encode(Encoding::UTF_8)
+    accum_string = ''.force_encoding(Encoding::BINARY)
+    adapter = described_class.new { |s| accum_string << s }
+    adapter << hello
+    expect(accum_string.encoding).to eq(Encoding::BINARY)
+    expect(hello.encoding).to eq(Encoding::UTF_8)
+  end
+
   it 'omits strings of zero length' do
     blobs = []
     adapter = described_class.new { |s| blobs << s }

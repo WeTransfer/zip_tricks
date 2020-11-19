@@ -1,3 +1,8 @@
+## 4.8.3
+
+* Fix a leak of 1 zlib deflater object per deflated file when writing out compressed files with data descriptors. The deflater
+  needs to be closed explicitly, which we weren't previously doing.
+
 ## 4.8.2
 
 * Fix extended timestamp timestamp value encoding. Previously we would use an incorrect encoding for the timestamp value, which would output correct but nonsensical timestamps. The pack specifier is now changed to output the correct value.

@@ -26,6 +26,16 @@ describe ZipTricks::WriteAndTell do
     expect(buf.bytesize).to eq(91) # It already contained some bytes
   end
 
+  it 'does not change the encoding of the source string' do
+    str = 'текста кусок'.force_encoding(Encoding::UTF_8)
+    buf = 'превед'.force_encoding(Encoding::BINARY)
+    writer = described_class.new(buf)
+    writer << str
+    expect(buf.bytesize).to eq(35)
+    expect(buf.encoding).to eq(Encoding::BINARY)
+    expect(str.encoding).to eq(Encoding::UTF_8)
+  end
+
   it 'is able to write into a null writer or a blackhole maintaining offsets' do
     writer = described_class.new(ZipTricks::NullWriter)
     writer << 'Hello'

@@ -1,3 +1,16 @@
+## 5.4.0
+
+* Use block form for zlib Deflater calls to conserve memory
+* Do not change string encoding in writer wrappers (avoid extra work)
+* Fix a zlib deflater object being leaked per archived file
+* Speed up streaming CRC32 computation
+* When running tests, assign the port for the Puma server dynamically
+* Reduce string allocations in the block deflate spec
+* Make sure RemoteUncap specs run under JRuby correctly
+* Replace Rails::Live streaming with iterable body streaming to avoid issues with Rails::Live across the board
+* Remove `qa/` directory and scripts, as the tests for the library proper should now be sufficient
+* Fix some documentation and sample code omissions and inconsistencies.
+
 ## 5.3.1
 
 * Fix extended timestamp timestamp value encoding. Previously we would use an incorrect encoding for the timestamp value, which would output correct but nonsensical timestamps. The pack specifier is now changed to output the correct value.

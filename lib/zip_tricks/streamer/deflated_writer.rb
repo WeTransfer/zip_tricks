@@ -14,7 +14,7 @@ class ZipTricks::Streamer::DeflatedWriter
     @compressed_io = io
     @deflater = ::Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION, -::Zlib::MAX_WBITS)
     @crc = ZipTricks::StreamCRC32.new
-    @crc_buf = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
+    @crc_buf = ZipTricks::WriteBuffer.new(@crc, CRC32_BUFFER_SIZE)
   end
 
   # Writes the given data into the deflater, and flushes the deflater

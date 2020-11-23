@@ -93,7 +93,7 @@ class ZipTricks::Streamer
   UnknownMode = Class.new(StandardError)
   OffsetOutOfSync = Class.new(StandardError)
 
-  private_constant :DeflatedWriter, :StoredWriter, :STORED, :DEFLATED
+  private_constant :STORED, :DEFLATED
 
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central

@@ -1,3 +1,6 @@
+* In `OutputEnumerator` apply some amount of buffering to be within a UNIX socket size for metatada writes. This
+  speeds up usage with Puma by about 20 percent, as there won't be as many `syswrite` calls on the socket.
+
 ## 5.4.0
 
 * Use block form for zlib Deflater calls to conserve memory

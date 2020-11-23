@@ -12,7 +12,8 @@ class ZipTricks::Streamer::StoredWriter
 
   def initialize(io)
     @io = ZipTricks::WriteAndTell.new(io)
-    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
+    @crc_compute = ZipTricks::StreamCRC32.new
+    @crc = ZipTricks::WriteBuffer.new(@crc_compute, CRC32_BUFFER_SIZE)
   end
 
   # Writes the given data to the contained IO object.
@@ -30,6 +31,7 @@ class ZipTricks::Streamer::StoredWriter
   #
   # @return [Hash] a hash of `{crc32, compressed_size, uncompressed_size}`
   def finish
-    {crc32: @crc.to_i, compressed_size: @io.tell, uncompressed_size: @io.tell}
+    @crc.flush
+    {crc32: @crc_compute.to_i, compressed_size: @io.tell, uncompressed_size: @io.tell}
   end
 end

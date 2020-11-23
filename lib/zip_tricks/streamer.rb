@@ -93,7 +93,7 @@ class ZipTricks::Streamer
   UnknownMode = Class.new(StandardError)
   OffsetOutOfSync = Class.new(StandardError)
 
-  private_constant :DeflatedWriter, :StoredWriter, :STORED, :DEFLATED
+  private_constant :STORED, :DEFLATED
 
   # Creates a new Streamer on top of the given IO-ish object and yields it. Once the given block
   # returns, the Streamer will have it's `close` method called, which will write out the central
@@ -138,20 +138,19 @@ class ZipTricks::Streamer
 
   # Creates a new Streamer on top of the given IO-ish object.
   #
-  # @param stream[IO] the destination IO for the ZIP. Anything that responds to `<<` can be used.
+  # @param writable[#<<] the destination IO for the ZIP. Anything that responds to `<<` can be used.
   # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
   #    dupliate names are used an exception will be raised
-  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
-    raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
-
-    @dedupe_filenames = auto_rename_duplicate_filenames
-    @out = ZipTricks::WriteAndTell.new(stream)
+  def initialize(writable, writer: create_writer, auto_rename_duplicate_filenames: false)
+    raise InvalidOutput, 'The writable must respond to #<<' unless writable.respond_to?(:<<)
+    @out = ZipTricks::WriteAndTell.new(writable)
     @files = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
+    @dedupe_filenames = auto_rename_duplicate_filenames
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.

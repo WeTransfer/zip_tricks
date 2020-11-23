@@ -13,7 +13,8 @@ class ZipTricks::Streamer::DeflatedWriter
   def initialize(io)
     @compressed_io = io
     @deflater = ::Zlib::Deflate.new(Zlib::DEFAULT_COMPRESSION, -::Zlib::MAX_WBITS)
-    @crc = ZipTricks::WriteBuffer.new(ZipTricks::StreamCRC32.new, CRC32_BUFFER_SIZE)
+    @crc = ZipTricks::StreamCRC32.new
+    @crc_buf = ZipTricks::WriteBuffer.new(@crc, CRC32_BUFFER_SIZE)
   end
 
   # Writes the given data into the deflater, and flushes the deflater
@@ -23,7 +24,7 @@ class ZipTricks::Streamer::DeflatedWriter
   # @return self
   def <<(data)
     @deflater.deflate(data) { |chunk| @compressed_io << chunk }
-    @crc << data
+    @crc_buf << data
     self
   end
 
@@ -34,6 +35,7 @@ class ZipTricks::Streamer::DeflatedWriter
   # @return [Hash] a hash of `{crc32, compressed_size, uncompressed_size}`
   def finish
     @compressed_io << @deflater.finish until @deflater.finished?
+    @crc_buf.flush
     {crc32: @crc.to_i, compressed_size: @deflater.total_out, uncompressed_size: @deflater.total_in}
   ensure
     @deflater.close

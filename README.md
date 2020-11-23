@@ -75,12 +75,15 @@ since you do not know how large the compressed data segments are going to be.
 
 ## Send a ZIP from a Rack response
 
-Create a `RackBody` object and give it's constructor a block that adds files.
-The block will only be called when actually sending the response to the client
+To "pull" data from ZipTricks you can create an `OutputEnumerator` object which will yield the binary chunks piece
+by piece, and apply some amount of buffering as well. Since this `OutputEnumerator` responds to `#each` and yields
+Strings it also can (and should!) be used as a Rack response body. Return it to your webserver and you will
+have your ZIP streamed. The block that you give to the `OutputEnumerator` will only start executing once your
+response body starts getting iterated over - when actually sending the response to the client
 (unless you are using a buffering Rack webserver, such as Webrick).
 
 ```ruby
-body = ZipTricks::RackBody.new do | zip |
+body = ZipTricks::Streamer.output_enum do | zip |
   zip.write_stored_file('mov.mp4') do |sink| # Those MPEG4 files do not compress that well
     File.open('mov.mp4', 'rb'){|source| IO.copy_stream(source, sink) }
   end

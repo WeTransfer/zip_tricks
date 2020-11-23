@@ -7,18 +7,30 @@
 # CRC32 combine operations - and this adds up. Since the CRC32 value
 # is usually not needed until the complete output has completed
 # we can buffer at least some amount of data before computing CRC32 over it.
+# We also use this buffer for output via Rack, where some amount of buffering
+# helps reduce the number of syscalls made by the webserver. ZipTricks performs
+# lots of very small writes, and some degree of speedup (about 20%) can be achieved
+# with a buffer of a few KB.
+#
+# Note that there is no guarantee that the write buffer is going to flush at or above
+# the given `buffer_size`, because for writes which exceed the buffer size it will
+# first `flush` and then write through the oversized chunk, without buffering it. This
+# helps conserve memory. Also note that the buffer will *not* duplicate strings for you
+# and *will* yield the same buffer String over and over, so if you are storing it in an
+# Array you might need to duplicate it.
 class ZipTricks::WriteBuffer
   # Creates a new WriteBuffer bypassing into a given writable object
   #
   # @param writable[#<<] An object that responds to `#<<` with a String as argument
   # @param buffer_size[Integer] How many bytes to buffer
-  def initialize(writable, buffer_size, transform = nil)
-    @buf = StringIO.new("\0".b * buffer_size)
-    @buf.truncate(0)
-    @bufsize = buffer_size
+  def initialize(writable, buffer_size)
+    # Allocating the buffer using a zero-padded String as a variation
+    # on using capacity:, which JRuby apparently does not like very much. The
+    # desire here is that the buffer doesn't have to be resized during the lifetime
+    # of the object.
+    @buf = ("\0".b * (buffer_size * 2)).clear
+    @buffer_size = buffer_size
     @writable = writable
-    @transform = transform || :to_s
-    @outbuf = "\0".b * buffer_size
   end
 
   # Appends the given data to the write buffer, and flushes the buffer into the
@@ -27,37 +39,14 @@ class ZipTricks::WriteBuffer
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    capacity = @bufsize
-    if capacity < 1
-      @writable << data.send(@transform)
-      return self
-    end
-
-    used = @buf.tell
-    data = StringIO.new(data)
-    data.binmode
-    size = data.size
-    needed = used + size
-
-    case needed <=> capacity
-    when 1 # needed > capacity
-      free = capacity - used
-      @buf << data.read(free, @outbuf)
-      flush
-      multiple, remaining = (size - free).divmod(capacity)
-      multiple.times do
-        @writable << data.read(capacity, @outbuf).send(@transform)
-      end
-      @buf << data.read(remaining, @outbuf)
-    when 0 # needed == capacity
-      if used > 0
-        @buf << data.string
-        flush
-      else
-        @writable << data.string
-      end
-    when -1 # needed < capacity
-      @buf << data.string
+    len = data.bytesize
+    cap = @buffer_size
+    if len >= cap
+      flush unless @buf.empty? # <- this is were we can output less than @buffer_size
+      @writable << data
+    else
+      @buf << data
+      flush if @buf.bytesize >= cap
     end
     self
   end
@@ -66,29 +55,12 @@ class ZipTricks::WriteBuffer
   #
   # @return self
   def flush
-    size = @buf.tell
-    if size > 0
-      @buf.rewind
-      @writable << @buf.read(size, @outbuf).send(@transform)
-      @buf.rewind
+    unless @buf.empty?
+      @writable << @buf
+      @buf.clear
     end
     self
   end
 
-  # Get current size of buffer.
-  #
-  # @return [Integer] the return value of `buffer#tell`
-  def size
-    @buf.tell
-  end
-
-  # Flushes the buffer and returns the result of `#to_i` of the contained `writable`.
-  # Primarily facilitates working with StreamCRC32 objects where you finish the
-  # computation by retrieving the CRC as an integer
-  #
-  # @return [Integer] the return value of `writable#to_i`
-  def to_i
-    flush
-    @writable.to_i
-  end
+  alias_method :flush!, :flush
 end

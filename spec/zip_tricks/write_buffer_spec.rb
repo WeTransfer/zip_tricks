@@ -31,49 +31,16 @@ describe ZipTricks::WriteBuffer do
     adapter << 'a' << 'b'
   end
 
-  it 'does not reuse the output string with dup transform' do
-    # It is important to ensure that when the accumulator writes into the
-    # destination it does not write the same String object over and over, as
-    # the receiving object might be retaining that String for later writes.
-    accumulator = []
-    write_buffer = described_class.new(accumulator, 2, :dup)
-    write_buffer << "a" << "b" << "c" << "d" << "e" << "and a word" << "and more"
-    write_buffer.flush
-
-    expect(accumulator.join).to eq('abcdeand a wordand more')
-    expect(accumulator.map(&:object_id).uniq.length).to eq(accumulator.length)
-  end
-
-  it 'bypasses the write if it is aligned to the buffer size' do
-    accumulator = []
-    write_buffer = described_class.new(accumulator, 3, :dup)
-    expect(write_buffer.size).to eq(0)
-    write_buffer << "abcdef"
-    expect(write_buffer.size).to eq(0)
-    write_buffer << "gh"
-    expect(write_buffer.size).to eq(2)
-    write_buffer << "ijk"
-    expect(write_buffer.size).to eq(2)
-    write_buffer << "lmno"
-    expect(write_buffer.size).to eq(0)
-    write_buffer << "p"
-    expect(write_buffer.size).to eq(1)
-
-    write_buffer.flush
-    expect(accumulator).to eq(["abc", "def", "ghi", "jkl", "mno", "p"])
-  end
-
-  it 'flushes the buffer and returns `to_i` from the contained object' do
+  it 'flushes the buffer when asked' do
     sink = double('Writable')
 
     expect(sink).to receive(:<<).with('quick brown fox ')
-    expect(sink).to receive(:to_i).and_return(123)
 
     adapter = described_class.new(sink, 64 * 1024)
+
     'quick brown fox '.each_char do |char|
       adapter << char
     end
-
-    expect(adapter.to_i).to eq(123)
+    adapter.flush
   end
 end

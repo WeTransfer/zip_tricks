@@ -26,7 +26,8 @@ describe ZipTricks::WriteBuffer do
     # if duplication gets applied on every write
     class Duplicator < Struct.new(:accumulator)
       def <<(data)
-        accumulator << data.dup; self
+        accumulator << data.dup
+        self
       end
     end
 

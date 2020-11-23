@@ -56,7 +56,17 @@ describe ZipTricks::WriteBuffer do
     # and it gets cleared after every flush of the buffer
     expect(accumulator).to eq(["", ""])
   end
-  
+
+  it 'supports flush! in addition to flush' do
+    sink = double('Writable')
+
+    expect(sink).to receive(:<<).with('ab')
+
+    adapter = described_class.new(sink, 64)
+    adapter << 'a' << 'b'
+    adapter.flush!
+  end
+
   it 'does not buffer with buffer size set to 0' do
     sink = double('Writable')
 

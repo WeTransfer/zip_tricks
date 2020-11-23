@@ -46,6 +46,12 @@ class ZipTricks::OutputEnumerator
   # to "take" output of the ZIP piecewise. If called without a block will return an Enumerator
   # that you can pull data from using `next`.
   #
+  # **NOTE** Because the `WriteBuffer` inside this object can reuse the buffer, it is important
+  #    that the `String` that is yielded **either** gets consumed eagerly (written byte-by-byte somewhere, or `#dup`-ed)
+  #    since the write buffer will clear it after your block returns. If you expand this Enumerator
+  #    eagerly into an Array you might notice that a lot of the segments of your ZIP output are
+  #    empty - this means that you need to duplicate them.
+  #
   # @yield [String] a chunk of the ZIP output in binary encoding
   def each
     if block_given?

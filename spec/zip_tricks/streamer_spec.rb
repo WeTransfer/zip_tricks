@@ -76,13 +76,11 @@ describe ZipTricks::Streamer do
 
     retval = zip << Random.new.bytes(8_912)
     expect(retval).to eq(zip)
-    zip.flush
     expect(io.tell).to eq(8_959)
 
     pos = zip.add_stored_entry(filename: 'filf.jpg', size: 8_921, crc32: 182_919)
     expect(pos).to eq(9006)
     zip << Random.new.bytes(8_921)
-    zip.flush
     expect(io.tell).to eq(17_927)
 
     pos = zip.close

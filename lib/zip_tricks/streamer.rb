@@ -138,20 +138,15 @@ class ZipTricks::Streamer
 
   # Creates a new Streamer on top of the given IO-ish object.
   #
-  # @param stream[IO] the destination IO for the ZIP. Anything that responds to `<<` can be used.
+  # @param writable[#<<] the destination IO for the ZIP. Anything that responds to `<<` can be used.
   # @param writer[ZipTricks::ZipWriter] the object to be used as the writer.
   #    Defaults to an instance of ZipTricks::ZipWriter, normally you won't need to override it
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
   #    dupliate names are used an exception will be raised
-  def initialize(stream, writer: create_writer, auto_rename_duplicate_filenames: false)
-    raise InvalidOutput, 'The stream must respond to #<<' unless stream.respond_to?(:<<)
-
-    # A small buffer used primarily to avoid too many microscopic writes when writing
-    # the ZIP metadata. This helps a lot with serving out the data via network but
-    # will also be more economical in other situations.
-    @buf = ZipTricks::WriteBuffer.new(stream, 4 * 1024)
-    @out = ZipTricks::WriteAndTell.new(@buf)
+  def initialize(writable, writer: create_writer, auto_rename_duplicate_filenames: false)
+    raise InvalidOutput, 'The writable must respond to #<<' unless writable.respond_to?(:<<)
+    @out = ZipTricks::WriteAndTell.new(writable)
     @files = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
@@ -186,7 +181,6 @@ class ZipTricks::Streamer
   # @param num_bytes [Integer] how many bytes are going to be written bypassing the Streamer
   # @return [Integer] position in the output stream / ZIP archive
   def simulate_write(num_bytes)
-    @buf.flush
     @out.advance_position_by(num_bytes)
     @out.tell
   end
@@ -215,7 +209,6 @@ class ZipTricks::Streamer
                                     compressed_size: compressed_size,
                                     uncompressed_size: uncompressed_size,
                                     use_data_descriptor: use_data_descriptor)
-    @buf.flush
     @out.tell
   end
 
@@ -238,7 +231,6 @@ class ZipTricks::Streamer
                                     compressed_size: size,
                                     uncompressed_size: size,
                                     use_data_descriptor: use_data_descriptor)
-    @buf.flush
     @out.tell
   end
 
@@ -255,7 +247,6 @@ class ZipTricks::Streamer
                                     compressed_size: 0,
                                     uncompressed_size: 0,
                                     use_data_descriptor: false)
-    @buf.flush
     @out.tell
   end
 
@@ -361,14 +352,6 @@ class ZipTricks::Streamer
     writable
   end
 
-  # Flush write buffer.
-  #
-  # @return self
-  def flush
-    @buf.flush
-    self
-  end
-
   # Closes the archive. Writes the central directory, and switches the writer into
   # a state where it can no longer be written to.
   #
@@ -409,7 +392,6 @@ class ZipTricks::Streamer
     @path_set.clear
 
     # and return the final offset
-    @buf.flush
     @out.tell
   end
 
@@ -446,7 +428,6 @@ class ZipTricks::Streamer
                                   uncompressed_size: last_entry.uncompressed_size)
     last_entry.bytes_used_for_data_descriptor = @out.tell - offset_before_data_descriptor
 
-    @buf.flush
     @out.tell
   end
 

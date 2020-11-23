@@ -35,7 +35,7 @@ class ZipTricks::OutputEnumerator
   #     but at block size boundaries or greater). Set it to 0 for unbuffered writes.
   # @param blk a block that will receive the Streamer object when executing. The block will not be executed
   #     immediately but only once `each` is called on the OutputEnumerator
-  def initialize(write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE, write_transform: nil, **streamer_options, &blk)
+  def initialize(write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE, **streamer_options, &blk)
     @streamer_options = streamer_options.to_h
     @bufsize = write_buffer_size.to_i
     @archiving_block = blk

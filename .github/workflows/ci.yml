@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+env:
+  BUNDLE_PATH: vendor/bundle
+
+jobs:
+  lint:
+    name: Code Style
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      matrix:
+        ruby:
+          - '2.7'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - name: Gemfile Cache
+        uses: actions/cache@v2
+        with:
+          path: Gemfile.lock
+          key: ${{ runner.os }}-gemlock-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'zip_tricks.gemspec') }}
+          restore-keys: |
+            ${{ runner.os }}-gemlock-${{ matrix.ruby }}-
+      - name: Bundle Cache
+        id: cache-gems
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'Gemfile.lock', 'zip_tricks.gemspec') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-${{ matrix.ruby }}-
+            ${{ runner.os }}-gems-
+      - name: Bundle Install
+        if: steps.cache-gems.outputs.cache-hit != 'true'
+        run: bundle install --jobs 4 --retry 3
+      - name: Rubocop Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/rubocop_cache
+          key: ${{ runner.os }}-rubocop-${{ hashFiles('.rubocop.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-rubocop-
+      - name: Rubocop
+        run: bundle exec rubocop
+  test:
+    name: Specs
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      matrix:
+        ruby:
+          - '2.7'
+          - '2.1'
+          - 'jruby-9.2'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+      - name: Gemfile Cache
+        uses: actions/cache@v2
+        with:
+          path: Gemfile.lock
+          key: ${{ runner.os }}-gemlock-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'zip_tricks.gemspec') }}
+          restore-keys: |
+            ${{ runner.os }}-gemlock-${{ matrix.ruby }}-
+      - name: Bundle Cache
+        id: cache-gems
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'Gemfile.lock', 'zip_tricks.gemspec') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-${{ matrix.ruby }}-
+            ${{ runner.os }}-gems-
+      - name: Bundle Install
+        if: steps.cache-gems.outputs.cache-hit != 'true'
+        run: bundle install --jobs 4 --retry 3
+      - name: RSpec
+        run: bundle exec rspec
+

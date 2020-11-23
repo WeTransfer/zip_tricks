@@ -21,6 +21,42 @@ describe ZipTricks::WriteBuffer do
     adapter.flush
   end
 
+  it 'bypasses larger writes, even if the amount of data accumulated is smaller than bufsize' do
+    # The WriteBuffer reuses strings, so examining its output is easier via Arrays
+    # if duplication gets applied on every write
+    class Duplicator < Struct.new(:accumulator)
+      def <<(data)
+        accumulator << data.dup; self
+      end
+    end
+
+    accumulator = []
+    subject = described_class.new(Duplicator.new(accumulator), 12)
+    subject << 'one'
+    subject << 'a much larger larger larger string which  is larger than the buffer size'
+    subject << 'some more data'
+    subject.flush
+
+    expect(accumulator).to eq([
+      "one",
+      "a much larger larger larger string which  is larger than the buffer size",
+      "some more data"
+    ])
+  end
+
+  it 'reuses the same String object throughout writes to conserve allocations' do
+    accumulator = []
+    subject = described_class.new(accumulator, 12)
+    subject << 'a' << 'b' << 'c'
+    subject.flush
+    subject << 'd'
+    subject.flush
+
+    # The accumulator contains 2 references to the same internal String in the WriteBuffer,
+    # and it gets cleared after every flush of the buffer
+    expect(accumulator).to eq(["", ""])
+  end
+  
   it 'does not buffer with buffer size set to 0' do
     sink = double('Writable')
 

@@ -18,6 +18,12 @@
 # helps conserve memory. Also note that the buffer will *not* duplicate strings for you
 # and *will* yield the same buffer String over and over, so if you are storing it in an
 # Array you might need to duplicate it.
+#
+# Note also that the WriteBuffer assumes that the object it `<<`-writes into is going
+# to **consume** in some way the string that it passes in. After the `<<` method returns,
+# the WriteBuffer will be cleared, and it passes the same String reference on every call
+# to `<<`. Therefore, if you need to retain the output of the WriteBuffer in, say, an Array,
+# you might need to `.dup` the `String` it gives you.
 class ZipTricks::WriteBuffer
   # Creates a new WriteBuffer bypassing into a given writable object
   #
@@ -39,14 +45,12 @@ class ZipTricks::WriteBuffer
   # @param data[String] data to be written
   # @return self
   def <<(data)
-    len = data.bytesize
-    cap = @buffer_size
-    if len >= cap
+    if data.bytesize >= @buffer_size
       flush unless @buf.empty? # <- this is were we can output less than @buffer_size
       @writable << data
     else
       @buf << data
-      flush if @buf.bytesize >= cap
+      flush if @buf.bytesize >= @buffer_size
     end
     self
   end
@@ -62,5 +66,6 @@ class ZipTricks::WriteBuffer
     self
   end
 
+  # `flush!` was renamed to `flush` but we preserve this method for backwards compatibility
   alias_method :flush!, :flush
 end

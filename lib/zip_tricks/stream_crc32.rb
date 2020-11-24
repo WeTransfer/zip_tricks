@@ -8,7 +8,7 @@ class ZipTricks::StreamCRC32
   rescue ArgumentError
     false
   end
-  CRC_BUF_SIZE = 1024 * 512
+  CRC_BUF_SIZE = 1024 * 64
   private_constant :STRINGS_HAVE_CAPACITY_SUPPORT, :CRC_BUF_SIZE
 
   # Compute a CRC32 value from an IO object. The object should respond to `read` and `eof?`

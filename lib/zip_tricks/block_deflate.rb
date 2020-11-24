@@ -48,7 +48,7 @@ require 'zlib'
 #     compressed_string = ZipTricks::BlockDeflate.deflate_chunk(big_string)
 
 class ZipTricks::BlockDeflate
-  DEFAULT_BLOCKSIZE = 1_024 * 1024 * 5
+  DEFAULT_BLOCKSIZE = 1_024 * 384
   END_MARKER = [3, 0].pack('C*')
   # Zlib::NO_COMPRESSION..
   VALID_COMPRESSIONS = (Zlib::DEFAULT_COMPRESSION..Zlib::BEST_COMPRESSION).to_a.freeze
@@ -71,13 +71,11 @@ class ZipTricks::BlockDeflate
   # @return [String] compressed bytes
   def self.deflate_chunk(bytes, level: Zlib::DEFAULT_COMPRESSION)
     raise "Invalid Zlib compression level #{level}" unless VALID_COMPRESSIONS.include?(level)
-    z = Zlib::Deflate.new(level)
+    z = Zlib::Deflate.new(level, -::Zlib::MAX_WBITS, Zlib::DEF_MEM_LEVEL)
     compressed_blob = z.deflate(bytes, Zlib::SYNC_FLUSH)
-    compressed_blob << z.finish
+    z.finish # discard end marker
     z.close
-
-    # Remove the header (2 bytes), the [3,0] end marker and the adler (4 bytes)
-    compressed_blob[2...-6]
+    compressed_blob
   end
 
   # Compress the contents of input_io into output_io, in blocks
@@ -119,12 +117,16 @@ class ZipTricks::BlockDeflate
                              output_io,
                              level: Zlib::DEFAULT_COMPRESSION,
                              block_size: DEFAULT_BLOCKSIZE)
-    bytes_written = 0
-    while block = input_io.read(block_size)
-      deflated = deflate_chunk(block, level: level)
-      output_io << deflated
-      bytes_written += deflated.bytesize
-    end
+    raise "Invalid Zlib compression level #{level}" unless VALID_COMPRESSIONS.include?(level)
+    z = Zlib::Deflate.new(level, -::Zlib::MAX_WBITS, Zlib::MAX_MEM_LEVEL)
+    # block sizes divisable by 3 yield much lower memory usage
+    block_size += block_size % 3072
+    block = "\0".b * block_size
+    output_io << z.deflate(block) while input_io.read(block_size, block)
+    output_io << z.flush(Zlib::SYNC_FLUSH)
+    bytes_written = z.total_out
+    z.finish # discard end marker
+    z.close
     bytes_written
   end
 end

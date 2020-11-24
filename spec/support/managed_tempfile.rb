@@ -1,3 +1,5 @@
+require 'tempfile'
+
 class ManagedTempfile < Tempfile
   @@managed_tempfiles = []
 

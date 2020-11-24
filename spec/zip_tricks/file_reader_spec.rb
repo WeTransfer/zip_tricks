@@ -84,8 +84,7 @@ describe ZipTricks::FileReader do
     it 'is still able to read the entries' do
       # Purposefully create a ZIP that we will damage after
       zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
-      tolstoy.force_encoding(Encoding::BINARY)
+      tolstoy = File.open(__dir__ + '/war-and-peace.txt', 'rb')
 
       # Make a one-off Writer that corrupts the size of the central directory
       # and says there is more data in it than there actually is
@@ -98,8 +97,8 @@ describe ZipTricks::FileReader do
       end
 
       ZipTricks::Streamer.open(zipfile, writer: EvilWriter.new) do |zip|
-        zip.write_deflated_file('text-1.txt') { |sink| sink << tolstoy }
-        zip.write_deflated_file('text-2.txt') { |sink| sink << tolstoy }
+        zip.write_deflated_file('text-1.txt') { |sink| IO.copy_stream(tolstoy, sink, nil, 0) }
+        zip.write_deflated_file('text-2.txt') { |sink| IO.copy_stream(tolstoy, sink, nil, 0) }
       end
 
       # Find the start of the EOCD record (signature, then the information
@@ -124,8 +123,7 @@ describe ZipTricks::FileReader do
   context 'with an end-to-end ZIP file to read' do
     it 'reads and uncompresses the file written deflated with data descriptors' do
       zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
-      tolstoy.force_encoding(Encoding::BINARY)
+      tolstoy = File.binread(__dir__ + '/war-and-peace.txt')
 
       ZipTricks::Streamer.open(zipfile) do |zip|
         zip.write_deflated_file('war-and-peace.txt') do |sink|
@@ -138,9 +136,7 @@ describe ZipTricks::FileReader do
 
       entry = entries.first
 
-      readback = ''
-      reader = entry.extractor_from(zipfile)
-      readback << reader.extract(10) until reader.eof?
+      readback = entry.extractor_from(zipfile).extract
 
       expect(readback.bytesize).to eq(tolstoy.bytesize)
       expect(readback[0..10]).to eq(tolstoy[0..10])
@@ -148,51 +144,48 @@ describe ZipTricks::FileReader do
     end
 
     it 'performs local file header reads by default' do
-      zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
-      tolstoy.force_encoding(Encoding::BINARY)
-
-      ZipTricks::Streamer.open(zipfile) do |zip|
-        40.times do |i|
-          zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| sink << tolstoy }
+      zipfile = ManagedTempfile.new('zip')
+      File.open(__dir__ + '/war-and-peace.txt', 'rb') do |tolstoy|
+        ZipTricks::Streamer.open(zipfile) do |zip|
+          10.times do |i|
+            zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| IO.copy_stream(tolstoy, sink, nil, 0) }
+          end
         end
       end
       zipfile.rewind
 
       read_monitor = ReadMonitor.new(zipfile)
       _entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
-      expect(read_monitor.num_reads).to eq(44)
+      expect(read_monitor.num_reads).to eq(14)
     end
 
     it 'performs local file header reads when `read_local_headers` is set to true' do
-      zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
-      tolstoy.force_encoding(Encoding::BINARY)
-
-      ZipTricks::Streamer.open(zipfile) do |zip|
-        40.times do |i|
-          zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| sink << tolstoy }
+      zipfile = ManagedTempfile.new('zip')
+      File.open(__dir__ + '/war-and-peace.txt', 'rb') do |tolstoy|
+        ZipTricks::Streamer.open(zipfile) do |zip|
+          10.times do |i|
+            zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| IO.copy_stream(tolstoy, sink, nil, 0) }
+          end
         end
       end
       zipfile.rewind
 
       read_monitor = ReadMonitor.new(zipfile)
       entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: true)
-      expect(read_monitor.num_reads).to eq(44)
+      expect(read_monitor.num_reads).to eq(14)
 
-      expect(entries.length).to eq(40)
+      expect(entries.length).to eq(10)
       entry = entries.first
       expect(entry).to be_known_offset
     end
 
     it 'performs a limited number of reads when `read_local_headers` is set to false' do
-      zipfile = StringIO.new
-      tolstoy = File.read(__dir__ + '/war-and-peace.txt')
-      tolstoy.force_encoding(Encoding::BINARY)
-
-      ZipTricks::Streamer.open(zipfile) do |zip|
-        40.times do |i|
-          zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| sink << tolstoy }
+      zipfile = ManagedTempfile.new('zip')
+      File.open(__dir__ + '/war-and-peace.txt', 'rb') do |tolstoy|
+        ZipTricks::Streamer.open(zipfile) do |zip|
+          10.times do |i|
+            zip.write_deflated_file(format('war-and-peace-%d.txt', i)) { |sink| IO.copy_stream(tolstoy, sink, nil, 0) }
+          end
         end
       end
       zipfile.rewind
@@ -201,7 +194,7 @@ describe ZipTricks::FileReader do
       entries = described_class.read_zip_structure(io: read_monitor, read_local_headers: false)
 
       expect(read_monitor.num_reads).to eq(4)
-      expect(entries.length).to eq(40)
+      expect(entries.length).to eq(10)
       entry = entries.first
       expect(entry).not_to be_known_offset
       expect { entry.compressed_data_offset }.to raise_error(/read/)
@@ -231,7 +224,7 @@ describe ZipTricks::FileReader do
     it 'reads the offset for an entry having Zip64 extra fields' do
       w = ZipTricks::ZipWriter.new
       out = StringIO.new
-      out << Random.new.bytes(7_656_177)
+      out << Random.new.bytes(177)
       w.write_local_file_header(io: out,
                                 filename: 'some file',
                                 compressed_size: 0xFFFFFFFF + 5,
@@ -244,8 +237,8 @@ describe ZipTricks::FileReader do
       out.rewind
 
       compressed_data_offset = subject.get_compressed_data_offset(io: out,
-                                                                  local_file_header_offset: 7_656_177)
-      expect(compressed_data_offset).to eq(7_656_245)
+                                                                  local_file_header_offset: 177)
+      expect(compressed_data_offset).to eq(245)
     end
 
     it 'reads the offset for an entry having a long name' do

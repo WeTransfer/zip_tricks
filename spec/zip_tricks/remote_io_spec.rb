@@ -45,7 +45,8 @@ describe ZipTricks::RemoteIO do
     before :each do
       @buf = Tempfile.new('simulated-http')
       @buf.binmode
-      5.times { @buf << Random.new.bytes(1024 * 1024 * 3) }
+      rand = Random.new
+      96.times { @buf << rand.bytes(16 * 1024) }
       @buf.rewind
 
       allow(subject).to receive(:request_object_size).and_return(@buf.size)
@@ -101,7 +102,7 @@ describe ZipTricks::RemoteIO do
         at_end = @buf.size - 4
         subject.seek(at_end, IO::SEEK_SET)
 
-        expect(subject.tell).to eq(15_728_636)
+        expect(subject.tell).to eq(at_end)
         bytes_read = subject.read(10)
         expect(subject.tell).to eq(@buf.size) # Should have moved the pos pointer to the end
 

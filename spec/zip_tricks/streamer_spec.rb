@@ -1,5 +1,4 @@
 require_relative '../spec_helper'
-require 'complexity_assert'
 
 describe ZipTricks::Streamer do
   let(:test_text_file_path) { File.join(__dir__, 'war-and-peace.txt') }
@@ -29,21 +28,35 @@ describe ZipTricks::Streamer do
   end
 
   it 'has linear performance depending on the file count' do
-    module FilecountComplexity
-      def self.generate_args(size)
-        [size]
-      end
-
-      def self.run(n_files)
+    scale = 2 # scaling factor between tests
+    tries = 4 # retries to reduce variance
+    max_variance = 0.15 # 15% fuzz factor
+    # 4, 8, 16, ..., 4096
+    results = (0..11).map do |n|
+      n_files = scale**n
+      tries.times.reduce(scale.to_f) do |last|
+        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         ZipTricks::Streamer.open(ZipTricks::NullWriter, writer: FakeZipWriter.new) do |w|
           n_files.times do |i|
             w.write_stored_file(format('file_%d', i)) { |body| body << 'w' }
           end
         end
+        result = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+        variance = (last - result).abs / result
+        break result if variance <= max_variance
+        result
       end
     end
 
-    expect(FilecountComplexity).to be_linear
+    # Calculate the factor compared to the previous result.
+    (results.count - 1).downto(1).each do |i|
+      results[i] = results[i] / results[i - 1]
+    end
+
+    median = results.sort[results.count / 2]
+    confidence = 0.25 # 75% confidence interval
+
+    expect(median).to be_within(scale * confidence).of(scale)
   end
 
   it 'raises an InvalidOutput if the given object does not support the methods' do

@@ -5,7 +5,7 @@ require 'zip_tricks/version'
 Gem::Specification.new do |spec|
   spec.name           = 'zip_tricks'
   spec.version        = ZipTricks::VERSION
-  spec.authors        = ['Julik Tarkhanov', 'Noah Berman', 'Dmitry Tymchuk', 'David Bosveld']
+  spec.authors        = ['Julik Tarkhanov', 'Noah Berman', 'Dmitry Tymchuk', 'David Bosveld', 'Felix Bünemann']
   spec.email          = ['me@julik.nl']
 
   spec.licenses       = ['MIT (Hippocratic)']

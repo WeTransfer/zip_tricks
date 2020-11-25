@@ -113,7 +113,8 @@ describe ZipTricks::BlockDeflate do
 
       num_bytes = described_class.deflate_in_blocks(input, output)
       expect(num_bytes).to eq(output.size)
-      expect(num_bytes).to eq(24_434)
+      # Workaround for size diff on some JRuby versions.
+      expect(num_bytes).to be_within(1).of(24_434)
     end
   end
 end

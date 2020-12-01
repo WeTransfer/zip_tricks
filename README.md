@@ -1,6 +1,6 @@
 # zip_tricks
 
-[![Build Status](https://travis-ci.org/WeTransfer/zip_tricks.svg?branch=master)](https://travis-ci.org/WeTransfer/zip_tricks)
+[![Build Status](https://travis-ci.org/WeTransfer/zip_tricks.svg?branch=main)](https://travis-ci.org/WeTransfer/zip_tricks)
 [![Gem Version](https://badge.fury.io/rb/zip_tricks.svg)](https://badge.fury.io/rb/zip_tricks)
 
 Allows streaming, non-rewinding ZIP file output from Ruby.
@@ -175,7 +175,7 @@ that have not been formally verified (ours hasn't been).
 
 ## Contributing to zip_tricks
 
-* Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
+* Check out the latest `main` to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
 * Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it.
 * Fork the project.
 * Start a feature/bugfix branch.

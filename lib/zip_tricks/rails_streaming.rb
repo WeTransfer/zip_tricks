@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Should be included into a Rails controller (together with `ActionController::Live`)
-# for easy ZIP output from any action.
+# Should be included into a Rails controller for easy ZIP output from any action.
 module ZipTricks::RailsStreaming
   # Opens a {ZipTricks::Streamer} and yields it to the caller. The output of the streamer
   # gets automatically forwarded to the Rails response stream. When the output completes,

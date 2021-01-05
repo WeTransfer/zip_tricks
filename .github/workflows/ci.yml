@@ -58,6 +58,7 @@ jobs:
     strategy:
       matrix:
         ruby:
+          - '3.0'
           - '2.7'
           - '2.1'
           - 'jruby-9.2'
@@ -89,4 +90,3 @@ jobs:
         run: bundle install --jobs 4 --retry 3
       - name: RSpec
         run: bundle exec rspec
-

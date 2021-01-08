@@ -84,7 +84,7 @@ describe ZipTricks::BlockDeflate do
   end
 
   describe '.deflate_in_blocks' do
-    it 'honors the block size' do
+    it 'honors the block size', :aggregate_failures do
       data = 'compressible' * (1024 * 1024 * 10)
       input = StringIO.new(data)
       output = StringIO.new

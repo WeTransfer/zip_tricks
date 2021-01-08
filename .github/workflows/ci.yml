@@ -58,10 +58,13 @@ jobs:
     strategy:
       matrix:
         ruby:
-          - '3.0'
           - '2.7'
           - '2.1'
           - 'jruby-9.2'
+        experimental: [false]
+        include:
+          - ruby: 3.0
+            experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -89,4 +92,5 @@ jobs:
         if: steps.cache-gems.outputs.cache-hit != 'true'
         run: bundle install --jobs 4 --retry 3
       - name: RSpec
+        continue-on-error: ${{ matrix.experimental }}
         run: bundle exec rspec

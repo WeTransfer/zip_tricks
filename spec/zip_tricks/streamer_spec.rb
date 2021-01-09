@@ -273,7 +273,7 @@ describe ZipTricks::Streamer do
     end
   end
 
-  it 'writes the correct archive elements when using data descriptors' do
+  it 'writes the correct archive elements when using data descriptors', :aggregate_failures do
     out = StringIO.new
     fake_w = double('Writer')
     expect(fake_w).to receive(:write_local_file_header) { |**kwargs|
@@ -522,7 +522,7 @@ describe ZipTricks::Streamer do
     }.to raise_error(ZipTricks::Streamer::OffsetOutOfSync, /Entries add up to \d+ bytes and the IO is at 50 bytes/)
   end
 
-  it 'writes the specified modification time' do
+  it 'writes the specified modification time', :aggregate_failures do
     fake_writer = double('Writer').as_null_object
 
     expect(fake_writer).to receive(:write_local_file_header) { |**kwargs|

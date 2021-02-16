@@ -36,6 +36,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rack', '~> 1.6' # For tests, where we spin up a server
   spec.add_development_dependency 'rake', '~> 12.2'
   spec.add_development_dependency 'rspec', '~> 3'
+  spec.add_development_dependency 'rspec-mocks', '~> 3.10', '>= 3.10.2' # ruby 3 compatibility
   spec.add_development_dependency 'complexity_assert'
   spec.add_development_dependency 'coderay'
   spec.add_development_dependency 'benchmark-ips'

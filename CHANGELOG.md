@@ -1,3 +1,7 @@
+## 5.6.0
+
+* Add customisable `unix_permissions` to Streamer and ZipWriter. Beware that customising these permissions can lead to the archive failing to expand with some unarchiving applications, and is especially sensitive for directories.
+
 ## 5.5.0
 
 * In `OutputEnumerator` apply some amount of buffering to be within a UNIX socket size for metatada writes. This

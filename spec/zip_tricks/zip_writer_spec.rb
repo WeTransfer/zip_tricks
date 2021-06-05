@@ -250,6 +250,43 @@ describe ZipTricks::ZipWriter do
       expect(br.read_n(10)).to eq('a-file.txt') # the filename
     end
 
+    it 'writes the file header with custom UNIX permissions' do
+      buf = StringIO.new
+
+      subject.write_central_directory_file_header(io: buf,
+                                                  local_file_header_location: 898_921,
+                                                  gp_flags: 555,
+                                                  storage_mode: 23,
+                                                  compressed_size: 901,
+                                                  uncompressed_size: 909_102,
+                                                  mtime: Time.utc(2016, 2, 2, 14, 0),
+                                                  crc32: 89_765,
+                                                  filename: 'a-file.txt',
+                                                  unix_permissions: 0o633)
+
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x02014b50)      # Central directory entry sig
+      expect(br.read_2b).to eq(820)             # version made by
+      expect(br.read_2b).to eq(20)              # version need to extract
+      expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
+      # set to bogus value to ensure we pass it through)
+      expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
+      expect(br.read_2b).to eq(28_672)          # last mod file time
+      expect(br.read_2b).to eq(18_498)          # last mod file date
+      expect(br.read_4b).to eq(89_765)          # crc32
+      expect(br.read_4b).to eq(901)             # compressed size
+      expect(br.read_4b).to eq(909_102)         # uncompressed size
+      expect(br.read_2b).to eq(10)              # filename length
+      expect(br.read_2b).to eq(9)               # extra field length
+      expect(br.read_2b).to eq(0)               # file comment
+      expect(br.read_2b).to eq(0)               # disk number, must be blanked to the
+      # maximum value because of The Unarchiver bug
+      expect(br.read_2b).to eq(0)               # internal file attributes
+      expect(br.read_4b).to eq(2_174_418_944)   # external file attributes
+      expect(br.read_4b).to eq(898_921)         # relative offset of local header
+      expect(br.read_n(10)).to eq('a-file.txt') # the filename
+    end
+
     it 'writes the file header for an entry that contains an empty directory' do
       buf = StringIO.new
 
@@ -282,6 +319,43 @@ describe ZipTricks::ZipWriter do
       # maximum value because of The Unarchiver bug
       expect(br.read_2b).to eq(0)               # internal file attributes
       expect(br.read_4b).to eq(1_106_051_072)   # external file attributes
+      expect(br.read_4b).to eq(898_921)         # relative offset of local header
+      expect(br.read_n(10)).to eq('directory/') # the filename
+    end
+
+    it 'writes the file header for an entry that contains an empty directory with custom UNIX permissions' do
+      buf = StringIO.new
+
+      subject.write_central_directory_file_header(io: buf,
+                                                  local_file_header_location: 898_921,
+                                                  gp_flags: 555,
+                                                  storage_mode: 23,
+                                                  compressed_size: 0,
+                                                  uncompressed_size: 0,
+                                                  mtime: Time.utc(2016, 2, 2, 14, 0),
+                                                  crc32: 0,
+                                                  filename: 'directory/',
+                                                  unix_permissions: 0o777)
+
+      br = ByteReader.new(buf)
+      expect(br.read_4b).to eq(0x02014b50)      # Central directory entry sig
+      expect(br.read_2b).to eq(820)             # version made by
+      expect(br.read_2b).to eq(20)              # version need to extract
+      expect(br.read_2b).to eq(555)             # general purpose bit flag (explicitly
+      # set to bogus value to ensure we pass it through)
+      expect(br.read_2b).to eq(23)              # compression method (explicitly set to bogus value)
+      expect(br.read_2b).to eq(28_672)          # last mod file time
+      expect(br.read_2b).to eq(18_498)          # last mod file date
+      expect(br.read_4b).to eq(0)               # crc32
+      expect(br.read_4b).to eq(0)               # compressed size
+      expect(br.read_4b).to eq(0)               # uncompressed size
+      expect(br.read_2b).to eq(10)              # filename length
+      expect(br.read_2b).to eq(9)               # extra field length
+      expect(br.read_2b).to eq(0)               # file comment
+      expect(br.read_2b).to eq(0)               # disk number, must be blanked to the
+      # maximum value because of The Unarchiver bug
+      expect(br.read_2b).to eq(0)               # internal file attributes
+      expect(br.read_4b).to eq(1_107_230_720)   # external file attributes
       expect(br.read_4b).to eq(898_921)         # relative offset of local header
       expect(br.read_n(10)).to eq('directory/') # the filename
     end

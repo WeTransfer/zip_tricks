@@ -200,14 +200,16 @@ class ZipTricks::Streamer
   # @param uncompressed_size [Integer] the size of the entry when uncompressed, in bytes
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor
+  # @param unix_permissions[Fixnum?] which UNIX permissions to set, normally the default should be used
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_deflated_entry(filename:, modification_time: Time.now.utc, compressed_size: 0, uncompressed_size: 0, crc32: 0, use_data_descriptor: false)
+  def add_deflated_entry(filename:, modification_time: Time.now.utc, compressed_size: 0, uncompressed_size: 0, crc32: 0, unix_permissions: nil, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     modification_time: modification_time,
                                     crc32: crc32,
                                     storage_mode: DEFLATED,
                                     compressed_size: compressed_size,
                                     uncompressed_size: uncompressed_size,
+                                    unix_permissions: unix_permissions,
                                     use_data_descriptor: use_data_descriptor)
     @out.tell
   end
@@ -222,14 +224,16 @@ class ZipTricks::Streamer
   # @param size [Integer] the size of the file when uncompressed, in bytes
   # @param crc32 [Integer] the CRC32 checksum of the entry when uncompressed
   # @param use_data_descriptor [Boolean] whether the entry body will be followed by a data descriptor. When in use
+  # @param unix_permissions[Fixnum?] which UNIX permissions to set, normally the default should be used
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_stored_entry(filename:, modification_time: Time.now.utc,  size: 0, crc32: 0, use_data_descriptor: false)
+  def add_stored_entry(filename:, modification_time: Time.now.utc,  size: 0, crc32: 0, unix_permissions: nil, use_data_descriptor: false)
     add_file_and_write_local_header(filename: filename,
                                     modification_time: modification_time,
                                     crc32: crc32,
                                     storage_mode: STORED,
                                     compressed_size: size,
                                     uncompressed_size: size,
+                                    unix_permissions: unix_permissions,
                                     use_data_descriptor: use_data_descriptor)
     @out.tell
   end
@@ -238,14 +242,16 @@ class ZipTricks::Streamer
   #
   # @param dirname [String] the name of the directory in the archive
   # @param modification_time [Time] the modification time of the directory in the archive
+  # @param unix_permissions[Fixnum?] which UNIX permissions to set, normally the default should be used
   # @return [Integer] the offset the output IO is at after writing the entry header
-  def add_empty_directory(dirname:, modification_time: Time.now.utc)
+  def add_empty_directory(dirname:, modification_time: Time.now.utc, unix_permissions: nil)
     add_file_and_write_local_header(filename: dirname.to_s + '/',
                                     modification_time: modification_time,
                                     crc32: 0,
                                     storage_mode: STORED,
                                     compressed_size: 0,
                                     uncompressed_size: 0,
+                                    unix_permissions: unix_permissions,
                                     use_data_descriptor: false)
     @out.tell
   end
@@ -283,14 +289,16 @@ class ZipTricks::Streamer
   #
   # @param filename[String] the name of the file in the archive
   # @param modification_time [Time] the modification time of the file in the archive
+  # @param unix_permissions[Fixnum?] which UNIX permissions to set, normally the default should be used
   # @yield [#<<, #write] an object that the file contents must be written to that will be automatically closed
   # @return [#<<, #write, #close] an object that the file contents must be written to, has to be closed manually
-  def write_stored_file(filename, modification_time: Time.now.utc)
+  def write_stored_file(filename, modification_time: Time.now.utc, unix_permissions: nil)
     add_stored_entry(filename: filename,
                      modification_time: modification_time,
                      use_data_descriptor: true,
                      crc32: 0,
-                     size: 0)
+                     size: 0,
+                     unix_permissions: unix_permissions)
 
     writable = Writable.new(self, StoredWriter.new(@out))
     if block_given?
@@ -335,14 +343,16 @@ class ZipTricks::Streamer
   #
   # @param filename[String] the name of the file in the archive
   # @param modification_time [Time] the modification time of the file in the archive
+  # @param unix_permissions[Fixnum?] which UNIX permissions to set, normally the default should be used
   # @yield [#<<, #write] an object that the file contents must be written to
-  def write_deflated_file(filename, modification_time: Time.now.utc)
+  def write_deflated_file(filename, modification_time: Time.now.utc, unix_permissions: nil)
     add_deflated_entry(filename: filename,
                        modification_time: modification_time,
                        use_data_descriptor: true,
                        crc32: 0,
                        compressed_size: 0,
-                       uncompressed_size: 0)
+                       uncompressed_size: 0,
+                       unix_permissions: unix_permissions)
 
     writable = Writable.new(self, DeflatedWriter.new(@out))
     if block_given?
@@ -375,7 +385,8 @@ class ZipTricks::Streamer
                                                   uncompressed_size: entry.uncompressed_size,
                                                   mtime: entry.mtime,
                                                   crc32: entry.crc32,
-                                                  filename: entry.filename)
+                                                  filename: entry.filename,
+                                                  unix_permissions: entry.unix_permissions)
     end
 
     # Record the central directory size, for the EOCDR
@@ -462,7 +473,8 @@ EMS
       storage_mode:,
       compressed_size:,
       uncompressed_size:,
-      use_data_descriptor:)
+      use_data_descriptor:,
+      unix_permissions:)
 
     # Clean backslashes
     filename = remove_backslash(filename)
@@ -498,7 +510,8 @@ EMS
                   use_data_descriptor,
                   _local_file_header_offset = local_header_starts_at,
                   _bytes_used_for_local_header = 0,
-                  _bytes_used_for_data_descriptor = 0)
+                  _bytes_used_for_data_descriptor = 0,
+                  unix_permissions)
 
     @writer.write_local_file_header(io: @out,
                                     gp_flags: e.gp_flags,

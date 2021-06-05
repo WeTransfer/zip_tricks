@@ -31,22 +31,10 @@ class ZipTricks::ZipWriter
   VERSION_MADE_BY                        = 52
   VERSION_NEEDED_TO_EXTRACT              = 20
   VERSION_NEEDED_TO_EXTRACT_ZIP64        = 45
-  DEFAULT_EXTERNAL_ATTRS = begin
-    # These need to be set so that the unarchived files do not become executable on UNIX, for
-    # security purposes. Strictly speaking we would want to make this user-customizable,
-    # but for now just putting in sane defaults will do. For example, Trac with zipinfo does this:
-    # zipinfo.external_attr = 0644 << 16L # permissions -r-wr--r--.
-    # We snatch the incantations from Rubyzip for this.
-    unix_perms = 0o644
-    file_type_file = 0o10
-    (file_type_file << 12 | (unix_perms & 0o7777)) << 16
-  end
-  EMPTY_DIRECTORY_EXTERNAL_ATTRS = begin
-    # Applies permissions to an empty directory.
-    unix_perms = 0o755
-    file_type_dir = 0o04
-    (file_type_dir << 12 | (unix_perms & 0o7777)) << 16
-  end
+  DEFAULT_FILE_UNIX_PERMISSIONS = 0o644
+  DEFAULT_DIRECTORY_UNIX_PERMISSIONS = 0o755
+  FILE_TYPE_FILE = 0o10
+  FILE_TYPE_DIRECTORY = 0o04
   MADE_BY_SIGNATURE = begin
     # A combination of the VERSION_MADE_BY low byte and the OS type high byte
     os_type = 3 # UNIX
@@ -64,7 +52,8 @@ class ZipTricks::ZipWriter
                    :VERSION_MADE_BY,
                    :VERSION_NEEDED_TO_EXTRACT,
                    :VERSION_NEEDED_TO_EXTRACT_ZIP64,
-                   :DEFAULT_EXTERNAL_ATTRS,
+                   :FILE_TYPE_FILE,
+                   :FILE_TYPE_DIRECTORY,
                    :MADE_BY_SIGNATURE,
                    :C_UINT4,
                    :C_UINT2,
@@ -136,6 +125,7 @@ class ZipTricks::ZipWriter
   # @param crc32[Fixnum] The CRC32 checksum of the file
   # @param mtime[Time]  the modification time to be recorded in the ZIP
   # @param gp_flags[Fixnum] bit-packed general purpose flags
+  # @param unix_permissions[Fixnum?] the permissions for the file, or nil for the default to be used
   # @return [void]
   def write_central_directory_file_header(io:,
                                           local_file_header_location:,
@@ -145,7 +135,9 @@ class ZipTricks::ZipWriter
                                           uncompressed_size:,
                                           mtime:,
                                           crc32:,
-                                          filename:)
+                                          filename:,
+                                          unix_permissions: nil
+                                         )
     # At this point if the header begins somewhere beyound 0xFFFFFFFF we _have_ to record the offset
     # of the local file header as a zip64 extra field, so we give up, give in, you loose, love will always win...
     add_zip64 = (local_file_header_location > FOUR_BYTE_MAX_UINT) ||
@@ -200,11 +192,15 @@ class ZipTricks::ZipWriter
 
     # Because the add_empty_directory method will create a directory with a trailing "/",
     # this check can be used to assign proper permissions to the created directory.
-    io << if filename.end_with?('/')
-      [EMPTY_DIRECTORY_EXTERNAL_ATTRS].pack(C_UINT4)
+    # external file attributes        4 bytes
+    external_attrs = if filename.end_with?('/')
+      unix_permissions ||= DEFAULT_DIRECTORY_UNIX_PERMISSIONS
+      generate_external_attrs(unix_permissions, FILE_TYPE_DIRECTORY)
     else
-      [DEFAULT_EXTERNAL_ATTRS].pack(C_UINT4)           # external file attributes        4 bytes
+      unix_permissions ||= DEFAULT_FILE_UNIX_PERMISSIONS
+      generate_external_attrs(unix_permissions, FILE_TYPE_FILE)
     end
+    io << [external_attrs].pack(C_UINT4)
 
     io << if add_zip64                                 # relative offset of local header 4 bytes
       [FOUR_BYTE_MAX_UINT].pack(C_UINT4)
@@ -433,5 +429,9 @@ class ZipTricks::ZipWriter
   def pack_array(values_to_packspecs)
     values, packspecs = values_to_packspecs.partition.each_with_index { |_, i| i.even? }
     values.pack(packspecs.join)
+  end
+
+  def generate_external_attrs(unix_permissions_int, file_type_int)
+    (file_type_int << 12 | (unix_permissions_int & 0o7777)) << 16
   end
 end

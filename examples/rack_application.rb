@@ -36,20 +36,19 @@ class ZipDownload
 
     # Create a suitable Rack response body, that will support each(),
     # close() and all the other methods. We can then return it up the stack.
-    zip_response_body = ZipTricks::Streamer.output_enum do |zip|
-      begin
-        # We are adding only one file to the ZIP here, but you could do that
-        # with an arbitrary number of files of course.
-        zip.add_stored_entry(filename: filename, size: f.size, crc32: crc32)
-        # Write the contents of the file. It is stored, so the writes go
-        # directly to the Rack output, bypassing any RubyZip
-        # deflaters/compressors. In fact you are yielding the "blob" string
-        # here directly to the Rack server handler.
-        IO.copy_stream(f, zip)
+    zip_response_body =
+      # We are adding only one file to the ZIP here, but you could do that
+      # with an arbitrary number of files of course.
+      ZipTricks::Streamer.output_enum do |zip|
+    zip.add_stored_entry(filename: filename, size: f.size, crc32: crc32)
+    # Write the contents of the file. It is stored, so the writes go
+    # directly to the Rack output, bypassing any RubyZip
+    # deflaters/compressors. In fact you are yielding the "blob" string
+    # here directly to the Rack server handler.
+    IO.copy_stream(f, zip)
       ensure
-        f.close # Make sure the opened file we read from gets closed
-      end
-    end
+      f.close # Make sure the opened file we read from gets closed
+  end
 
     # Add a Content-Disposition so that the download has a .zip extension
     # (this will not work well with UTF-8 filenames on Windows, but hey!)

@@ -8,12 +8,10 @@ class ManagedTempfile < Tempfile
 
   def self.prune!
     @@managed_tempfiles.each do |tf|
-      begin
         tf.close
         tf.unlink
-      rescue
+    rescue
         nil
-      end
     end
     @@managed_tempfiles.clear
   end

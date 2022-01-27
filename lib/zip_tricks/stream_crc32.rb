@@ -5,7 +5,7 @@ class ZipTricks::StreamCRC32
   STRINGS_HAVE_CAPACITY_SUPPORT = begin
     String.new('', capacity: 1)
     true
-  rescue ArgumentError
+                                  rescue ArgumentError
     false
   end
   CRC_BUF_SIZE = 1024 * 512

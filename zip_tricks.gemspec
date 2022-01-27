@@ -42,6 +42,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'benchmark-ips'
   spec.add_development_dependency 'allocation_stats', '~> 0.1.5'
   spec.add_development_dependency 'yard', '~> 0.9'
-  spec.add_development_dependency 'wetransfer_style', '0.6.0'
+  spec.add_development_dependency 'wetransfer_style', '~> 1.0'
   spec.add_development_dependency 'puma'
 end

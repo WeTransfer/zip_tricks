@@ -32,10 +32,8 @@ describe ZipTricks::RemoteUncap do
   end
 
   after :each do
-    begin
       File.unlink('temp.zip')
-    rescue Errno::ENOENT
-    end
+  rescue Errno::ENOENT
   end
 
   it 'returns an array of remote entries that can be used to fetch the segments \

@@ -12,7 +12,6 @@ describe ZipTricks::RemoteIO do
 
     it 'performs remote reads when repeatedly requesting the same chunk, via \
         #request_range' do
-
       expect(subject).to receive(:request_object_size).and_return(120)
       allow(subject).to receive(:request_range) { |range|
         expect(range).to eq(5..14)

@@ -524,19 +524,20 @@ describe ZipTricks::Streamer do
 
   it 'writes the specified modification time', :aggregate_failures do
     fake_writer = double('Writer').as_null_object
+    modification_time = Time.new(2018, 1, 1, 0, 0, 0, '+00:00')
 
     expect(fake_writer).to receive(:write_local_file_header) { |**kwargs|
-      expect(kwargs[:mtime]).to eq(Time.new('2018-01-01 00:00:00'))
+      expect(kwargs[:mtime]).to eq(modification_time)
     }.exactly(3).times
 
     described_class.open(StringIO.new, writer: fake_writer) do |zip|
-      zip.write_stored_file('stored.txt', modification_time: Time.new('2018-01-01 00:00:00')) do |sink|
+      zip.write_stored_file('stored.txt', modification_time: modification_time) do |sink|
         sink << 'stored'
       end
-      zip.write_deflated_file('deflated.txt', modification_time: Time.new('2018-01-01 00:00:00')) do |sink|
+      zip.write_deflated_file('deflated.txt', modification_time: modification_time) do |sink|
         sink << 'deflated'
       end
-      zip.add_empty_directory(dirname: 'empty', modification_time: Time.new('2018-01-01 00:00:00'))
+      zip.add_empty_directory(dirname: 'empty', modification_time: modification_time)
     end
   end
 end

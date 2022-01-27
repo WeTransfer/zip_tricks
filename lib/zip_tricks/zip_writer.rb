@@ -104,9 +104,7 @@ class ZipTricks::ZipWriter
     # https://social.technet.microsoft.com/Forums/windows/en-US/6a60399f-2879-4859-b7ab-6ddd08a70948
     # TL;DR of it is: Windows 7 Explorer _will_ open Zip64 entries. However, it desires to have the
     # Zip64 extra field as _the first_ extra field.
-    if requires_zip64
-      extra_fields << zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size)
-    end
+    extra_fields << zip_64_extra_for_local_file_header(compressed_size: compressed_size, uncompressed_size: uncompressed_size) if requires_zip64
     extra_fields << timestamp_extra_for_local_file_header(mtime)
 
     io << [extra_fields.size].pack(C_UINT2)                # extra field length              2 bytes

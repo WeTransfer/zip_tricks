@@ -1,7 +1,7 @@
 inherit_gem:
   wetransfer_style: ruby/default.yml
 AllCops:
-  TargetRubyVersion: 2.1
+  TargetRubyVersion: 2.5
 Layout/FirstMethodArgumentLineBreak:
   Enabled: false
 Layout/FirstMethodParameterLineBreak:
@@ -11,5 +11,5 @@ Style/GlobalVars:
       - qa/*.rb
       - spec/spec_helper.rb
       - spec/support/zip_inspection.rb
-Layout/IndentHeredoc:
+Layout/HeredocIndentation:
   Enabled: false

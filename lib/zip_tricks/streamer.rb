@@ -144,13 +144,14 @@ class ZipTricks::Streamer
   # @param auto_rename_duplicate_filenames[Boolean] whether duplicate filenames, when encountered,
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
   #    dupliate names are used an exception will be raised
-  def initialize(writable, writer: create_writer, auto_rename_duplicate_filenames: false)
+  def initialize(writable, writer: create_writer, auto_rename_duplicate_filenames: false, comment: nil)
     raise InvalidOutput, 'The writable must respond to #<<' unless writable.respond_to?(:<<)
     @out = ZipTricks::WriteAndTell.new(writable)
     @files = []
     @path_set = ZipTricks::PathSet.new
     @writer = writer
     @dedupe_filenames = auto_rename_duplicate_filenames
+    @comment = comment
   end
 
   # Writes a part of a zip entry body (actual binary data of the entry) into the output stream.
@@ -396,7 +397,8 @@ class ZipTricks::Streamer
     @writer.write_end_of_central_directory(io: @out,
                                            start_of_central_directory_location: cdir_starts_at,
                                            central_directory_size: cdir_size,
-                                           num_files_in_archive: @files.length)
+                                           num_files_in_archive: @files.length,
+                                           comment: @comment)
 
     # Clear the files so that GC will not have to trace all the way to here to deallocate them
     @files.clear

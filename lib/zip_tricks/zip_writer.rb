@@ -246,7 +246,9 @@ class ZipTricks::ZipWriter
   # @param num_files_in_archive[Fixnum] How many files the archive contains
   # @param comment[String] the comment for the archive (defaults to ZIP_TRICKS_COMMENT)
   # @return [void]
-  def write_end_of_central_directory(io:, start_of_central_directory_location:, central_directory_size:, num_files_in_archive:, comment: ZIP_TRICKS_COMMENT)
+  def write_end_of_central_directory(io:, start_of_central_directory_location:, central_directory_size:, num_files_in_archive:, comment: nil)
+    comment ||= ZIP_TRICKS_COMMENT
+
     zip64_eocdr_offset = start_of_central_directory_location + central_directory_size
 
     zip64_required = central_directory_size > FOUR_BYTE_MAX_UINT ||

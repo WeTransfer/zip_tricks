@@ -58,13 +58,11 @@ jobs:
     strategy:
       matrix:
         ruby:
+          - '3.0'
           - '2.7'
           - '2.1'
           - 'jruby-9.2'
         experimental: [false]
-        include:
-          - ruby: 3.0
-            experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@v2

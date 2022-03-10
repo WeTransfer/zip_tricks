@@ -267,7 +267,7 @@ class ZipTricks::Streamer
   #       IO.copy_stream(source_file, sink)
   #     end
   #
-  # If deferred writes are desired (for example - to integerate with an API that
+  # If deferred writes are desired (for example - to integrate with an API that
   # does not support blocks, or to work with non-blocking environments) the method
   # has to be called without a block. In that case it returns the sink instead,
   # permitting to write to it in a deferred fashion. When `close` is called on
@@ -319,7 +319,7 @@ class ZipTricks::Streamer
   #       IO.copy_stream(source_file, sink)
   #     end
   #
-  # If deferred writes are desired (for example - to integerate with an API that
+  # If deferred writes are desired (for example - to integrate with an API that
   # does not support blocks, or to work with non-blocking environments) the method
   # has to be called without a block. In that case it returns the sink instead,
   # permitting to write to it in a deferred fashion. When `close` is called on

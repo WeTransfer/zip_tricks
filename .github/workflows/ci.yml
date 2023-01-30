@@ -18,13 +18,13 @@ jobs:
           - '2.7'
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
       - name: Gemfile Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: Gemfile.lock
           key: ${{ runner.os }}-gemlock-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'zip_tricks.gemspec') }}
@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-gemlock-${{ matrix.ruby }}-
       - name: Bundle Cache
         id: cache-gems
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'Gemfile.lock', 'zip_tricks.gemspec') }}
@@ -43,7 +43,7 @@ jobs:
         if: steps.cache-gems.outputs.cache-hit != 'true'
         run: bundle install --jobs 4 --retry 3
       - name: Rubocop Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/rubocop_cache
           key: ${{ runner.os }}-rubocop-${{ hashFiles('.rubocop.yml') }}
@@ -59,21 +59,23 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
+          - '3.2'
           - '3.1'
           - '3.0'
           - '2.7'
+          - 'jruby-9.4'
           - 'jruby-9.3'
           - 'jruby-9.2'
         experimental: [false]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
       - name: Gemfile Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: Gemfile.lock
           key: ${{ runner.os }}-gemlock-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'zip_tricks.gemspec') }}
@@ -81,7 +83,7 @@ jobs:
             ${{ runner.os }}-gemlock-${{ matrix.ruby }}-
       - name: Bundle Cache
         id: cache-gems
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', 'Gemfile.lock', 'zip_tricks.gemspec') }}

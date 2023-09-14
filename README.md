@@ -124,7 +124,7 @@ the metadata of the file upfront (the CRC32 of the uncompressed file and the siz
 to that socket using some accelerated writing technique, and only use the Streamer to write out the ZIP metadata.
 
 ```ruby
-# io has to be an object that supports #<<
+# io has to be an object that supports #<< or #write()
 ZipTricks::Streamer.open(io) do | zip |
   # raw_file is written "as is" (STORED mode).
   # Write the local file header first..

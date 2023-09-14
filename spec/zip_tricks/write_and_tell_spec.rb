@@ -45,6 +45,20 @@ describe ZipTricks::WriteAndTell do
     expect(writer.tell).to eq(33)
   end
 
+  it 'is able to write into an object which only supports write()' do
+    stream_with_just_write = Object.new
+    def stream_with_just_write.write(bytes)
+      # noop
+    end
+
+    writer = described_class.new(stream_with_just_write)
+    writer << 'Hello'
+    writer << 'Goodbye'
+    writer << 'What a day!'
+    writer.advance_position_by(10)
+    expect(writer.tell).to eq(33)
+  end
+
   it 'advances the internal pointer using advance_position_by' do
     str = ''
 

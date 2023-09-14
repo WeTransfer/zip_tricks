@@ -50,6 +50,17 @@ describe ZipTricks::Streamer do
     expect { described_class.new(nil) }.to raise_error(ZipTricks::Streamer::InvalidOutput)
   end
 
+  it 'allows a destination which only supports write()' do
+    stream_with_just_write = Object.new
+    def stream_with_just_write.write(bytes)
+      # noop
+    end
+
+    expect {
+      described_class.new(stream_with_just_write)
+    }.not_to raise_error
+  end
+
   it 'allows the writer to be injectable' do
     fake_writer = double('ZipWriter')
     expect(fake_writer).to receive(:write_local_file_header)

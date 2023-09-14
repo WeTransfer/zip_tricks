@@ -6,11 +6,20 @@ class ZipTricks::WriteAndTell
   def initialize(io)
     @io = io
     @pos = 0
+    # Some objects (such as ActionController::Live `stream` object) cannot be "pushed" into
+    # using the :<< operator, but only support `write`. For ease we add a small shim in that case instead of having
+    # the user abstract it themselves.
+    @use_write = !io.respond_to?(:<<)
   end
 
   def <<(bytes)
     return self if bytes.nil?
-    @io << bytes.b
+    if @use_write
+      @io.write(bytes.b)
+    else
+      @io << bytes.b
+    end
+
     @pos += bytes.bytesize
     self
   end

@@ -145,7 +145,8 @@ class ZipTricks::Streamer
   #    should be suffixed with (1), (2) etc. Default value is `false` - if
   #    dupliate names are used an exception will be raised
   def initialize(writable, writer: create_writer, auto_rename_duplicate_filenames: false)
-    raise InvalidOutput, 'The writable must respond to #<<' unless writable.respond_to?(:<<)
+    raise InvalidOutput, 'The writable must respond to #<< or #write' unless writable.respond_to?(:<<) || writable.respond_to?(:write)
+
     @out = ZipTricks::WriteAndTell.new(writable)
     @files = []
     @path_set = ZipTricks::PathSet.new

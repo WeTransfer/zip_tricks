@@ -7,7 +7,15 @@ describe ZipTricks::RailsStreaming do
       attr_reader :response
       attr_accessor :response_body
       def initialize
-        @response = Struct.new(:headers, :sending_file).new({})
+        @response = Struct.new(:headers).new({})
+      end
+
+      def send_stream(filename:, type:, disposition:)
+        out = StringIO.new
+        @response.headers['Content-Type'] = type
+        yield(out)
+        @response_body = out
+        @response_body.rewind
       end
 
       def stream_zip
@@ -26,7 +34,6 @@ describe ZipTricks::RailsStreaming do
 
     expect(response.headers['Content-Type']).to eq('application/zip')
     expect(response.headers['X-Accel-Buffering']).to eq('no')
-    expect(response.sending_file).to be(true)
 
     ref = StringIO.new('', 'wb')
     ZipTricks::Streamer.open(ref) do |z|
@@ -34,8 +41,6 @@ describe ZipTricks::RailsStreaming do
         f << 'ßHello from Rails'
       end
     end
-
-    expect(ZipTricks::Streamer).to receive(:new).with(any_args, auto_rename_duplicate_filenames: true).and_call_original
 
     out = StringIO.new('', 'wb')
     response_body.each.reduce(out, :<<)

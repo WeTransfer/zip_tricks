@@ -53,7 +53,7 @@ jobs:
         run: bundle exec rubocop
   test:
     name: Specs
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false

@@ -80,9 +80,9 @@ require 'set'
 # Calling {Streamer#close} **will not** call `#close` on the underlying IO object.
 class ZipTricks::Streamer
   require_relative 'streamer/deflated_writer'
-  require_relative 'streamer/writable'
-  require_relative 'streamer/stored_writer'
   require_relative 'streamer/entry'
+  require_relative 'streamer/stored_writer'
+  require_relative 'streamer/writable'
 
   STORED = 0
   DEFLATED = 8

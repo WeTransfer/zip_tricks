@@ -11,7 +11,7 @@ describe ZipTricks::Streamer::DeflatedWriter do
 
     finish_result = subject.finish
 
-    zlib_inflater = ::Zlib::Inflate.new(-Zlib::MAX_WBITS)
+    zlib_inflater = Zlib::Inflate.new(-Zlib::MAX_WBITS)
     inflated = zlib_inflater.inflate(out.string)
     expect(inflated).to eq(('a' * 256) + ('b' * 256) + ('b' * 256))
 

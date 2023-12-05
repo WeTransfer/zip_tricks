@@ -1,5 +1,5 @@
-require 'spec_helper'
 require 'net/http'
+require 'spec_helper'
 
 describe ZipTricks::RemoteUncap do
   before :all do

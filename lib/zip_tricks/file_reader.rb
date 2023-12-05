@@ -63,8 +63,8 @@ require 'stringio'
 # it involves a much larger number of reads (1 read from the IO per entry in the ZIP).
 
 class ZipTricks::FileReader
-  require_relative 'file_reader/stored_reader'
   require_relative 'file_reader/inflating_reader'
+  require_relative 'file_reader/stored_reader'
 
   ReadError = Class.new(StandardError)
   UnsupportedFeature = Class.new(StandardError)
@@ -608,7 +608,7 @@ class ZipTricks::FileReader
     end
 
     # If the offset is negative there is certainly no Zip64 EOCD locator here
-    return unless zip64_eocd_loc_offset >= 0
+    return if zip64_eocd_loc_offset < 0
 
     file_io.seek(zip64_eocd_loc_offset, IO::SEEK_SET)
     assert_signature(file_io, 0x07064b50)

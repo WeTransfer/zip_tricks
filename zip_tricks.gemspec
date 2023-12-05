@@ -33,8 +33,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'rubyzip', '~> 1'
 
-  spec.add_development_dependency 'rack', '~> 1.6' # For tests, where we spin up a server
-  spec.add_development_dependency 'rake', '~> 12.2'
+  spec.add_development_dependency 'rack', '>= 1.6' # For tests, where we spin up a server
+  spec.add_development_dependency 'rake', '>= 12.2'
   spec.add_development_dependency 'rspec', '~> 3'
   spec.add_development_dependency 'rspec-mocks', '~> 3.10', '>= 3.10.2' # ruby 3 compatibility
   spec.add_development_dependency 'complexity_assert'
@@ -42,6 +42,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'benchmark-ips'
   spec.add_development_dependency 'allocation_stats', '~> 0.1.5'
   spec.add_development_dependency 'yard', '~> 0.9'
-  spec.add_development_dependency 'wetransfer_style', '~> 1.0'
+  spec.add_development_dependency 'wetransfer_style', '~> 2.1'
   spec.add_development_dependency 'puma'
 end

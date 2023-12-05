@@ -65,7 +65,6 @@ jobs:
           - '2.7'
           - 'jruby-9.4'
           - 'jruby-9.3'
-          - 'jruby-9.2'
         experimental: [false]
     steps:
       - name: Checkout

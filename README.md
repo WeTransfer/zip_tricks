@@ -1,5 +1,7 @@
 # zip_tricks
 
+### zip_tricks will not receive further updates or support, and will no longer be maintained. The repository remains public, inviting the community to fork and continue its journey. Thank you for being part of the community to date.
+
 [![CI](https://github.com/WeTransfer/zip_tricks/actions/workflows/ci.yml/badge.svg)](https://github.com/WeTransfer/zip_tricks/actions/workflows/ci.yml)
 [![Gem Version](https://badge.fury.io/rb/zip_tricks.svg)](https://badge.fury.io/rb/zip_tricks)
 

@@ -4,7 +4,7 @@
 
 zip_tricks will not receive further updates or support, and will no longer be maintained. The story of zip_tricks continues
 in [zip_kit](https://github.com/julik/zip_kit) which is going to be receiving regular updates and supports all
-of the zip_tricks functionality (and more). Thank you for being part of the community to date!
+of the zip_tricks functionality (and more). Thank you for being part of the zip_tricks community!
 
 [![Gem Version](https://badge.fury.io/rb/zip_tricks.svg)](https://badge.fury.io/rb/zip_tricks)
 
